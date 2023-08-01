@@ -1,0 +1,27 @@
+{
+    "version": "0.2.0",
+    "configurations": [
+        {
+            "name": "[Debug] API",
+            "type": "go",
+            "request": "launch",
+            "mode": "auto",
+            "program": "${workspaceFolder}/cmd/main.go",
+            "envFile": "${workspaceFolder}/cmd/.env",
+            "args": [
+                "api"
+            ]
+        },
+        {
+            "name": "[Debug] Migration",
+            "type": "go",
+            "request": "launch",
+            "mode": "auto",
+            "program": "${workspaceFolder}/cmd/main.go",
+            "envFile": "${workspaceFolder}/cmd/.env",
+            "args": [
+                "migrate"
+            ]
+        }
+    ]
+}
