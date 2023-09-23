@@ -1,9 +1,10 @@
 module github.com/jailtonjunior94/financial
 
-go 1.20
+go 1.21.1
 
 require (
 	github.com/go-chi/chi/v5 v5.0.10
+	github.com/go-sql-driver/mysql v1.5.0
 	github.com/golang-migrate/migrate/v4 v4.16.2
 	github.com/lib/pq v1.10.9
 	github.com/spf13/cobra v1.7.0
