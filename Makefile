@@ -8,3 +8,7 @@ test:
 
 cover:
 	go tool cover -html=coverage.outmak
+
+build-financial-api:
+	@echo "Compiling Financial API..."
+	@CGO_ENABLED=0 go build -ldflags="-w -s" -o ./bin/financial ./cmd/main.go

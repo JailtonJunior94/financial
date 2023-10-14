@@ -23,6 +23,10 @@ func (s *ApiServe) ApiServer() {
 
 	router := chi.NewRouter()
 	router.Use(middleware.Heartbeat("/health"))
+	router.Get("/api", func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusOK)
+	})
 
 	server := http.Server{
 		ReadTimeout:       time.Duration(10) * time.Second,
