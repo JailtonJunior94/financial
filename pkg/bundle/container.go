@@ -8,6 +8,7 @@ import (
 	"github.com/jailtonjunior94/financial/internal/infrastructure/user/repository"
 	usecase "github.com/jailtonjunior94/financial/internal/usecase/user"
 	mysql "github.com/jailtonjunior94/financial/pkg/database/mysql"
+	"github.com/jailtonjunior94/financial/pkg/encrypt"
 )
 
 type container struct {
@@ -15,6 +16,7 @@ type container struct {
 	DB             *sql.DB
 	UserRepository interfaces.UserRepository
 	UserUseCase    usecase.CreateUserUseCase
+	Hash           encrypt.HashAdapter
 }
 
 func NewContainer() *container {
@@ -28,12 +30,14 @@ func NewContainer() *container {
 		panic(err)
 	}
 
+	hash := encrypt.NewHashAdapter()
 	userRepository := repository.NewUserRepository(dbConnection)
-	userUseCase := usecase.NewCreateUserUseCase(userRepository)
+	userUseCase := usecase.NewCreateUserUseCase(hash, userRepository)
 
 	return &container{
 		Config:         config,
 		DB:             dbConnection,
+		Hash:           hash,
 		UserRepository: userRepository,
 		UserUseCase:    userUseCase,
 	}

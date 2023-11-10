@@ -3,6 +3,7 @@ package mysql
 import (
 	"database/sql"
 	"errors"
+	"fmt"
 
 	"github.com/jailtonjunior94/financial/configs"
 
@@ -14,7 +15,7 @@ var (
 )
 
 func NewMySqlDatabase(config *configs.Config) (*sql.DB, error) {
-	sqlDB, err := sql.Open("mysql", "root:financial@tcp(localhost:3306)/financial")
+	sqlDB, err := sql.Open(config.DBDriver, dsn(config))
 	if err != nil {
 		return nil, ErrSQLOpenConn
 	}
@@ -23,5 +24,17 @@ func NewMySqlDatabase(config *configs.Config) (*sql.DB, error) {
 	if err != nil {
 		return nil, ErrSQLOpenConn
 	}
+	sqlDB.SetMaxIdleConns(config.DBMaxIdleConns)
 	return sqlDB, nil
+}
+
+func dsn(config *configs.Config) string {
+	return fmt.Sprintf(
+		"%s:%s@tcp(%s:%s)/%s?charset=utf8&parseTime=True&loc=Local",
+		config.DBUser,
+		config.DBPassword,
+		config.DBHost,
+		config.DBPort,
+		config.DBName,
+	)
 }

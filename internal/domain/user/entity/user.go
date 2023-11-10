@@ -52,7 +52,6 @@ func (u *User) SetPassword(password string) error {
 	if password == "" {
 		return ErrPasswordIsRequired
 	}
-
 	u.Password = password
 	return nil
 }
