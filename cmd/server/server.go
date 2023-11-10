@@ -8,6 +8,7 @@ import (
 
 	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/chi/v5/middleware"
+	"github.com/jailtonjunior94/financial/internal/infrastructure/user/web"
 	"github.com/jailtonjunior94/financial/pkg/bundle"
 )
 
@@ -27,6 +28,9 @@ func (s *ApiServe) ApiServer() {
 		w.Header().Set("Content-Type", "application/json")
 		w.WriteHeader(http.StatusOK)
 	})
+
+	userHandler := web.NewUserHandler(container.UserUseCase)
+	router.Post("/users", userHandler.Create)
 
 	server := http.Server{
 		ReadTimeout:       time.Duration(10) * time.Second,

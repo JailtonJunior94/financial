@@ -6,9 +6,11 @@ require (
 	github.com/go-chi/chi/v5 v5.0.10
 	github.com/go-sql-driver/mysql v1.5.0
 	github.com/golang-migrate/migrate/v4 v4.16.2
+	github.com/google/uuid v1.3.0
 	github.com/lib/pq v1.10.9
 	github.com/spf13/cobra v1.7.0
 	github.com/spf13/viper v1.16.0
+	golang.org/x/crypto v0.9.0
 )
 
 require (
