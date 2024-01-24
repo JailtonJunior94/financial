@@ -49,6 +49,5 @@ func main() {
 	}
 
 	root.AddCommand(migrate, api, consumers)
-
 	root.Execute()
 }

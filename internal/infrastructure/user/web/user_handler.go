@@ -19,7 +19,7 @@ func (h *UserHandler) Create(w http.ResponseWriter, r *http.Request) {
 	var input usecase.CreateUserInput
 	err := json.NewDecoder(r.Body).Decode(&input)
 	if err != nil {
-		http.Error(w, err.Error(), http.StatusBadRequest)
+		http.Error(w, err.Error(), http.StatusUnprocessableEntity)
 		return
 	}
 

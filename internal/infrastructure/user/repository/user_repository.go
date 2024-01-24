@@ -16,7 +16,7 @@ func NewUserRepository(db *sql.DB) interfaces.UserRepository {
 }
 
 func (r *userRepository) Create(u *entity.User) (*entity.User, error) {
-	stmt, err := r.Db.Prepare("INSERT INTO users (id, name, email, password, created_at, updated_at, active) VALUES (?, ?, ?, ?, ?, ?, ?)")
+	stmt, err := r.Db.Prepare("insert into users (id, name, email, password, created_at, updated_at, active) values (?, ?, ?, ?, ?, ?, ?)")
 	if err != nil {
 		return nil, err
 	}
@@ -26,4 +26,14 @@ func (r *userRepository) Create(u *entity.User) (*entity.User, error) {
 		return nil, err
 	}
 	return u, nil
+}
+
+func (r *userRepository) FindByEmail(email string) (*entity.User, error) {
+	row := r.Db.QueryRow("select * from users where email = ? and active = true", email)
+
+	var user entity.User
+	if err := row.Scan(&user.ID, &user.Name, &user.Email, &user.Password, &user.CreatedAt, &user.UpdatedAt, &user.Active); err != nil {
+		return nil, err
+	}
+	return &user, nil
 }

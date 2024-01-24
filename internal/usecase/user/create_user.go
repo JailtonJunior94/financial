@@ -1,8 +1,6 @@
-package usecase
+package user
 
 import (
-	"time"
-
 	"github.com/jailtonjunior94/financial/internal/domain/user/entity"
 	"github.com/jailtonjunior94/financial/internal/domain/user/interfaces"
 	"github.com/jailtonjunior94/financial/pkg/encrypt"
@@ -15,19 +13,6 @@ type CreateUserUseCase interface {
 type createUserUseCase struct {
 	Hash       encrypt.HashAdapter
 	Repository interfaces.UserRepository
-}
-
-type CreateUserInput struct {
-	Name     string `json:"name"`
-	Email    string `json:"email"`
-	Password string `json:"password"`
-}
-
-type CreateUserOutput struct {
-	ID        string    `json:"id"`
-	Name      string    `json:"name"`
-	Email     string    `json:"email"`
-	CreatedAt time.Time `json:"createdAt"`
 }
 
 func NewCreateUserUseCase(hash encrypt.HashAdapter, repository interfaces.UserRepository) CreateUserUseCase {
