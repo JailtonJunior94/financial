@@ -1,9 +1,22 @@
 package auth
 
 import (
+	"errors"
+
 	"github.com/jailtonjunior94/financial/internal/domain/user/interfaces"
 	"github.com/jailtonjunior94/financial/pkg/authentication"
 	"github.com/jailtonjunior94/financial/pkg/encrypt"
+	"github.com/jailtonjunior94/financial/pkg/logger"
+)
+
+var (
+	ErrUserNotFound = errors.New("user not found")
+	ErrCheckHash    = errors.New("error checking hash")
+)
+
+const (
+	EmailKey = "email"
+	ErrorKey = "error"
 )
 
 type TokenUseCase interface {
@@ -11,31 +24,48 @@ type TokenUseCase interface {
 }
 
 type tokenUseCase struct {
-	Hash       encrypt.HashAdapter
-	Jwt        authentication.JwtAdapter
-	Repository interfaces.UserRepository
+	logger     logger.Logger
+	hash       encrypt.HashAdapter
+	jwt        authentication.JwtAdapter
+	repository interfaces.UserRepository
 }
 
-func NewTokenUseCase(hash encrypt.HashAdapter, jwt authentication.JwtAdapter, repository interfaces.UserRepository) TokenUseCase {
-	return &tokenUseCase{Hash: hash, Jwt: jwt, Repository: repository}
+func NewTokenUseCase(logger logger.Logger, hash encrypt.HashAdapter, jwt authentication.JwtAdapter, repository interfaces.UserRepository) TokenUseCase {
+	return &tokenUseCase{logger: logger, hash: hash, jwt: jwt, repository: repository}
 }
 
 func (u *tokenUseCase) Execute(input *AuthInput) (*AuthOutput, error) {
-	user, err := u.Repository.FindByEmail(input.Email)
+	user, err := u.repository.FindByEmail(input.Email)
 	if err != nil {
+		u.logger.Error("error find user by e-mail",
+			logger.Field{Key: EmailKey, Value: input.Email},
+			logger.Field{Key: ErrorKey, Value: err.Error()},
+		)
 		return nil, err
 	}
 
 	if user == nil {
-		return nil, nil
+		u.logger.Warn("user not found",
+			logger.Field{Key: EmailKey, Value: input.Email},
+			logger.Field{Key: ErrorKey, Value: err.Error()},
+		)
+		return nil, ErrUserNotFound
 	}
 
-	if !u.Hash.CheckHash(user.Password, input.Password) {
-		return nil, nil
+	if !u.hash.CheckHash(user.Password, input.Password) {
+		u.logger.Warn("error checking hash",
+			logger.Field{Key: EmailKey, Value: input.Email},
+			logger.Field{Key: ErrorKey, Value: err.Error()},
+		)
+		return nil, ErrCheckHash
 	}
 
-	token, err := u.Jwt.GenerateTokenJWT(user.ID, user.Email)
+	token, err := u.jwt.GenerateTokenJWT(user.ID, user.Email)
 	if err != nil {
+		u.logger.Error("error generate token",
+			logger.Field{Key: EmailKey, Value: input.Email},
+			logger.Field{Key: ErrorKey, Value: err.Error()},
+		)
 		return nil, err
 	}
 	return &AuthOutput{Token: token}, nil

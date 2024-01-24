@@ -30,7 +30,6 @@ func (r *userRepository) Create(u *entity.User) (*entity.User, error) {
 
 func (r *userRepository) FindByEmail(email string) (*entity.User, error) {
 	row := r.Db.QueryRow("select * from users where email = ? and active = true", email)
-
 	var user entity.User
 	if err := row.Scan(&user.ID, &user.Name, &user.Email, &user.Password, &user.CreatedAt, &user.UpdatedAt, &user.Active); err != nil {
 		return nil, err

@@ -47,7 +47,7 @@ func NewContainer() *container {
 	middlewareAuth := middlewares.NewAuthorization(config)
 	userRepository := repository.NewUserRepository(dbConnection)
 	middlewareTracing := middlewares.NewTracingMiddleware(otelTelemetry.GetTracer())
-	authUseCase := auth.NewTokenUseCase(hash, jwt, userRepository)
+	authUseCase := auth.NewTokenUseCase(logger, hash, jwt, userRepository)
 	userUseCase := user.NewCreateUserUseCase(logger, hash, userRepository)
 
 	return &container{

@@ -25,7 +25,6 @@ func NewUserRoutes(router *chi.Mux, middleware middlewares.Authorization, userRo
 
 func (u *userRoute) Register(middleware middlewares.Authorization, router *chi.Mux) {
 	router.Route("/api/v1/users", func(r chi.Router) {
-		r.Use(middleware.Authorization)
 		r.Post("/", u.CreateUserHandler)
 	})
 }

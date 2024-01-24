@@ -1,10 +1,10 @@
 package web
 
 import (
-	"encoding/json"
 	"net/http"
 
 	"github.com/jailtonjunior94/financial/internal/usecase/auth"
+	"github.com/jailtonjunior94/financial/pkg/responses"
 )
 
 type AuthHandler struct {
@@ -23,13 +23,8 @@ func (h *AuthHandler) Token(w http.ResponseWriter, r *http.Request) {
 
 	output, err := h.useCase.Execute(input)
 	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
+		responses.Error(w, http.StatusInternalServerError, "Internal Server Error")
 		return
 	}
-
-	err = json.NewEncoder(w).Encode(output)
-	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
-		return
-	}
+	responses.JSON(w, http.StatusOK, output)
 }
