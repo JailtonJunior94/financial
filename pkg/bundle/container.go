@@ -13,18 +13,20 @@ import (
 	mysql "github.com/jailtonjunior94/financial/pkg/database/mysql"
 	"github.com/jailtonjunior94/financial/pkg/encrypt"
 	"github.com/jailtonjunior94/financial/pkg/logger"
+	"github.com/jailtonjunior94/financial/pkg/tracing"
 )
 
 type container struct {
-	DB             *sql.DB
-	Logger         logger.Logger
-	Config         *configs.Config
-	AuthUseCase    auth.TokenUseCase
-	Hash           encrypt.HashAdapter
-	UserUseCase    user.CreateUserUseCase
-	Jwt            authentication.JwtAdapter
-	UserRepository interfaces.UserRepository
-	MiddlewareAuth middlewares.Authorization
+	DB                *sql.DB
+	Logger            logger.Logger
+	Config            *configs.Config
+	AuthUseCase       auth.TokenUseCase
+	Hash              encrypt.HashAdapter
+	UserUseCase       user.CreateUserUseCase
+	Jwt               authentication.JwtAdapter
+	UserRepository    interfaces.UserRepository
+	MiddlewareAuth    middlewares.Authorization
+	MiddlewareTracing middlewares.TracingMiddleware
 }
 
 func NewContainer() *container {
@@ -38,23 +40,26 @@ func NewContainer() *container {
 		panic(err)
 	}
 
+	otelTelemetry := tracing.NewProvider(config.ServiceName, "1.0.0", config.OtelExporterEndpoint)
 	logger := logger.NewLogger()
 	hash := encrypt.NewHashAdapter()
 	jwt := authentication.NewJwtAdapter(config)
 	middlewareAuth := middlewares.NewAuthorization(config)
 	userRepository := repository.NewUserRepository(dbConnection)
-	userUseCase := user.NewCreateUserUseCase(logger, hash, userRepository)
+	middlewareTracing := middlewares.NewTracingMiddleware(otelTelemetry.GetTracer())
 	authUseCase := auth.NewTokenUseCase(hash, jwt, userRepository)
+	userUseCase := user.NewCreateUserUseCase(logger, hash, userRepository)
 
 	return &container{
-		Jwt:            jwt,
-		Config:         config,
-		Hash:           hash,
-		Logger:         logger,
-		DB:             dbConnection,
-		UserUseCase:    userUseCase,
-		AuthUseCase:    authUseCase,
-		UserRepository: userRepository,
-		MiddlewareAuth: middlewareAuth,
+		Jwt:               jwt,
+		Config:            config,
+		Hash:              hash,
+		Logger:            logger,
+		DB:                dbConnection,
+		UserUseCase:       userUseCase,
+		AuthUseCase:       authUseCase,
+		UserRepository:    userRepository,
+		MiddlewareAuth:    middlewareAuth,
+		MiddlewareTracing: middlewareTracing,
 	}
 }

@@ -12,3 +12,12 @@ cover:
 build-financial-api:
 	@echo "Compiling Financial API..."
 	@CGO_ENABLED=0 go build -ldflags="-w -s" -o ./bin/financial ./cmd/main.go
+
+start_without_api:
+	docker-compose -f deployment/docker-compose.yml up -d mysql rabbitmq zipkin
+
+start:
+	docker-compose -f deployment/docker-compose.yml up --build -d
+
+stop:
+	docker-compose -f deployment/docker-compose.yml down

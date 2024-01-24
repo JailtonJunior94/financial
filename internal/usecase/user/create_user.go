@@ -24,20 +24,26 @@ func NewCreateUserUseCase(logger logger.Logger, hash encrypt.HashAdapter, reposi
 func (u *createUserUseCase) Execute(input *CreateUserInput) (*CreateUserOutput, error) {
 	newUser, err := entity.NewUser(input.Name, input.Email)
 	if err != nil {
+		u.logger.Warn("error parsing user", logger.Field{Key: "warning", Value: err.Error()})
 		return nil, err
 	}
 
-	u.logger.Info("generating hash", logger.Field{Key: "password", Value: input.Password})
-
 	hash, err := u.hash.GenerateHash(input.Password)
 	if err != nil {
+		u.logger.Error("error generating hash",
+			logger.Field{Key: "e-mail", Value: input.Email},
+			logger.Field{Key: "error", Value: err.Error()},
+		)
 		return nil, err
 	}
 
 	newUser.SetPassword(hash)
 	user, err := u.repository.Create(newUser)
 	if err != nil {
-		u.logger.Error("error creating user", logger.Field{Key: "error", Value: err.Error()})
+		u.logger.Error("error created user in database",
+			logger.Field{Key: "e-mail", Value: input.Email},
+			logger.Field{Key: "error", Value: err.Error()},
+		)
 		return nil, err
 	}
 

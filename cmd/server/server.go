@@ -13,6 +13,7 @@ import (
 	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/chi/v5/middleware"
 	"github.com/go-chi/render"
+	"github.com/riandyrn/otelchi"
 )
 
 type ApiServe struct {
@@ -30,6 +31,7 @@ func (s *ApiServe) ApiServer() {
 		middleware.Logger,
 		middleware.Heartbeat("/health"),
 		render.SetContentType(render.ContentTypeJSON),
+		otelchi.Middleware(container.Config.ServiceName, otelchi.WithChiRoutes(router)),
 	)
 	router.Get("/api", func(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusOK)
