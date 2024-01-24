@@ -12,16 +12,18 @@ import (
 	"github.com/jailtonjunior94/financial/pkg/authentication"
 	mysql "github.com/jailtonjunior94/financial/pkg/database/mysql"
 	"github.com/jailtonjunior94/financial/pkg/encrypt"
+	"github.com/jailtonjunior94/financial/pkg/logger"
 )
 
 type container struct {
-	Config         *configs.Config
 	DB             *sql.DB
+	Logger         logger.Logger
+	Config         *configs.Config
+	AuthUseCase    auth.TokenUseCase
 	Hash           encrypt.HashAdapter
+	UserUseCase    user.CreateUserUseCase
 	Jwt            authentication.JwtAdapter
 	UserRepository interfaces.UserRepository
-	UserUseCase    user.CreateUserUseCase
-	AuthUseCase    auth.TokenUseCase
 	MiddlewareAuth middlewares.Authorization
 }
 
@@ -36,21 +38,23 @@ func NewContainer() *container {
 		panic(err)
 	}
 
+	logger := logger.NewLogger()
 	hash := encrypt.NewHashAdapter()
 	jwt := authentication.NewJwtAdapter(config)
 	middlewareAuth := middlewares.NewAuthorization(config)
 	userRepository := repository.NewUserRepository(dbConnection)
-	userUseCase := user.NewCreateUserUseCase(hash, userRepository)
+	userUseCase := user.NewCreateUserUseCase(logger, hash, userRepository)
 	authUseCase := auth.NewTokenUseCase(hash, jwt, userRepository)
 
 	return &container{
+		Jwt:            jwt,
 		Config:         config,
 		Hash:           hash,
-		Jwt:            jwt,
+		Logger:         logger,
 		DB:             dbConnection,
-		UserRepository: userRepository,
 		UserUseCase:    userUseCase,
 		AuthUseCase:    authUseCase,
+		UserRepository: userRepository,
 		MiddlewareAuth: middlewareAuth,
 	}
 }

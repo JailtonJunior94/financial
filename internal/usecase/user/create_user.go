@@ -4,6 +4,7 @@ import (
 	"github.com/jailtonjunior94/financial/internal/domain/user/entity"
 	"github.com/jailtonjunior94/financial/internal/domain/user/interfaces"
 	"github.com/jailtonjunior94/financial/pkg/encrypt"
+	"github.com/jailtonjunior94/financial/pkg/logger"
 )
 
 type CreateUserUseCase interface {
@@ -11,12 +12,13 @@ type CreateUserUseCase interface {
 }
 
 type createUserUseCase struct {
-	Hash       encrypt.HashAdapter
-	Repository interfaces.UserRepository
+	logger     logger.Logger
+	hash       encrypt.HashAdapter
+	repository interfaces.UserRepository
 }
 
-func NewCreateUserUseCase(hash encrypt.HashAdapter, repository interfaces.UserRepository) CreateUserUseCase {
-	return &createUserUseCase{Hash: hash, Repository: repository}
+func NewCreateUserUseCase(logger logger.Logger, hash encrypt.HashAdapter, repository interfaces.UserRepository) CreateUserUseCase {
+	return &createUserUseCase{logger: logger, hash: hash, repository: repository}
 }
 
 func (u *createUserUseCase) Execute(input *CreateUserInput) (*CreateUserOutput, error) {
@@ -25,14 +27,17 @@ func (u *createUserUseCase) Execute(input *CreateUserInput) (*CreateUserOutput, 
 		return nil, err
 	}
 
-	hash, err := u.Hash.GenerateHash(input.Password)
+	u.logger.Info("generating hash", logger.Field{Key: "password", Value: input.Password})
+
+	hash, err := u.hash.GenerateHash(input.Password)
 	if err != nil {
 		return nil, err
 	}
 
 	newUser.SetPassword(hash)
-	user, err := u.Repository.Create(newUser)
+	user, err := u.repository.Create(newUser)
 	if err != nil {
+		u.logger.Error("error creating user", logger.Field{Key: "error", Value: err.Error()})
 		return nil, err
 	}
 
