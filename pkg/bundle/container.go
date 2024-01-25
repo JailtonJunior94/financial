@@ -43,11 +43,11 @@ func NewContainer() *container {
 	otelTelemetry := tracing.NewProvider(config.ServiceName, "1.0.0", config.OtelExporterEndpoint)
 	logger := logger.NewLogger()
 	hash := encrypt.NewHashAdapter()
-	jwt := authentication.NewJwtAdapter(config)
-	middlewareAuth := middlewares.NewAuthorization(config)
+	jwt := authentication.NewJwtAdapter(logger, config)
+	middlewareAuth := middlewares.NewAuthorization(config, jwt)
 	userRepository := repository.NewUserRepository(dbConnection)
 	middlewareTracing := middlewares.NewTracingMiddleware(otelTelemetry.GetTracer())
-	authUseCase := auth.NewTokenUseCase(logger, hash, jwt, userRepository)
+	authUseCase := auth.NewTokenUseCase(config, logger, hash, jwt, userRepository)
 	userUseCase := user.NewCreateUserUseCase(logger, hash, userRepository)
 
 	return &container{

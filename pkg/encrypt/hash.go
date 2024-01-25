@@ -2,13 +2,15 @@ package encrypt
 
 import "golang.org/x/crypto/bcrypt"
 
-type HashAdapter interface {
-	GenerateHash(str string) (string, error)
-	CheckHash(hash, str string) bool
-}
+type (
+	HashAdapter interface {
+		GenerateHash(str string) (string, error)
+		CheckHash(hash, str string) bool
+	}
 
-type hashAdapter struct {
-}
+	hashAdapter struct {
+	}
+)
 
 func NewHashAdapter() HashAdapter {
 	return &hashAdapter{}

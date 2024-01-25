@@ -8,11 +8,13 @@ import (
 	"github.com/go-chi/chi/v5"
 )
 
-type Routes func(userRoute *userRoute)
-type userRoute struct {
-	Authorization     middlewares.Authorization
-	CreateUserHandler func(w http.ResponseWriter, r *http.Request)
-}
+type (
+	Routes    func(userRoute *userRoute)
+	userRoute struct {
+		Authorization     middlewares.Authorization
+		CreateUserHandler func(w http.ResponseWriter, r *http.Request)
+	}
+)
 
 func NewUserRoutes(router *chi.Mux, middleware middlewares.Authorization, userRoutes ...Routes) *userRoute {
 	route := &userRoute{}
@@ -25,6 +27,7 @@ func NewUserRoutes(router *chi.Mux, middleware middlewares.Authorization, userRo
 
 func (u *userRoute) Register(middleware middlewares.Authorization, router *chi.Mux) {
 	router.Route("/api/v1/users", func(r chi.Router) {
+		r.Use(middleware.Authorization)
 		r.Post("/", u.CreateUserHandler)
 	})
 }

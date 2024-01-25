@@ -6,10 +6,12 @@ import (
 	"github.com/go-chi/chi/v5"
 )
 
-type Routes func(authRoute *authRoute)
-type authRoute struct {
-	TokenHandler func(w http.ResponseWriter, r *http.Request)
-}
+type (
+	Routes    func(authRoute *authRoute)
+	authRoute struct {
+		TokenHandler func(w http.ResponseWriter, r *http.Request)
+	}
+)
 
 func NewAuthRoute(router *chi.Mux, authRoutes ...Routes) *authRoute {
 	route := &authRoute{}

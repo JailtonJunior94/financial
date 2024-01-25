@@ -7,15 +7,17 @@ import (
 	"github.com/jailtonjunior94/financial/pkg/logger"
 )
 
-type CreateUserUseCase interface {
-	Execute(input *CreateUserInput) (*CreateUserOutput, error)
-}
+type (
+	CreateUserUseCase interface {
+		Execute(input *CreateUserInput) (*CreateUserOutput, error)
+	}
 
-type createUserUseCase struct {
-	logger     logger.Logger
-	hash       encrypt.HashAdapter
-	repository interfaces.UserRepository
-}
+	createUserUseCase struct {
+		logger     logger.Logger
+		hash       encrypt.HashAdapter
+		repository interfaces.UserRepository
+	}
+)
 
 func NewCreateUserUseCase(logger logger.Logger, hash encrypt.HashAdapter, repository interfaces.UserRepository) CreateUserUseCase {
 	return &createUserUseCase{logger: logger, hash: hash, repository: repository}

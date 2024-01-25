@@ -3,6 +3,7 @@ package auth
 import (
 	"errors"
 
+	"github.com/jailtonjunior94/financial/configs"
 	"github.com/jailtonjunior94/financial/internal/domain/user/interfaces"
 	"github.com/jailtonjunior94/financial/pkg/authentication"
 	"github.com/jailtonjunior94/financial/pkg/encrypt"
@@ -24,14 +25,27 @@ type TokenUseCase interface {
 }
 
 type tokenUseCase struct {
+	config     *configs.Config
 	logger     logger.Logger
 	hash       encrypt.HashAdapter
 	jwt        authentication.JwtAdapter
 	repository interfaces.UserRepository
 }
 
-func NewTokenUseCase(logger logger.Logger, hash encrypt.HashAdapter, jwt authentication.JwtAdapter, repository interfaces.UserRepository) TokenUseCase {
-	return &tokenUseCase{logger: logger, hash: hash, jwt: jwt, repository: repository}
+func NewTokenUseCase(
+	config *configs.Config,
+	logger logger.Logger,
+	hash encrypt.HashAdapter,
+	jwt authentication.JwtAdapter,
+	repository interfaces.UserRepository,
+) TokenUseCase {
+	return &tokenUseCase{
+		config:     config,
+		logger:     logger,
+		hash:       hash,
+		jwt:        jwt,
+		repository: repository,
+	}
 }
 
 func (u *tokenUseCase) Execute(input *AuthInput) (*AuthOutput, error) {
@@ -60,7 +74,7 @@ func (u *tokenUseCase) Execute(input *AuthInput) (*AuthOutput, error) {
 		return nil, ErrCheckHash
 	}
 
-	token, err := u.jwt.GenerateTokenJWT(user.ID, user.Email)
+	token, err := u.jwt.GenerateToken(user.ID, user.Email)
 	if err != nil {
 		u.logger.Error("error generate token",
 			logger.Field{Key: EmailKey, Value: input.Email},
@@ -68,5 +82,5 @@ func (u *tokenUseCase) Execute(input *AuthInput) (*AuthOutput, error) {
 		)
 		return nil, err
 	}
-	return &AuthOutput{Token: token}, nil
+	return NewAuthOutput(token, u.config.AuthExpirationAt), nil
 }
