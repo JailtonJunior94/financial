@@ -6,7 +6,7 @@ COPY go.mod go.sum ./
 RUN go mod download
 
 COPY . .
-RUN make build-financial-api
+RUN make build_financial_api
 
 FROM alpine:3.16
 WORKDIR /app/

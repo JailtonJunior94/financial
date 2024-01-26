@@ -9,7 +9,7 @@ test:
 cover:
 	go tool cover -html=coverage.outmak
 
-build-financial-api:
+build_financial_api:
 	@echo "Compiling Financial API..."
 	@CGO_ENABLED=0 go build -ldflags="-w -s" -o ./bin/financial ./cmd/main.go
 
@@ -21,3 +21,7 @@ start:
 
 stop:
 	docker-compose -f deployment/docker-compose.yml down
+
+.PHONY: mockery
+generate_mock:
+	@mockery --dir=internal/domain/user/interfaces --name=UserRepository --filename=user_repository_mock.go --output=internal/infrastructure/user/repository/mock --outpkg=repositoryMock
