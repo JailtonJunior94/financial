@@ -7,7 +7,7 @@ test:
 	go tool cover -func coverage.out | grep total
 
 cover:
-	go tool cover -html=coverage.outmak
+	go tool cover -html=coverage.out
 
 build_financial_api:
 	@echo "Compiling Financial API..."
@@ -25,3 +25,4 @@ stop:
 .PHONY: mockery
 generate_mock:
 	@mockery --dir=internal/domain/user/interfaces --name=UserRepository --filename=user_repository_mock.go --output=internal/infrastructure/user/repository/mock --outpkg=repositoryMock
+	@mockery --dir=internal/domain/category/interfaces --name=CategoryRepository --filename=category_repository_mock.go --output=internal/infrastructure/category/repository/mock --outpkg=repositoryMock

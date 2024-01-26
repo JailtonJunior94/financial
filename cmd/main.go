@@ -21,7 +21,7 @@ func main() {
 		Short: "Financial Migrations",
 		Run: func(cmd *cobra.Command, args []string) {
 			container := bundle.NewContainer()
-			migrate, err := migration.NewMigrateMySql(container.DB, container.Config.MigratePath, container.Config.DBName)
+			migrate, err := migration.NewMigrateMySql(container.Logger, container.DB, container.Config.MigratePath, container.Config.DBName)
 			if err != nil {
 				panic(err)
 			}

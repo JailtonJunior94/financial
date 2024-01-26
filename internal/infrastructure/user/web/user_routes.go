@@ -16,18 +16,17 @@ type (
 	}
 )
 
-func NewUserRoutes(router *chi.Mux, middleware middlewares.Authorization, userRoutes ...Routes) *userRoute {
+func NewUserRoutes(router *chi.Mux, userRoutes ...Routes) *userRoute {
 	route := &userRoute{}
 	for _, userRoute := range userRoutes {
 		userRoute(route)
 	}
-	route.Register(middleware, router)
+	route.Register(router)
 	return route
 }
 
-func (u *userRoute) Register(middleware middlewares.Authorization, router *chi.Mux) {
+func (u *userRoute) Register(router *chi.Mux) {
 	router.Route("/api/v1/users", func(r chi.Router) {
-		r.Use(middleware.Authorization)
 		r.Post("/", u.CreateUserHandler)
 	})
 }

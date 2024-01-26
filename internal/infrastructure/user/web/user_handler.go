@@ -26,7 +26,7 @@ func (h *UserHandler) Create(w http.ResponseWriter, r *http.Request) {
 
 	output, err := h.useCase.Execute(&input)
 	if err != nil {
-		responses.Error(w, http.StatusInternalServerError, "Internal Server Error")
+		responses.Error(w, http.StatusBadRequest, "error creating user")
 		return
 	}
 	responses.JSON(w, http.StatusCreated, output)

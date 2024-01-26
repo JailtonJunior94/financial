@@ -22,7 +22,7 @@ type Transaction struct {
 	Active    bool
 }
 
-func NewUser(userID string) (*Transaction, error) {
+func NewTransaction(userID string) (*Transaction, error) {
 	transaction := &Transaction{
 		ID:        uuid.New().String(),
 		UserID:    userID,

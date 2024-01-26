@@ -69,7 +69,6 @@ func (u *tokenUseCase) Execute(input *AuthInput) (*AuthOutput, error) {
 	if !u.hash.CheckHash(user.Password, input.Password) {
 		u.logger.Warn("error checking hash",
 			logger.Field{Key: EmailKey, Value: input.Email},
-			logger.Field{Key: ErrorKey, Value: err.Error()},
 		)
 		return nil, ErrCheckHash
 	}
