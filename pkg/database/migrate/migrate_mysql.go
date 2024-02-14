@@ -31,7 +31,7 @@ func NewMigrateMySql(logger logger.Logger, db *sql.DB, migratePath, dbName strin
 func (m *Migrate) ExecuteMigrationMySql() error {
 	_, _, err := m.migrate.Version()
 	if err != nil && !errors.Is(err, migrate.ErrNilVersion) {
-		m.logger.Error(err.Error())
+		m.logger.Info(err.Error())
 		return ErrMigrateVersion
 	}
 

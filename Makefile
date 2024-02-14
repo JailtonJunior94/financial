@@ -14,7 +14,7 @@ build_financial_api:
 	@CGO_ENABLED=0 go build -ldflags="-w -s" -o ./bin/financial ./cmd/main.go
 
 start_without_api:
-	docker-compose -f deployment/docker-compose.yml up -d mysql rabbitmq zipkin
+	docker-compose -f deployment/docker-compose.yml up -d mysql rabbitmq grafana prometheus otel-collector zipkin-all-in-one
 
 start:
 	docker-compose -f deployment/docker-compose.yml up --build -d
