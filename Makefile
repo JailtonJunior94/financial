@@ -24,5 +24,5 @@ stop:
 
 .PHONY: mockery
 generate_mock:
-	@mockery --dir=internal/domain/user/interfaces --name=UserRepository --filename=user_repository_mock.go --output=internal/infrastructure/user/repository/mock --outpkg=repositoryMock
-	@mockery --dir=internal/domain/category/interfaces --name=CategoryRepository --filename=category_repository_mock.go --output=internal/infrastructure/category/repository/mock --outpkg=repositoryMock
+	@mockery --dir=internal/user/domain/interfaces --name=UserRepository --filename=user_repository_mock.go --output=internal/user/infrastructure/repository/mock --outpkg=repositoryMock
+	@mockery --dir=internal/category/domain/interfaces --name=CategoryRepository --filename=category_repository_mock.go --output=internal/category/infrastructure/repository/mock --outpkg=repositoryMock

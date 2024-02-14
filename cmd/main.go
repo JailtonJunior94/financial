@@ -1,6 +1,7 @@
 package main
 
 import (
+	"context"
 	"log"
 
 	"github.com/jailtonjunior94/financial/cmd/server"
@@ -20,7 +21,7 @@ func main() {
 		Use:   "migrate",
 		Short: "Financial Migrations",
 		Run: func(cmd *cobra.Command, args []string) {
-			container := bundle.NewContainer()
+			container := bundle.NewContainer(context.Background())
 			migrate, err := migration.NewMigrateMySql(container.Logger, container.DB, container.Config.MigratePath, container.Config.DBName)
 			if err != nil {
 				panic(err)

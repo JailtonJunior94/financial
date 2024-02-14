@@ -1,21 +1,23 @@
 package bundle
 
 import (
+	"context"
 	"database/sql"
+	"log"
 
 	"github.com/jailtonjunior94/financial/configs"
-	categoryInterface "github.com/jailtonjunior94/financial/internal/domain/category/interfaces"
-	userInterface "github.com/jailtonjunior94/financial/internal/domain/user/interfaces"
-	cr "github.com/jailtonjunior94/financial/internal/infrastructure/category/repository"
-	ur "github.com/jailtonjunior94/financial/internal/infrastructure/user/repository"
+	categoryInterfaces "github.com/jailtonjunior94/financial/internal/category/domain/interfaces"
+	categoryRepository "github.com/jailtonjunior94/financial/internal/category/infrastructure/repository"
+	category "github.com/jailtonjunior94/financial/internal/category/usecase"
 	"github.com/jailtonjunior94/financial/internal/infrastructure/web/middlewares"
-	"github.com/jailtonjunior94/financial/internal/usecase/auth"
-	"github.com/jailtonjunior94/financial/internal/usecase/category"
-	"github.com/jailtonjunior94/financial/internal/usecase/user"
+	userInterfaces "github.com/jailtonjunior94/financial/internal/user/domain/interfaces"
+	userRepository "github.com/jailtonjunior94/financial/internal/user/infrastructure/repository"
+	user "github.com/jailtonjunior94/financial/internal/user/usecase"
 	"github.com/jailtonjunior94/financial/pkg/authentication"
-	mysql "github.com/jailtonjunior94/financial/pkg/database/mysql"
+	"github.com/jailtonjunior94/financial/pkg/database/mysql"
 	"github.com/jailtonjunior94/financial/pkg/encrypt"
 	"github.com/jailtonjunior94/financial/pkg/logger"
+	"github.com/jailtonjunior94/financial/pkg/observability"
 	"github.com/jailtonjunior94/financial/pkg/tracing"
 )
 
@@ -23,18 +25,18 @@ type container struct {
 	DB                    *sql.DB
 	Logger                logger.Logger
 	Config                *configs.Config
-	AuthUseCase           auth.TokenUseCase
+	AuthUseCase           user.TokenUseCase
 	Hash                  encrypt.HashAdapter
-	UserUseCase           user.CreateUserUseCase
+	CreateUserUseCase     user.CreateUserUseCase
 	Jwt                   authentication.JwtAdapter
-	UserRepository        userInterface.UserRepository
-	CategoryRepository    categoryInterface.CategoryRepository
+	UserRepository        userInterfaces.UserRepository
+	CategoryRepository    categoryInterfaces.CategoryRepository
 	MiddlewareAuth        middlewares.Authorization
 	MiddlewareTracing     middlewares.TracingMiddleware
 	CreateCategoryUseCase category.CreateCategoryUseCase
 }
 
-func NewContainer() *container {
+func NewContainer(ctx context.Context) *container {
 	/* General Dependencies */
 	config, err := configs.LoadConfig(".")
 	if err != nil {
@@ -46,6 +48,30 @@ func NewContainer() *container {
 		panic(err)
 	}
 
+	observability := observability.NewObservability(
+		observability.WithServiceName(config.ServiceName),
+		observability.WithServiceVersion("1.0.0"),
+		observability.WithResource(),
+		observability.WithTracerProvider(ctx, "localhost:4317"),
+		observability.WithMeterProvider(ctx, "localhost:4317"),
+	)
+
+	tracerProvider := observability.TracerProvider()
+	defer func() {
+		if err := tracerProvider.Shutdown(ctx); err != nil {
+			log.Fatal(err)
+		}
+	}()
+
+	meterProvider := observability.MeterProvider()
+	defer func() {
+		if err := meterProvider.Shutdown(ctx); err != nil {
+			log.Fatal(err)
+		}
+	}()
+
+	tracer := observability.Tracer()
+
 	logger := logger.NewLogger()
 	hash := encrypt.NewHashAdapter()
 	jwt := authentication.NewJwtAdapter(logger, config)
@@ -53,15 +79,15 @@ func NewContainer() *container {
 	middlewareTracing := middlewares.NewTracingMiddleware(otelTelemetry.GetTracer())
 
 	/* User */
-	userRepository := ur.NewUserRepository(dbConnection)
+	userRepository := userRepository.NewUserRepository(dbConnection)
 	userUseCase := user.NewCreateUserUseCase(logger, hash, userRepository)
 
 	/* Auth */
 	middlewareAuth := middlewares.NewAuthorization(config, jwt)
-	authUseCase := auth.NewTokenUseCase(config, logger, hash, jwt, userRepository)
+	authUseCase := user.NewTokenUseCase(tracer, config, logger, hash, jwt, userRepository)
 
 	/* Category */
-	categoryRepository := cr.NewCategoryRepository(dbConnection)
+	categoryRepository := categoryRepository.NewCategoryRepository(dbConnection)
 	createUserUseCase := category.NewCreateUserUseCase(logger, categoryRepository)
 
 	return &container{
@@ -70,7 +96,7 @@ func NewContainer() *container {
 		Hash:                  hash,
 		Logger:                logger,
 		DB:                    dbConnection,
-		UserUseCase:           userUseCase,
+		CreateUserUseCase:     userUseCase,
 		AuthUseCase:           authUseCase,
 		UserRepository:        userRepository,
 		MiddlewareAuth:        middlewareAuth,
