@@ -9,7 +9,7 @@ import (
 	categoryInterfaces "github.com/jailtonjunior94/financial/internal/category/domain/interfaces"
 	categoryRepository "github.com/jailtonjunior94/financial/internal/category/infrastructure/repository"
 	category "github.com/jailtonjunior94/financial/internal/category/usecase"
-	"github.com/jailtonjunior94/financial/internal/infrastructure/web/middlewares"
+	"github.com/jailtonjunior94/financial/internal/shared/web/middlewares"
 	userInterfaces "github.com/jailtonjunior94/financial/internal/user/domain/interfaces"
 	userRepository "github.com/jailtonjunior94/financial/internal/user/infrastructure/repository"
 	user "github.com/jailtonjunior94/financial/internal/user/usecase"

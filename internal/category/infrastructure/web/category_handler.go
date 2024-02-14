@@ -5,7 +5,7 @@ import (
 	"net/http"
 
 	"github.com/jailtonjunior94/financial/internal/category/usecase"
-	"github.com/jailtonjunior94/financial/internal/infrastructure/web/middlewares"
+	"github.com/jailtonjunior94/financial/internal/shared/web/middlewares"
 	"github.com/jailtonjunior94/financial/pkg/authentication"
 	"github.com/jailtonjunior94/financial/pkg/responses"
 )

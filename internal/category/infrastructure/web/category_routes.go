@@ -3,7 +3,7 @@ package web
 import (
 	"net/http"
 
-	"github.com/jailtonjunior94/financial/internal/infrastructure/web/middlewares"
+	"github.com/jailtonjunior94/financial/internal/shared/web/middlewares"
 
 	"github.com/go-chi/chi/v5"
 )
