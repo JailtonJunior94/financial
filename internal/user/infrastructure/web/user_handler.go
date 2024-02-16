@@ -24,7 +24,7 @@ func (h *UserHandler) Create(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	output, err := h.createUserUseCase.Execute(&input)
+	output, err := h.createUserUseCase.Execute(r.Context(), &input)
 	if err != nil {
 		responses.Error(w, http.StatusBadRequest, "error creating user")
 		return

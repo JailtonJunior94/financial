@@ -8,24 +8,24 @@ import (
 	"github.com/jailtonjunior94/financial/configs"
 	"github.com/jailtonjunior94/financial/internal/user/domain/entity"
 	repositoryMock "github.com/jailtonjunior94/financial/internal/user/infrastructure/repository/mock"
-	"github.com/jailtonjunior94/financial/pkg/authentication"
+	"github.com/jailtonjunior94/financial/pkg/auth"
 	"github.com/jailtonjunior94/financial/pkg/encrypt"
 	"github.com/jailtonjunior94/financial/pkg/logger"
+	"github.com/jailtonjunior94/financial/pkg/observability"
 
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/suite"
-	"go.opentelemetry.io/otel/trace"
 )
 
 type TokenSuite struct {
 	suite.Suite
 
-	ctx    context.Context
-	logger logger.Logger
-	config *configs.Config
-	hash   encrypt.HashAdapter
-	jwt    authentication.JwtAdapter
-	trace  trace.Tracer
+	ctx           context.Context
+	logger        logger.Logger
+	config        *configs.Config
+	hash          encrypt.HashAdapter
+	jwt           auth.JwtAdapter
+	observability observability.Observability
 }
 
 func TestTokenSuite(t *testing.T) {
@@ -38,7 +38,7 @@ func (s *TokenSuite) SetupTest() {
 		AuthSecretKey:    "my_secret_key",
 	}
 	s.logger = logger.NewLogger()
-	s.jwt = authentication.NewJwtAdapter(s.logger, s.config)
+	s.jwt = auth.NewJwtAdapter(s.logger, s.config)
 	s.hash = encrypt.NewHashAdapter()
 }
 
@@ -83,7 +83,7 @@ func (s *TokenSuite) TestToken() {
 
 	for _, scenario := range scenarios {
 		s.T().Run(scenario.name, func(t *testing.T) {
-			tokenUseCase := NewTokenUseCase(s.trace, s.config, s.logger, s.hash, s.jwt, scenario.fields.userRepository)
+			tokenUseCase := NewTokenUseCase(s.config, s.logger, s.hash, s.jwt, scenario.fields.userRepository, s.observability)
 			token, err := tokenUseCase.Execute(s.ctx, scenario.args.input)
 			scenario.expected(token, err)
 		})

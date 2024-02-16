@@ -6,7 +6,7 @@ import (
 
 	"github.com/jailtonjunior94/financial/internal/category/usecase"
 	"github.com/jailtonjunior94/financial/internal/shared/web/middlewares"
-	"github.com/jailtonjunior94/financial/pkg/authentication"
+	"github.com/jailtonjunior94/financial/pkg/auth"
 	"github.com/jailtonjunior94/financial/pkg/responses"
 )
 
@@ -19,7 +19,7 @@ func NewCategoryHandler(createCategoryUseCase usecase.CreateCategoryUseCase) *Ca
 }
 
 func (h *CategoryHandler) Create(w http.ResponseWriter, r *http.Request) {
-	user := r.Context().Value(middlewares.UserCtxKey).(*authentication.User)
+	user := r.Context().Value(middlewares.UserCtxKey).(*auth.User)
 
 	var input usecase.CreateCategoryInput
 	err := json.NewDecoder(r.Body).Decode(&input)

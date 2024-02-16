@@ -4,9 +4,10 @@ import (
 	"fmt"
 	"net/http"
 
+	"github.com/jailtonjunior94/financial/pkg/observability"
+
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/propagation"
-	"go.opentelemetry.io/otel/trace"
 )
 
 type TracingMiddleware interface {
@@ -14,11 +15,11 @@ type TracingMiddleware interface {
 }
 
 type tracingMiddleware struct {
-	tracer trace.Tracer
+	observability observability.Observability
 }
 
-func NewTracingMiddleware(tracer trace.Tracer) TracingMiddleware {
-	return &tracingMiddleware{tracer: tracer}
+func NewTracingMiddleware(observability observability.Observability) TracingMiddleware {
+	return &tracingMiddleware{observability: observability}
 }
 
 func (m *tracingMiddleware) Tracing(next http.Handler) http.Handler {
@@ -26,7 +27,7 @@ func (m *tracingMiddleware) Tracing(next http.Handler) http.Handler {
 		spanName := fmt.Sprintf("%s %s", r.Method, r.URL.Path)
 		otel.GetTextMapPropagator().Extract(r.Context(), propagation.HeaderCarrier(r.Header))
 
-		ctx, span := m.tracer.Start(r.Context(), spanName)
+		ctx, span := m.observability.Tracer().Start(r.Context(), spanName)
 		defer span.End()
 
 		r = r.WithContext(ctx)

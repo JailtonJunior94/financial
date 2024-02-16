@@ -31,7 +31,7 @@ type (
 	}
 )
 
-func NewCreateUserUseCase(logger logger.Logger, repository interfaces.CategoryRepository) CreateCategoryUseCase {
+func NewCreateCategoryUseCase(logger logger.Logger, repository interfaces.CategoryRepository) CreateCategoryUseCase {
 	return &createCategoryUseCase{logger: logger, repository: repository}
 }
 

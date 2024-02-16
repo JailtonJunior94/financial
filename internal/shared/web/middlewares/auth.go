@@ -5,17 +5,17 @@ import (
 	"net/http"
 
 	"github.com/jailtonjunior94/financial/configs"
-	"github.com/jailtonjunior94/financial/pkg/authentication"
+	"github.com/jailtonjunior94/financial/pkg/auth"
 )
 
 type (
 	Authorization interface {
 		Authorization(next http.Handler) http.Handler
-		GetUserFromContext(ctx context.Context) *authentication.User
+		GetUserFromContext(ctx context.Context) *auth.User
 	}
 
 	authorization struct {
-		jwt    authentication.JwtAdapter
+		jwt    auth.JwtAdapter
 		config *configs.Config
 	}
 
@@ -26,7 +26,7 @@ type (
 
 var UserCtxKey = &contextKey{"user"}
 
-func NewAuthorization(config *configs.Config, jwt authentication.JwtAdapter) Authorization {
+func NewAuthorization(config *configs.Config, jwt auth.JwtAdapter) Authorization {
 	return &authorization{config: config, jwt: jwt}
 }
 
@@ -43,7 +43,7 @@ func (a *authorization) Authorization(next http.Handler) http.Handler {
 	})
 }
 
-func (a *authorization) GetUserFromContext(ctx context.Context) *authentication.User {
-	raw, _ := ctx.Value(UserCtxKey).(*authentication.User)
+func (a *authorization) GetUserFromContext(ctx context.Context) *auth.User {
+	raw, _ := ctx.Value(UserCtxKey).(*auth.User)
 	return raw
 }

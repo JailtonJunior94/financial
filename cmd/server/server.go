@@ -3,14 +3,14 @@ package server
 import (
 	"context"
 	"fmt"
+	"log"
 	"net"
 	"net/http"
 	"time"
 
-	categoryRoute "github.com/jailtonjunior94/financial/internal/category/infrastructure/web"
-	userRoute "github.com/jailtonjunior94/financial/internal/user/infrastructure/web"
+	"github.com/jailtonjunior94/financial/internal/category"
+	"github.com/jailtonjunior94/financial/internal/user"
 	"github.com/jailtonjunior94/financial/pkg/bundle"
-	"github.com/riandyrn/otelchi"
 
 	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/chi/v5/middleware"
@@ -24,7 +24,23 @@ func NewApiServe() *ApiServe {
 }
 
 func (s *ApiServe) ApiServer() {
-	ioc := bundle.NewContainer(context.Background())
+	ctx := context.Background()
+	ioc := bundle.NewContainer(ctx)
+
+	/* Observability */
+	tracerProvider := ioc.Observability.TracerProvider()
+	defer func() {
+		if err := tracerProvider.Shutdown(ctx); err != nil {
+			log.Fatal(err)
+		}
+	}()
+
+	meterProvider := ioc.Observability.MeterProvider()
+	defer func() {
+		if err := meterProvider.Shutdown(ctx); err != nil {
+			log.Fatal(err)
+		}
+	}()
 
 	router := chi.NewRouter()
 	router.Use(
@@ -32,17 +48,14 @@ func (s *ApiServe) ApiServer() {
 		middleware.Recoverer,
 		middleware.Heartbeat("/health"),
 		middleware.SetHeader("Content-Type", "application/json"),
-		otelchi.Middleware(ioc.Config.ServiceName, otelchi.WithChiRoutes(router)),
 	)
 
-	authHandler := userRoute.NewAuthHandler(ioc.AuthUseCase)
-	userRoute.NewAuthRoute(router, userRoute.WithTokenHandler(authHandler.Token))
-
-	userHandler := userRoute.NewUserHandler(ioc.CreateUserUseCase)
-	userRoute.NewUserRoutes(router, userRoute.WithCreateUserHandler(userHandler.Create))
-
-	categoryHandler := categoryRoute.NewCategoryHandler(ioc.CreateCategoryUseCase)
-	categoryRoute.NewCategoryRoutes(router, ioc.MiddlewareAuth, categoryRoute.WithCreateCategoryHandler(categoryHandler.Create))
+	/* Auth */
+	user.RegisterAuthModule(ioc, router)
+	/* User */
+	user.RegisterUserModule(ioc, router)
+	/* Category */
+	category.RegisterCategoryModule(ioc, router)
 
 	server := http.Server{
 		ReadTimeout:       time.Duration(10) * time.Second,
@@ -52,7 +65,7 @@ func (s *ApiServe) ApiServer() {
 
 	listener, err := net.Listen("tcp", fmt.Sprintf(":%s", ioc.Config.HttpServerPort))
 	if err != nil {
-		panic(err)
+		log.Fatal(err)
 	}
 	server.Serve(listener)
 }

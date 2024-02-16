@@ -1,6 +1,7 @@
 package logger
 
 import (
+	"log"
 	"os"
 
 	"github.com/google/uuid"
@@ -34,7 +35,7 @@ func NewLogger() Logger {
 
 	logger, err := logConfiguration.Build()
 	if err != nil {
-		panic(err)
+		log.Fatal(err)
 	}
 	defer logger.Sync()
 	return &zapLogger{logger: logger}

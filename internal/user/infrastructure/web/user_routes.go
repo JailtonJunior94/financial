@@ -16,7 +16,7 @@ type (
 	}
 )
 
-func NewUserRoutes(router *chi.Mux, userRoutes ...Routes) *userRoute {
+func NewUserRoute(router *chi.Mux, userRoutes ...Routes) *userRoute {
 	route := &userRoute{}
 	for _, userRoute := range userRoutes {
 		userRoute(route)

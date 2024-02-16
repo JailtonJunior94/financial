@@ -8,11 +8,11 @@ import (
 )
 
 type categoryRepository struct {
-	Db *sql.DB
+	db *sql.DB
 }
 
 func NewCategoryRepository(db *sql.DB) interfaces.CategoryRepository {
-	return &categoryRepository{Db: db}
+	return &categoryRepository{db: db}
 }
 
 func (r *categoryRepository) Find(userID string) ([]*entity.Category, error) {
@@ -24,7 +24,7 @@ func (r *categoryRepository) FindByID(userID, id string) (*entity.Category, erro
 }
 
 func (r *categoryRepository) Create(c *entity.Category) (*entity.Category, error) {
-	stmt, err := r.Db.Prepare("insert into categories (id, user_id, name, sequence, created_at, updated_at, active) values (?, ?, ?, ?, ?, ?, ?)")
+	stmt, err := r.db.Prepare("insert into categories (id, user_id, name, sequence, created_at, updated_at, active) values (?, ?, ?, ?, ?, ?, ?)")
 	if err != nil {
 		return nil, err
 	}

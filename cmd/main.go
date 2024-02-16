@@ -24,10 +24,10 @@ func main() {
 			container := bundle.NewContainer(context.Background())
 			migrate, err := migration.NewMigrateMySql(container.Logger, container.DB, container.Config.MigratePath, container.Config.DBName)
 			if err != nil {
-				panic(err)
+				log.Fatal(err)
 			}
 			if err = migrate.ExecuteMigration(); err != nil {
-				panic(err)
+				log.Fatal(err)
 			}
 		},
 	}

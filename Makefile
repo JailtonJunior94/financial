@@ -13,13 +13,13 @@ build_financial_api:
 	@echo "Compiling Financial API..."
 	@CGO_ENABLED=0 go build -ldflags="-w -s" -o ./bin/financial ./cmd/main.go
 
-start_without_api:
+start_docker_without_api:
 	docker-compose -f deployment/docker-compose.yml up -d mysql rabbitmq grafana prometheus otel-collector zipkin-all-in-one
 
-start:
+start_docker:
 	docker-compose -f deployment/docker-compose.yml up --build -d
 
-stop:
+stop_docker:
 	docker-compose -f deployment/docker-compose.yml down
 
 .PHONY: mockery

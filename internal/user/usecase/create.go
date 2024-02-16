@@ -1,6 +1,8 @@
 package usecase
 
 import (
+	"context"
+
 	"github.com/jailtonjunior94/financial/internal/user/domain/entity"
 	"github.com/jailtonjunior94/financial/internal/user/domain/interfaces"
 	"github.com/jailtonjunior94/financial/pkg/encrypt"
@@ -9,7 +11,7 @@ import (
 
 type (
 	CreateUserUseCase interface {
-		Execute(input *CreateUserInput) (*CreateUserOutput, error)
+		Execute(ctx context.Context, input *CreateUserInput) (*CreateUserOutput, error)
 	}
 
 	createUserUseCase struct {
@@ -23,7 +25,7 @@ func NewCreateUserUseCase(logger logger.Logger, hash encrypt.HashAdapter, reposi
 	return &createUserUseCase{logger: logger, hash: hash, repository: repository}
 }
 
-func (u *createUserUseCase) Execute(input *CreateUserInput) (*CreateUserOutput, error) {
+func (u *createUserUseCase) Execute(ctx context.Context, input *CreateUserInput) (*CreateUserOutput, error) {
 	newUser, err := entity.NewUser(input.Name, input.Email)
 	if err != nil {
 		u.logger.Warn("error parsing user", logger.Field{Key: "warning", Value: err.Error()})
@@ -40,7 +42,7 @@ func (u *createUserUseCase) Execute(input *CreateUserInput) (*CreateUserOutput, 
 	}
 
 	newUser.SetPassword(hash)
-	user, err := u.repository.Create(newUser)
+	user, err := u.repository.Create(ctx, newUser)
 	if err != nil {
 		u.logger.Error("error created user in database",
 			logger.Field{Key: "e-mail", Value: input.Email},

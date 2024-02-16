@@ -6,11 +6,10 @@ import (
 
 	"github.com/jailtonjunior94/financial/configs"
 	"github.com/jailtonjunior94/financial/internal/user/domain/interfaces"
-	"github.com/jailtonjunior94/financial/pkg/authentication"
+	"github.com/jailtonjunior94/financial/pkg/auth"
 	"github.com/jailtonjunior94/financial/pkg/encrypt"
 	"github.com/jailtonjunior94/financial/pkg/logger"
-
-	"go.opentelemetry.io/otel/trace"
+	"github.com/jailtonjunior94/financial/pkg/observability"
 )
 
 var (
@@ -28,34 +27,34 @@ type TokenUseCase interface {
 }
 
 type tokenUseCase struct {
-	trace      trace.Tracer
-	config     *configs.Config
-	logger     logger.Logger
-	hash       encrypt.HashAdapter
-	jwt        authentication.JwtAdapter
-	repository interfaces.UserRepository
+	logger        logger.Logger
+	config        *configs.Config
+	hash          encrypt.HashAdapter
+	jwt           auth.JwtAdapter
+	repository    interfaces.UserRepository
+	observability observability.Observability
 }
 
 func NewTokenUseCase(
-	trace trace.Tracer,
 	config *configs.Config,
 	logger logger.Logger,
 	hash encrypt.HashAdapter,
-	jwt authentication.JwtAdapter,
+	jwt auth.JwtAdapter,
 	repository interfaces.UserRepository,
+	observability observability.Observability,
 ) TokenUseCase {
 	return &tokenUseCase{
-		trace:      trace,
-		config:     config,
-		logger:     logger,
-		hash:       hash,
-		jwt:        jwt,
-		repository: repository,
+		config:        config,
+		logger:        logger,
+		hash:          hash,
+		jwt:           jwt,
+		repository:    repository,
+		observability: observability,
 	}
 }
 
 func (u *tokenUseCase) Execute(ctx context.Context, input *AuthInput) (*AuthOutput, error) {
-	ctx, span := u.trace.Start(ctx, "token")
+	ctx, span := u.observability.Tracer().Start(ctx, "token_usecase.Execute")
 	defer span.End()
 
 	user, err := u.repository.FindByEmail(ctx, input.Email)
