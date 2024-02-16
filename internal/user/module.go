@@ -10,14 +10,14 @@ import (
 )
 
 func RegisterAuthModule(ioc *bundle.Container, router *chi.Mux) {
-	userRepository := repository.NewUserRepository(ioc.DB)
+	userRepository := repository.NewUserRepository(ioc.DB, ioc.Observability)
 	authUseCase := usecase.NewTokenUseCase(ioc.Config, ioc.Logger, ioc.Hash, ioc.Jwt, userRepository, ioc.Observability)
 	authHandler := web.NewAuthHandler(ioc.Observability, authUseCase)
 	web.NewAuthRoute(router, web.WithTokenHandler(authHandler.Token))
 }
 
 func RegisterUserModule(ioc *bundle.Container, router *chi.Mux) {
-	userRepository := repository.NewUserRepository(ioc.DB)
+	userRepository := repository.NewUserRepository(ioc.DB, ioc.Observability)
 	createUserUseCase := usecase.NewCreateUserUseCase(ioc.Logger, ioc.Hash, userRepository)
 	userHandler := web.NewUserHandler(createUserUseCase)
 	web.NewUserRoute(router, web.WithCreateUserHandler(userHandler.Create))
