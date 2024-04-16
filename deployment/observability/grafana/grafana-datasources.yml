@@ -13,4 +13,15 @@ datasources:
   editable: false
   jsonData:
     httpMethod: GET
-
+- name: Jaeger
+  type: jaeger
+  uid: jaeger
+  access: proxy
+  orgId: 1
+  url: http://jaeger:16686
+  basicAuth: false
+  isDefault: false
+  version: 1
+  editable: false
+  jsonData:
+    httpMethod: GET

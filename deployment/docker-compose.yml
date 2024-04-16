@@ -1,15 +1,32 @@
 version: "3"
 
 services:
+  financial_migration:
+    container_name: financial_migration
+    build:
+      context: ..
+      dockerfile: cmd/Dockerfile
+    command: migrate
+    environment:
+      - DB_DRIVER=mysql
+      - DB_HOST=mysql
+      - DB_PORT=3306
+      - DB_USER=mysql
+      - DB_PASSWORD=mysql
+      - DB_NAME=financial
+      - DB_MAX_IDLE_CONNS=10
+      - MIGRATE_PATH=file://migrations
+    depends_on:
+      - mysql
+
   financial:
     container_name: financial
-    image: financial
-    command: "api"
     build:
       context: ..
       dockerfile: cmd/Dockerfile
     ports:
       - "8000:8000"
+    command: "api"
     environment:
       - DEVELOPMENT_MODE="true"
       - HTTP_SERVER_PORT="8000"
@@ -45,13 +62,14 @@ services:
       - "5672:5672"
       - "15672:15672"
 
-  otel-collector:
+  otel_collector:
+    container_name: observability-otel-collector
     image: otel/opentelemetry-collector-contrib:0.82.0
     restart: always
     command:
       - --config=/etc/otelcol-contrib/otel-collector.yml
     volumes:
-      - ./observability/collector/otel-collector.yml:/etc/otelcol-contrib/otel-collector.yml
+      - ./deployment/observability/collector/otel-collector.yml:/etc/otelcol-contrib/otel-collector.yml
     ports:
       - "1888:1888" # pprof extension
       - "8888:8888" # Prometheus metrics exposed by the collector
@@ -60,33 +78,35 @@ services:
       - "4317:4317" # OTLP gRPC receiver
       - "4318:4318" # OTLP http receiver
       - "55679:55679" # zpages extension
+      - "55681:55681"
     depends_on:
-      - zipkin-all-in-one
+      - jaeger
 
   prometheus:
-    container_name: prometheus
+    container_name: observability-prometheus
     image: prom/prometheus
     restart: always
     command:
       - --config.file=/etc/prometheus/prometheus.yml
     volumes:
-      - ./observability/prometheus/prometheus.yml:/etc/prometheus/prometheus.yml
+      - ./deployment/observability/prometheus/prometheus.yml:/etc/prometheus/prometheus.yml
     ports:
       - "9090:9090"
 
   grafana:
-    container_name: grafana
+    container_name: observability-grafana
     image: grafana/grafana
     volumes:
-      - ./observability/grafana/grafana-datasources.yml:/etc/grafana/provisioning/datasources/datasources.yml
+      - ./deployment/observability/grafana/grafana-datasources.yml:/etc/grafana/provisioning/datasources/datasources.yml
     ports:
       - "3000:3000"
 
-  zipkin-all-in-one:
-    image: openzipkin/zipkin:latest
-    restart: always
+  jaeger:
+    container_name: observability-jaeger
+    image: jaegertracing/all-in-one:latest
     ports:
-      - "9411:9411"
+      - "16686:16686"
+      - "14250:14250"
 
 volumes:
   mysql:

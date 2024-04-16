@@ -8,7 +8,8 @@ import (
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/exporters/otlp/otlpmetric/otlpmetricgrpc"
 	"go.opentelemetry.io/otel/exporters/otlp/otlptrace/otlptracegrpc"
-	"go.opentelemetry.io/otel/exporters/prometheus"
+	"go.opentelemetry.io/otel/exporters/stdout/stdoutmetric"
+	"go.opentelemetry.io/otel/exporters/stdout/stdouttrace"
 	"go.opentelemetry.io/otel/propagation"
 	"go.opentelemetry.io/otel/sdk/metric"
 	"go.opentelemetry.io/otel/sdk/resource"
@@ -41,6 +42,16 @@ func NewObservability(options ...Option) Observability {
 		option(observability)
 	}
 	return observability
+}
+
+func NewDevelopmentObservability(serviceName string) Observability {
+	return NewObservability(
+		WithServiceName(serviceName),
+		WithServiceVersion("1.0.0"),
+		WithResource(),
+		WithStdoutTracerProvider(),
+		WithStdoutMeterProvider(),
+	)
 }
 
 func (o *observability) Tracer() trace.Tracer {
@@ -110,6 +121,23 @@ func WithTracerProvider(ctx context.Context, endpoint string) Option {
 	}
 }
 
+func WithStdoutTracerProvider() Option {
+	return func(observability *observability) {
+		exporter, err := stdouttrace.New()
+		if err != nil {
+			log.Fatalf("failed to initialize stdout export pipeline: %v", err)
+		}
+
+		tracerProvider := sdktrace.NewTracerProvider(
+			sdktrace.WithSampler(sdktrace.AlwaysSample()),
+			sdktrace.WithSyncer(exporter),
+		)
+
+		observability.tracer = tracerProvider.Tracer(observability.serviceName)
+		observability.tracerProvider = tracerProvider
+	}
+}
+
 func WithMeterProvider(ctx context.Context, endpoint string) Option {
 	return func(observability *observability) {
 		metricExporter, err := otlpmetricgrpc.New(ctx,
@@ -125,7 +153,7 @@ func WithMeterProvider(ctx context.Context, endpoint string) Option {
 			metric.WithResource(observability.resource),
 			metric.WithReader(metric.NewPeriodicReader(
 				metricExporter,
-				metric.WithInterval(3*time.Second)),
+				metric.WithInterval(2*time.Second)),
 			),
 		)
 
@@ -134,14 +162,21 @@ func WithMeterProvider(ctx context.Context, endpoint string) Option {
 	}
 }
 
-func WithMeterProviderPrometheus(ctx context.Context, endpoint string) Option {
+func WithStdoutMeterProvider() Option {
 	return func(observability *observability) {
-		exporter, err := prometheus.New()
+		exporter, err := stdoutmetric.New()
 		if err != nil {
-			log.Fatal(err)
+			log.Fatalf("failed to initialize stdout export pipeline: %v", err)
 		}
 
-		meterProvider := metric.NewMeterProvider(metric.WithReader(exporter))
+		meterProvider := metric.NewMeterProvider(
+			metric.WithResource(observability.resource),
+			metric.WithReader(metric.NewPeriodicReader(
+				exporter,
+				metric.WithInterval(2*time.Second)),
+			),
+		)
+
 		otel.SetMeterProvider(meterProvider)
 		observability.meterProvider = meterProvider
 	}

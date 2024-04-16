@@ -13,7 +13,7 @@ WORKDIR /app/
 
 COPY --from=builder /go/src/financial/bin .
 COPY --from=builder /go/src/financial/cmd/.env .
-# COPY --from=builder /go/src/financial/migrations/financial ./migrations/financial
+COPY --from=builder /go/src/financial/database/migrations ./migrations/financial
 
 EXPOSE 80
 EXPOSE 443

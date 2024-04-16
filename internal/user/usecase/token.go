@@ -69,7 +69,6 @@ func (u *tokenUseCase) Execute(ctx context.Context, input *AuthInput) (*AuthOutp
 	if user == nil {
 		u.logger.Warn("user not found",
 			logger.Field{Key: EmailKey, Value: input.Email},
-			logger.Field{Key: ErrorKey, Value: err.Error()},
 		)
 		return nil, ErrUserNotFound
 	}
