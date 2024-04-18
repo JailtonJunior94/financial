@@ -1,9 +1,9 @@
-package web
+package rest
 
 import (
 	"net/http"
 
-	"github.com/jailtonjunior94/financial/internal/shared/web/middlewares"
+	"github.com/jailtonjunior94/financial/internal/shared/http/middlewares"
 
 	"github.com/go-chi/chi/v5"
 )

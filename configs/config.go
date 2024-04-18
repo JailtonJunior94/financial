@@ -6,6 +6,7 @@ import (
 
 type Config struct {
 	ServiceName          string `mapstructure:"SERVICE_NAME"`
+	ServiceVersion       string `mapstructure:"SERVICE_VERSION"`
 	DevelopmentMode      bool   `mapstructure:"DEVELOPMENT_MODE"`
 	HttpServerPort       string `mapstructure:"HTTP_SERVER_PORT"`
 	DBDriver             string `mapstructure:"DB_DRIVER"`

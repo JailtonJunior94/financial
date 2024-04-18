@@ -37,7 +37,7 @@ func (m *Migrate) ExecuteMigrationMySql() error {
 
 	err = m.migrate.Up()
 	if errors.Is(err, migrate.ErrNoChange) {
-		m.logger.Error(err.Error())
+		m.logger.Info(err.Error())
 		return nil
 	}
 

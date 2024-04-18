@@ -2,6 +2,11 @@
 migrate:
 	@migrate create -ext sql -dir database/migrations -format unix $(NAME)
 
+.PHONY: mockery
+generate_mock:
+	@mockery --dir=internal/user/domain/interfaces --name=UserRepository --filename=user_repository_mock.go --output=internal/user/infrastructure/repository/mock --outpkg=repositoryMock
+	@mockery --dir=internal/category/domain/interfaces --name=CategoryRepository --filename=category_repository_mock.go --output=internal/category/infrastructure/repository/mock --outpkg=repositoryMock
+
 test:
 	go test -coverprofile coverage.out -failfast ./...
 	go tool cover -func coverage.out | grep total
@@ -14,15 +19,10 @@ build_financial_api:
 	@CGO_ENABLED=0 go build -ldflags="-w -s" -o ./bin/financial ./cmd/main.go
 
 start_docker_without_api:
-	docker-compose -f deployment/docker-compose.yml up -d mysql rabbitmq grafana prometheus otel-collector zipkin-all-in-one
+	docker compose -f deployment/docker-compose.yml up -d financial_migration mysql rabbitmq grafana prometheus otel_collector jaeger cockroachdb
 
 start_docker:
-	docker-compose -f deployment/docker-compose.yml up --build -d
+	docker compose -f deployment/docker-compose.yml up --build -d
 
 stop_docker:
-	docker-compose -f deployment/docker-compose.yml down
-
-.PHONY: mockery
-generate_mock:
-	@mockery --dir=internal/user/domain/interfaces --name=UserRepository --filename=user_repository_mock.go --output=internal/user/infrastructure/repository/mock --outpkg=repositoryMock
-	@mockery --dir=internal/category/domain/interfaces --name=CategoryRepository --filename=category_repository_mock.go --output=internal/category/infrastructure/repository/mock --outpkg=repositoryMock
+	docker compose -f deployment/docker-compose.yml down

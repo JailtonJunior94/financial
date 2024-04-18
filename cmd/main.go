@@ -36,8 +36,7 @@ func main() {
 		Use:   "api",
 		Short: "Financial API",
 		Run: func(cmd *cobra.Command, args []string) {
-			server := server.NewApiServe()
-			server.ApiServer()
+			server.NewApiServer().Server()
 		},
 	}
 

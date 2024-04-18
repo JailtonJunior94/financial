@@ -5,7 +5,7 @@ import (
 	"database/sql"
 
 	"github.com/jailtonjunior94/financial/configs"
-	"github.com/jailtonjunior94/financial/internal/shared/web/middlewares"
+	"github.com/jailtonjunior94/financial/internal/shared/http/middlewares"
 	"github.com/jailtonjunior94/financial/pkg/auth"
 	"github.com/jailtonjunior94/financial/pkg/database/mysql"
 	"github.com/jailtonjunior94/financial/pkg/encrypt"
@@ -36,7 +36,7 @@ func NewContainer(ctx context.Context) *Container {
 
 	observability := observability.NewObservability(
 		observability.WithServiceName(config.ServiceName),
-		observability.WithServiceVersion("1.0.0"),
+		observability.WithServiceVersion(config.ServiceVersion),
 		observability.WithResource(),
 		observability.WithTracerProvider(ctx, config.OtelExporterEndpoint),
 		observability.WithMeterProvider(ctx, config.OtelExporterEndpoint),

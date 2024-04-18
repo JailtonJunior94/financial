@@ -21,8 +21,16 @@ type (
 	}
 )
 
-func NewCreateUserUseCase(logger logger.Logger, hash encrypt.HashAdapter, repository interfaces.UserRepository) CreateUserUseCase {
-	return &createUserUseCase{logger: logger, hash: hash, repository: repository}
+func NewCreateUserUseCase(
+	logger logger.Logger,
+	hash encrypt.HashAdapter,
+	repository interfaces.UserRepository,
+) CreateUserUseCase {
+	return &createUserUseCase{
+		logger:     logger,
+		hash:       hash,
+		repository: repository,
+	}
 }
 
 func (u *createUserUseCase) Execute(ctx context.Context, input *CreateUserInput) (*CreateUserOutput, error) {

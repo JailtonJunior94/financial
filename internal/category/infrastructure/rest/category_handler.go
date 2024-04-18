@@ -1,11 +1,11 @@
-package web
+package rest
 
 import (
 	"encoding/json"
 	"net/http"
 
 	"github.com/jailtonjunior94/financial/internal/category/usecase"
-	"github.com/jailtonjunior94/financial/internal/shared/web/middlewares"
+	"github.com/jailtonjunior94/financial/internal/shared/http/middlewares"
 	"github.com/jailtonjunior94/financial/pkg/auth"
 	"github.com/jailtonjunior94/financial/pkg/responses"
 )

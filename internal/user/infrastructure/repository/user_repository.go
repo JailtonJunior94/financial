@@ -14,8 +14,14 @@ type userRepository struct {
 	observability observability.Observability
 }
 
-func NewUserRepository(db *sql.DB, observability observability.Observability) interfaces.UserRepository {
-	return &userRepository{db: db, observability: observability}
+func NewUserRepository(
+	db *sql.DB,
+	observability observability.Observability,
+) interfaces.UserRepository {
+	return &userRepository{
+		db:            db,
+		observability: observability,
+	}
 }
 
 func (r *userRepository) Create(ctx context.Context, user *entity.User) (*entity.User, error) {
