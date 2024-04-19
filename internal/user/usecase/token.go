@@ -80,7 +80,7 @@ func (u *tokenUseCase) Execute(ctx context.Context, input *AuthInput) (*AuthOutp
 		return nil, ErrCheckHash
 	}
 
-	token, err := u.jwt.GenerateToken(user.ID, user.Email)
+	token, err := u.jwt.GenerateToken(user.ID.String(), user.Email.String())
 	if err != nil {
 		u.logger.Error("error generate token",
 			logger.Field{Key: EmailKey, Value: input.Email},

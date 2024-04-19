@@ -4,7 +4,7 @@ import (
 	"context"
 	"database/sql"
 
-	"github.com/jailtonjunior94/financial/internal/user/domain/entity"
+	"github.com/jailtonjunior94/financial/internal/user/domain/entities"
 	"github.com/jailtonjunior94/financial/internal/user/domain/interfaces"
 	"github.com/jailtonjunior94/financial/pkg/observability"
 )
@@ -24,29 +24,77 @@ func NewUserRepository(
 	}
 }
 
-func (r *userRepository) Create(ctx context.Context, user *entity.User) (*entity.User, error) {
+func (r *userRepository) Insert(ctx context.Context, user *entities.User) (*entities.User, error) {
 	ctx, span := r.observability.Tracer().Start(ctx, "user_repository.Create")
 	defer span.End()
 
-	stmt, err := r.db.PrepareContext(ctx, "insert into users (id, name, email, password, created_at, updated_at, active) values (?, ?, ?, ?, ?, ?, ?)")
+	query := `insert into
+				users (
+					id,
+					name,
+					email,
+					password,
+					created_at,
+					updated_at,
+					deleted_at
+				)
+				values
+				($1, $2, $3, $4, $5, $6, $7)`
+
+	stmt, err := r.db.PrepareContext(ctx, query)
 	if err != nil {
 		return nil, err
 	}
 
-	_, err = stmt.ExecContext(ctx, user.ID, user.Name, user.Email, user.Password, user.CreatedAt, user.UpdatedAt, user.Active)
+	_, err = stmt.ExecContext(
+		ctx,
+		user.ID.Value,
+		user.Name.String(),
+		user.Email.String(),
+		user.Password,
+		user.CreatedAt,
+		user.UpdatedAt,
+		user.DeletedAt,
+	)
 	if err != nil {
 		return nil, err
 	}
 	return user, nil
 }
 
-func (r *userRepository) FindByEmail(ctx context.Context, email string) (*entity.User, error) {
+func (r *userRepository) FindByEmail(ctx context.Context, email string) (*entities.User, error) {
 	ctx, span := r.observability.Tracer().Start(ctx, "user_repository.FindByEmail")
 	defer span.End()
 
-	row := r.db.QueryRowContext(ctx, "select * from users where email = ? and active = true", email)
-	var user entity.User
-	if err := row.Scan(&user.ID, &user.Name, &user.Email, &user.Password, &user.CreatedAt, &user.UpdatedAt, &user.Active); err != nil {
+	query := `select
+				id,
+				name,
+				email,
+				password,
+				created_at,
+				updated_at,
+				deleted_at
+			from
+				users
+			where
+				email = $1
+				and deleted_at is null;`
+
+	var user entities.User
+	err := r.db.QueryRowContext(ctx, query, email).Scan(
+		&user.ID.Value,
+		&user.Name.Value,
+		&user.Email.Value,
+		&user.Password,
+		&user.CreatedAt,
+		&user.UpdatedAt,
+		&user.DeletedAt,
+	)
+
+	if err != nil {
+		if err == sql.ErrNoRows {
+			return nil, nil
+		}
 		return nil, err
 	}
 	return &user, nil

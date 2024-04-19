@@ -1,10 +1,14 @@
 package interfaces
 
-import "github.com/jailtonjunior94/financial/internal/category/domain/entity"
+import (
+	"context"
+
+	"github.com/jailtonjunior94/financial/internal/category/domain/entities"
+)
 
 type CategoryRepository interface {
-	Find(userID string) ([]*entity.Category, error)
-	FindByID(userID, id string) (*entity.Category, error)
-	Create(c *entity.Category) (*entity.Category, error)
-	Update(c *entity.Category) (*entity.Category, error)
+	Find(ctx context.Context, userID string) ([]*entities.Category, error)
+	FindByID(ctx context.Context, userID, id string) (*entities.Category, error)
+	Insert(ctx context.Context, category *entities.Category) (*entities.Category, error)
+	Update(ctx context.Context, category *entities.Category) (*entities.Category, error)
 }

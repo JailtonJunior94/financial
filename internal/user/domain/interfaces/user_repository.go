@@ -3,10 +3,10 @@ package interfaces
 import (
 	"context"
 
-	"github.com/jailtonjunior94/financial/internal/user/domain/entity"
+	"github.com/jailtonjunior94/financial/internal/user/domain/entities"
 )
 
 type UserRepository interface {
-	Create(ctx context.Context, user *entity.User) (*entity.User, error)
-	FindByEmail(ctx context.Context, email string) (*entity.User, error)
+	Insert(ctx context.Context, user *entities.User) (*entities.User, error)
+	FindByEmail(ctx context.Context, email string) (*entities.User, error)
 }

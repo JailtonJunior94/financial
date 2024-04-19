@@ -6,7 +6,7 @@ import (
 	"testing"
 
 	"github.com/jailtonjunior94/financial/configs"
-	"github.com/jailtonjunior94/financial/internal/user/domain/entity"
+	"github.com/jailtonjunior94/financial/internal/user/domain/factories"
 	repositoryMock "github.com/jailtonjunior94/financial/internal/user/infrastructure/repository/mock"
 	"github.com/jailtonjunior94/financial/pkg/auth"
 	"github.com/jailtonjunior94/financial/pkg/encrypt"
@@ -53,7 +53,7 @@ func (s *TokenSuite) TestToken() {
 	)
 
 	passwordHash, _ := s.hash.GenerateHash("my_password@2024")
-	user, _ := entity.NewUser("John Mckinley", "john.mckinley@examplepetstore.com")
+	user, _ := factories.CreateUser("John Mckinley", "john.mckinley@examplepetstore.com")
 	user.SetPassword(passwordHash)
 
 	scenarios := []struct {

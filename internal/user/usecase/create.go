@@ -3,7 +3,7 @@ package usecase
 import (
 	"context"
 
-	"github.com/jailtonjunior94/financial/internal/user/domain/entity"
+	"github.com/jailtonjunior94/financial/internal/user/domain/factories"
 	"github.com/jailtonjunior94/financial/internal/user/domain/interfaces"
 	"github.com/jailtonjunior94/financial/pkg/encrypt"
 	"github.com/jailtonjunior94/financial/pkg/logger"
@@ -34,9 +34,9 @@ func NewCreateUserUseCase(
 }
 
 func (u *createUserUseCase) Execute(ctx context.Context, input *CreateUserInput) (*CreateUserOutput, error) {
-	newUser, err := entity.NewUser(input.Name, input.Email)
+	user, err := factories.CreateUser(input.Name, input.Email)
 	if err != nil {
-		u.logger.Warn("error parsing user", logger.Field{Key: "warning", Value: err.Error()})
+		u.logger.Warn("error parsing user", logger.Field{Key: "warning", Value: err})
 		return nil, err
 	}
 
@@ -44,25 +44,25 @@ func (u *createUserUseCase) Execute(ctx context.Context, input *CreateUserInput)
 	if err != nil {
 		u.logger.Error("error generating hash",
 			logger.Field{Key: "e-mail", Value: input.Email},
-			logger.Field{Key: "error", Value: err.Error()},
+			logger.Field{Key: "error", Value: err},
 		)
 		return nil, err
 	}
 
-	newUser.SetPassword(hash)
-	user, err := u.repository.Create(ctx, newUser)
+	user.SetPassword(hash)
+	userCreated, err := u.repository.Insert(ctx, user)
 	if err != nil {
 		u.logger.Error("error created user in database",
 			logger.Field{Key: "e-mail", Value: input.Email},
-			logger.Field{Key: "error", Value: err.Error()},
+			logger.Field{Key: "error", Value: err},
 		)
 		return nil, err
 	}
 
 	return &CreateUserOutput{
-		ID:        user.ID,
-		Name:      user.Name,
-		Email:     user.Email,
-		CreatedAt: user.CreatedAt,
+		ID:        userCreated.ID.String(),
+		Name:      userCreated.Name.String(),
+		Email:     userCreated.Email.String(),
+		CreatedAt: userCreated.CreatedAt,
 	}, nil
 }
