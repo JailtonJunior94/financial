@@ -7,6 +7,7 @@ import (
 	"time"
 
 	migration "github.com/jailtonjunior94/financial/pkg/database/migrate"
+	"github.com/jailtonjunior94/financial/pkg/logger"
 
 	"github.com/testcontainers/testcontainers-go"
 	postgresContainer "github.com/testcontainers/testcontainers-go/modules/postgres"
@@ -26,7 +27,7 @@ func NewPostgresContainer(ctx context.Context) *PostgresContainer {
 				WithOccurrence(2).
 				WithStartupTimeout(5*time.Second),
 		),
-		postgresContainer.WithDatabase("tramporteiro"),
+		postgresContainer.WithDatabase("financial"),
 		postgresContainer.WithUsername("postgres"),
 		postgresContainer.WithPassword("postgres"),
 	)
@@ -37,13 +38,13 @@ func NewPostgresContainer(ctx context.Context) *PostgresContainer {
 	return &PostgresContainer{Container: postgres}
 }
 
-func (s *PostgresContainer) ExecuteMigration(db *sql.DB, dbName, migratePath string) {
-	migrate, err := migration.NewMigrate(nil, db, migratePath, dbName)
+func (s *PostgresContainer) ExecuteMigration(logger logger.Logger, db *sql.DB, dbName, migratePath string) {
+	migrate, err := migration.NewMigratePostgres(logger, db, migratePath, dbName)
 	if err != nil {
 		log.Fatalf("could not start migrate: %s", err)
 	}
 
-	if err = migrate.ExecuteMigration(); err != nil {
+	if err = migrate.Execute(); err != nil {
 		log.Fatalf("could execute migration: %s", err)
 	}
 }

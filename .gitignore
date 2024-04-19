@@ -2,3 +2,4 @@
 bin
 .docker
 coverage.out
+cockroachdb_data

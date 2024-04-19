@@ -7,7 +7,7 @@ import (
 	"github.com/jailtonjunior94/financial/configs"
 	"github.com/jailtonjunior94/financial/internal/shared/http/middlewares"
 	"github.com/jailtonjunior94/financial/pkg/auth"
-	"github.com/jailtonjunior94/financial/pkg/database/mysql"
+	"github.com/jailtonjunior94/financial/pkg/database/postgres"
 	"github.com/jailtonjunior94/financial/pkg/encrypt"
 	"github.com/jailtonjunior94/financial/pkg/logger"
 	"github.com/jailtonjunior94/financial/pkg/observability"
@@ -29,7 +29,7 @@ func NewContainer(ctx context.Context) *Container {
 		panic(err)
 	}
 
-	db, err := mysql.NewMySqlDatabase(config)
+	db, err := postgres.NewPostgresDatabase(config)
 	if err != nil {
 		panic(err)
 	}

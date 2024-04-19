@@ -22,12 +22,27 @@ func main() {
 		Short: "Financial Migrations",
 		Run: func(cmd *cobra.Command, args []string) {
 			container := bundle.NewContainer(context.Background())
-			migrate, err := migration.NewMigrateMySql(container.Logger, container.DB, container.Config.MigratePath, container.Config.DBName)
-			if err != nil {
-				log.Fatal(err)
-			}
-			if err = migrate.ExecuteMigration(); err != nil {
-				log.Fatal(err)
+			switch container.Config.DBDriver {
+			case "postgres":
+				{
+					migrate, err := migration.NewMigrateCockroachDB(container.Logger, container.DB, container.Config.MigratePath, container.Config.DBName)
+					if err != nil {
+						log.Fatal(err)
+					}
+					if err = migrate.Execute(); err != nil {
+						log.Fatal(err)
+					}
+				}
+			case "mysql":
+				{
+					migrate, err := migration.NewMigrateMySql(container.Logger, container.DB, container.Config.MigratePath, container.Config.DBName)
+					if err != nil {
+						log.Fatal(err)
+					}
+					if err = migrate.Execute(); err != nil {
+						log.Fatal(err)
+					}
+				}
 			}
 		},
 	}
