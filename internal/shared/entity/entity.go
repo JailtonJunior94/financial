@@ -9,6 +9,6 @@ import (
 type Base struct {
 	ID        vos.UUID
 	CreatedAt time.Time
-	UpdatedAt time.Time
+	UpdatedAt *time.Time
 	DeletedAt *time.Time
 }
