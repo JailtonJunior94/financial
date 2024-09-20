@@ -2,6 +2,7 @@ receivers:
   otlp:
     protocols:
       grpc:
+      http:
 
 processors:
   batch:
@@ -10,9 +11,15 @@ exporters:
   prometheus:
     endpoint: "0.0.0.0:8889"
 
-  # zipkin:
-  #   endpoint: "http://zipkin-all-in-one:9411/api/v2/spans"
-  #   format: proto
+  googlecloud:
+    project: "financial-420621"
+    user_agent: "opentelemetry-collector"
+    metric:
+      prefix: "otel"
+    trace:
+      endpoint: "cloudtrace.googleapis.com:443"
+    log:
+      endpoint: "logging.googleapis.com:443"
 
   jaeger:
     endpoint: "jaeger:14250"
@@ -30,8 +37,12 @@ service:
     metrics:
       receivers: [otlp]
       processors: [batch]
-      exporters: [prometheus]
+      exporters: [prometheus, googlecloud]
     traces:
       receivers: [otlp]
       processors: [batch]
-      exporters: [jaeger]
+      exporters: [jaeger, googlecloud]
+    logs:
+      receivers: [otlp]
+      processors: [batch]
+      exporters: [googlecloud]

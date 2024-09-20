@@ -46,6 +46,8 @@ func (s *apiServer) Server() {
 		}
 	}()
 
+	loggerProvider := ioc.Observability.LoggerProvider()
+
 	/* Close DBConnection */
 	defer func() {
 		if err := ioc.DB.Close(); err != nil {
@@ -67,6 +69,7 @@ func (s *apiServer) Server() {
 			responses.Error(w, http.StatusInternalServerError, "database error connection failed or database is not running")
 			return
 		}
+		loggerProvider.InfoContext(r.Context(), "Health check")
 		responses.JSON(w, http.StatusOK, map[string]interface{}{"status": "ok"})
 	})
 

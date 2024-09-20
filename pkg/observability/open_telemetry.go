@@ -3,19 +3,36 @@ package observability
 import (
 	"context"
 	"log"
+	"log/slog"
+	"os"
 	"time"
 
+	"go.opentelemetry.io/contrib/bridges/otelslog"
 	"go.opentelemetry.io/otel"
+	"go.opentelemetry.io/otel/codes"
+	"go.opentelemetry.io/otel/exporters/otlp/otlplog/otlploggrpc"
 	"go.opentelemetry.io/otel/exporters/otlp/otlpmetric/otlpmetricgrpc"
 	"go.opentelemetry.io/otel/exporters/otlp/otlptrace/otlptracegrpc"
 	"go.opentelemetry.io/otel/exporters/stdout/stdoutmetric"
 	"go.opentelemetry.io/otel/exporters/stdout/stdouttrace"
+	"go.opentelemetry.io/otel/log/global"
 	"go.opentelemetry.io/otel/propagation"
+	sdkLogger "go.opentelemetry.io/otel/sdk/log"
 	"go.opentelemetry.io/otel/sdk/metric"
 	"go.opentelemetry.io/otel/sdk/resource"
 	sdktrace "go.opentelemetry.io/otel/sdk/trace"
-	semconv "go.opentelemetry.io/otel/semconv/v1.24.0"
+	semconv "go.opentelemetry.io/otel/semconv/v1.26.0"
+
+	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/trace"
+)
+
+type Code uint
+
+const (
+	Unset Code = 0
+	Error Code = 1
+	Ok    Code = 2
 )
 
 type (
@@ -23,16 +40,36 @@ type (
 		Tracer() trace.Tracer
 		MeterProvider() *metric.MeterProvider
 		TracerProvider() *sdktrace.TracerProvider
+		LoggerProvider() *slog.Logger
+		Start(ctx context.Context, name string, opts ...trace.SpanStartOption) (context.Context, Span)
+	}
+
+	Span interface {
+		trace.Span
+		AddAttributes(attrs ...Attributes)
+		AddStatus(code Code, description string)
+	}
+
+	span struct {
+		trace.Span
+	}
+
+	Attributes struct {
+		Key   string
+		Value any
 	}
 
 	Option        func(observability *observability)
 	observability struct {
 		serviceName    string
 		serviceVersion string
+		Span           Span
 		tracer         trace.Tracer
 		resource       *resource.Resource
 		meterProvider  *metric.MeterProvider
 		tracerProvider *sdktrace.TracerProvider
+		loggerProvider *sdkLogger.LoggerProvider
+		logger         *slog.Logger
 	}
 )
 
@@ -44,10 +81,10 @@ func NewObservability(options ...Option) Observability {
 	return observability
 }
 
-func NewDevelopmentObservability(serviceName string) Observability {
+func NewDevelopmentObservability(serviceName, serviceVersion string) Observability {
 	return NewObservability(
 		WithServiceName(serviceName),
-		WithServiceVersion("1.0.0"),
+		WithServiceVersion(serviceVersion),
 		WithResource(),
 		WithStdoutTracerProvider(),
 		WithStdoutMeterProvider(),
@@ -66,6 +103,44 @@ func (o *observability) TracerProvider() *sdktrace.TracerProvider {
 	return o.tracerProvider
 }
 
+func (o *observability) LoggerProvider() *slog.Logger {
+	o.logger = otelslog.NewLogger(o.serviceName,
+		otelslog.WithLoggerProvider(o.loggerProvider),
+	)
+	return o.logger
+}
+
+func (o *observability) Start(ctx context.Context, name string, opts ...trace.SpanStartOption) (context.Context, Span) {
+	if len(opts) == 0 {
+		ctx, startSpan := o.tracer.Start(ctx, name)
+		return ctx, &span{startSpan}
+	}
+	ctx, startSpan := o.tracer.Start(ctx, name, opts[0])
+	return ctx, &span{startSpan}
+}
+
+func (s *span) AddStatus(code Code, description string) {
+	s.Span.SetStatus(codes.Code(code), description)
+}
+
+func (s *span) AddAttributes(attrs ...Attributes) {
+	for _, attr := range attrs {
+		switch attr.Value.(type) {
+		case string:
+			s.Span.SetAttributes(attribute.Key(attr.Key).String(attr.Value.(string)))
+		case int:
+			s.Span.SetAttributes(attribute.Key(attr.Key).Int64(int64(attr.Value.(int))))
+		case int64:
+			s.Span.SetAttributes(attribute.Key(attr.Key).Int64(attr.Value.(int64)))
+		case float64:
+			s.Span.SetAttributes(attribute.Key(attr.Key).Float64(attr.Value.(float64)))
+		case bool:
+			s.Span.SetAttributes(attribute.Key(attr.Key).Bool(attr.Value.(bool)))
+		default:
+		}
+	}
+}
+
 func WithServiceName(serviceName string) Option {
 	return func(observability *observability) {
 		observability.serviceName = serviceName
@@ -80,12 +155,14 @@ func WithServiceVersion(serviceVersion string) Option {
 
 func WithResource() Option {
 	return func(observability *observability) {
+		host, _ := os.Hostname()
 		resource, err := resource.Merge(
 			resource.Default(),
 			resource.NewWithAttributes(
 				semconv.SchemaURL,
 				semconv.ServiceName(observability.serviceName),
 				semconv.ServiceVersion(observability.serviceVersion),
+				semconv.HostName(host),
 			),
 		)
 
@@ -118,6 +195,28 @@ func WithTracerProvider(ctx context.Context, endpoint string) Option {
 
 		observability.tracer = tracerProvider.Tracer(observability.serviceName)
 		observability.tracerProvider = tracerProvider
+	}
+}
+
+func WithLoggerProvider(ctx context.Context, endpoint string) Option {
+	return func(observability *observability) {
+		loggerExporter, err := otlploggrpc.New(
+			ctx,
+			otlploggrpc.WithInsecure(),
+			otlploggrpc.WithEndpoint(endpoint),
+		)
+		if err != nil {
+			log.Fatal(err)
+		}
+
+		loggerProcessor := sdkLogger.NewBatchProcessor(loggerExporter)
+		loggerProvider := sdkLogger.NewLoggerProvider(
+			sdkLogger.WithResource(observability.resource),
+			sdkLogger.WithProcessor(loggerProcessor),
+		)
+
+		observability.loggerProvider = loggerProvider
+		global.SetLoggerProvider(observability.loggerProvider)
 	}
 }
 

@@ -10,7 +10,6 @@ import (
 	repositoryMock "github.com/jailtonjunior94/financial/internal/user/infrastructure/repository/mock"
 	"github.com/jailtonjunior94/financial/pkg/auth"
 	"github.com/jailtonjunior94/financial/pkg/encrypt"
-	"github.com/jailtonjunior94/financial/pkg/logger"
 	"github.com/jailtonjunior94/financial/pkg/observability"
 
 	"github.com/stretchr/testify/mock"
@@ -21,7 +20,6 @@ type TokenSuite struct {
 	suite.Suite
 
 	ctx           context.Context
-	logger        logger.Logger
 	config        *configs.Config
 	hash          encrypt.HashAdapter
 	jwt           auth.JwtAdapter
@@ -37,8 +35,7 @@ func (s *TokenSuite) SetupTest() {
 		AuthExpirationAt: 8,
 		AuthSecretKey:    "my_secret_key",
 	}
-	s.logger = logger.NewLogger()
-	s.jwt = auth.NewJwtAdapter(s.logger, s.config)
+	s.jwt = auth.NewJwtAdapter(s.config, s.observability)
 	s.hash = encrypt.NewHashAdapter()
 }
 
@@ -83,7 +80,7 @@ func (s *TokenSuite) TestToken() {
 
 	for _, scenario := range scenarios {
 		s.T().Run(scenario.name, func(t *testing.T) {
-			tokenUseCase := NewTokenUseCase(s.config, s.logger, s.hash, s.jwt, scenario.fields.userRepository, s.observability)
+			tokenUseCase := NewTokenUseCase(s.config, s.observability, s.hash, s.jwt, scenario.fields.userRepository)
 			token, err := tokenUseCase.Execute(s.ctx, scenario.args.input)
 			scenario.expected(token, err)
 		})

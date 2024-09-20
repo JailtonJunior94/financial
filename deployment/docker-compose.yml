@@ -38,6 +38,7 @@ services:
       - MIGRATE_PATH=file://../database/migrations
       - AUTH_EXPIRATION_AT=8
       - AUTH_SECRET_KEY="RmluYW5jaWFsQ29udHJvbEFtYmllbnRlUHJvZHVjdGlvbg=="
+      - OTEL_EXPORTER_OTLP_ENDPOINT=otel_collector
     depends_on:
       - financial_migration
 
@@ -92,7 +93,10 @@ services:
     command:
       - --config=/etc/otelcol-contrib/otel-collector.yml
     volumes:
+      - ~/gmp-test-sa-key.json:/etc/otel/key.json
       - ./observability/collector/otel-collector.yml:/etc/otelcol-contrib/otel-collector.yml
+    environment:
+      - GOOGLE_APPLICATION_CREDENTIALS=/etc/otel/key.json
     ports:
       - "1888:1888" # pprof extension
       - "8888:8888" # Prometheus metrics exposed by the collector

@@ -38,13 +38,14 @@ func NewContainer(ctx context.Context) *Container {
 		observability.WithServiceName(config.ServiceName),
 		observability.WithServiceVersion(config.ServiceVersion),
 		observability.WithResource(),
+		observability.WithLoggerProvider(ctx, config.OtelExporterEndpoint),
 		observability.WithTracerProvider(ctx, config.OtelExporterEndpoint),
 		observability.WithMeterProvider(ctx, config.OtelExporterEndpoint),
 	)
 
 	logger := logger.NewLogger()
 	hash := encrypt.NewHashAdapter()
-	jwt := auth.NewJwtAdapter(logger, config)
+	jwt := auth.NewJwtAdapter(config, observability)
 	middlewareAuth := middlewares.NewAuthorization(config, jwt)
 
 	return &Container{

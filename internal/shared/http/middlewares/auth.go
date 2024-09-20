@@ -32,7 +32,7 @@ func NewAuthorization(config *configs.Config, jwt auth.JwtAdapter) Authorization
 
 func (a *authorization) Authorization(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		user, err := a.jwt.ValidateToken(r.Header.Get("Authorization"))
+		user, err := a.jwt.ValidateToken(r.Context(), r.Header.Get("Authorization"))
 		if err != nil {
 			w.WriteHeader(http.StatusUnauthorized)
 			return

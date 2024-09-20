@@ -9,16 +9,22 @@ import (
 )
 
 type AuthHandler struct {
-	tokenUseCase  usecase.TokenUseCase
-	observability observability.Observability
+	tokenUseCase usecase.TokenUseCase
+	o11y         observability.Observability
 }
 
-func NewAuthHandler(observability observability.Observability, tokenUseCase usecase.TokenUseCase) *AuthHandler {
-	return &AuthHandler{observability: observability, tokenUseCase: tokenUseCase}
+func NewAuthHandler(
+	o11y observability.Observability,
+	tokenUseCase usecase.TokenUseCase,
+) *AuthHandler {
+	return &AuthHandler{
+		o11y:         o11y,
+		tokenUseCase: tokenUseCase,
+	}
 }
 
 func (h *AuthHandler) Token(w http.ResponseWriter, r *http.Request) {
-	ctx, span := h.observability.Tracer().Start(r.Context(), "auth_handler.token")
+	ctx, span := h.o11y.Tracer().Start(r.Context(), "auth_handler.token")
 	defer span.End()
 
 	input := &usecase.AuthInput{
@@ -28,6 +34,7 @@ func (h *AuthHandler) Token(w http.ResponseWriter, r *http.Request) {
 
 	output, err := h.tokenUseCase.Execute(ctx, input)
 	if err != nil {
+		span.RecordError(err)
 		responses.Error(w, http.StatusInternalServerError, "Internal Server Error")
 		return
 	}

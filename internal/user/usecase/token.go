@@ -8,7 +8,6 @@ import (
 	"github.com/jailtonjunior94/financial/internal/user/domain/interfaces"
 	"github.com/jailtonjunior94/financial/pkg/auth"
 	"github.com/jailtonjunior94/financial/pkg/encrypt"
-	"github.com/jailtonjunior94/financial/pkg/logger"
 	"github.com/jailtonjunior94/financial/pkg/observability"
 )
 
@@ -27,64 +26,67 @@ type TokenUseCase interface {
 }
 
 type tokenUseCase struct {
-	logger        logger.Logger
-	config        *configs.Config
-	hash          encrypt.HashAdapter
-	jwt           auth.JwtAdapter
-	repository    interfaces.UserRepository
-	observability observability.Observability
+	jwt        auth.JwtAdapter
+	config     *configs.Config
+	hash       encrypt.HashAdapter
+	repository interfaces.UserRepository
+	o11y       observability.Observability
 }
 
 func NewTokenUseCase(
 	config *configs.Config,
-	logger logger.Logger,
+	o11y observability.Observability,
 	hash encrypt.HashAdapter,
 	jwt auth.JwtAdapter,
 	repository interfaces.UserRepository,
-	observability observability.Observability,
 ) TokenUseCase {
 	return &tokenUseCase{
-		config:        config,
-		logger:        logger,
-		hash:          hash,
-		jwt:           jwt,
-		repository:    repository,
-		observability: observability,
+		config:     config,
+		hash:       hash,
+		jwt:        jwt,
+		repository: repository,
+		o11y:       o11y,
 	}
 }
 
 func (u *tokenUseCase) Execute(ctx context.Context, input *AuthInput) (*AuthOutput, error) {
-	ctx, span := u.observability.Tracer().Start(ctx, "token_usecase.Execute")
+	ctx, span := u.o11y.Start(ctx, "create_user_usecase.execute")
 	defer span.End()
 
 	user, err := u.repository.FindByEmail(ctx, input.Email)
 	if err != nil {
-		u.logger.Error("error find user by e-mail",
-			logger.Field{Key: EmailKey, Value: input.Email},
-			logger.Field{Key: ErrorKey, Value: err.Error()},
+		span.AddStatus(observability.Error, "error find user by e-mail")
+		span.AddAttributes(
+			observability.Attributes{Key: EmailKey, Value: input.Email},
+			observability.Attributes{Key: "error", Value: err.Error()},
 		)
 		return nil, err
 	}
 
 	if user == nil {
-		u.logger.Warn("user not found",
-			logger.Field{Key: EmailKey, Value: input.Email},
+		span.AddStatus(observability.Error, "user not found")
+		span.AddAttributes(
+			observability.Attributes{Key: EmailKey, Value: input.Email},
+			observability.Attributes{Key: "error", Value: err.Error()},
 		)
 		return nil, ErrUserNotFound
 	}
 
 	if !u.hash.CheckHash(user.Password, input.Password) {
-		u.logger.Warn("error checking hash",
-			logger.Field{Key: EmailKey, Value: input.Email},
+		span.AddStatus(observability.Error, "error checking hash")
+		span.AddAttributes(
+			observability.Attributes{Key: EmailKey, Value: input.Email},
+			observability.Attributes{Key: "error", Value: err.Error()},
 		)
 		return nil, ErrCheckHash
 	}
 
-	token, err := u.jwt.GenerateToken(user.ID.String(), user.Email.String())
+	token, err := u.jwt.GenerateToken(ctx, user.ID.String(), user.Email.String())
 	if err != nil {
-		u.logger.Error("error generate token",
-			logger.Field{Key: EmailKey, Value: input.Email},
-			logger.Field{Key: ErrorKey, Value: err.Error()},
+		span.AddStatus(observability.Error, "error generate token")
+		span.AddAttributes(
+			observability.Attributes{Key: EmailKey, Value: input.Email},
+			observability.Attributes{Key: "error", Value: err.Error()},
 		)
 		return nil, err
 	}
