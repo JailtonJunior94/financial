@@ -57,8 +57,7 @@ func (s *apiServer) Server() {
 	router.Use(
 		middleware.RealIP,
 		middleware.RequestID,
-		middleware.Recoverer,
-		ioc.MetricMiddleware.Metrics,
+		ioc.PanicRecoverMiddleware.Recover,
 		middleware.AllowContentType("application/json", "application/x-www-form-urlencoded"),
 		middleware.SetHeader("Content-Type", "application/json"),
 	)

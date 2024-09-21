@@ -14,10 +14,7 @@ type userRepository struct {
 	o11y o11y.Observability
 }
 
-func NewUserRepository(
-	db *sql.DB,
-	o11y o11y.Observability,
-) interfaces.UserRepository {
+func NewUserRepository(db *sql.DB, o11y o11y.Observability) interfaces.UserRepository {
 	return &userRepository{
 		db:   db,
 		o11y: o11y,

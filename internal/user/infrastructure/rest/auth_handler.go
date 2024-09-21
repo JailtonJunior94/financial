@@ -9,8 +9,8 @@ import (
 )
 
 type AuthHandler struct {
-	tokenUseCase usecase.TokenUseCase
 	o11y         o11y.Observability
+	tokenUseCase usecase.TokenUseCase
 }
 
 func NewAuthHandler(

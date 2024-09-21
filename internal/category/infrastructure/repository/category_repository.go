@@ -6,14 +6,19 @@ import (
 
 	"github.com/jailtonjunior94/financial/internal/category/domain/entities"
 	"github.com/jailtonjunior94/financial/internal/category/domain/interfaces"
+	"github.com/jailtonjunior94/financial/pkg/o11y"
 )
 
 type categoryRepository struct {
-	db *sql.DB
+	db   *sql.DB
+	o11y o11y.Observability
 }
 
-func NewCategoryRepository(db *sql.DB) interfaces.CategoryRepository {
-	return &categoryRepository{db: db}
+func NewCategoryRepository(db *sql.DB, o11y o11y.Observability) interfaces.CategoryRepository {
+	return &categoryRepository{
+		db:   db,
+		o11y: o11y,
+	}
 }
 
 func (r *categoryRepository) Find(ctx context.Context, userID string) ([]*entities.Category, error) {
@@ -25,12 +30,30 @@ func (r *categoryRepository) FindByID(ctx context.Context, userID, id string) (*
 }
 
 func (r *categoryRepository) Insert(ctx context.Context, category *entities.Category) (*entities.Category, error) {
-	stmt, err := r.db.Prepare("insert into categories (id, user_id, name, sequence, created_at, updated_at, active) values (?, ?, ?, ?, ?, ?, ?)")
+	ctx, span := r.o11y.Start(ctx, "category_repository.insert")
+	defer span.End()
+
+	query := `insert into
+				categories (
+					id,
+					user_id,
+					name,
+					sequence,
+					created_at,
+					updated_at,
+					active
+				)
+				values
+					(?, ?, ?, ?, ?, ?, ?)`
+
+	stmt, err := r.db.PrepareContext(ctx, query)
 	if err != nil {
+		panic(err)
 		return nil, err
 	}
 
-	_, err = stmt.Exec(
+	_, err = stmt.ExecContext(
+		ctx,
 		category.ID,
 		category.UserID,
 		category.Name,
@@ -40,6 +63,11 @@ func (r *categoryRepository) Insert(ctx context.Context, category *entities.Cate
 		category.Active,
 	)
 	if err != nil {
+		span.AddStatus(o11y.Error, "error creating category")
+		span.AddAttributes(
+			o11y.Attributes{Key: "user_id", Value: category.UserID},
+			o11y.Attributes{Key: "error", Value: err},
+		)
 		return nil, err
 	}
 	return category, nil

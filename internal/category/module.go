@@ -10,8 +10,8 @@ import (
 )
 
 func RegisterCategoryModule(ioc *bundle.Container, router *chi.Mux) {
-	categoryRepository := repository.NewCategoryRepository(ioc.DB)
-	categoryCreateUseCase := usecase.NewCreateCategoryUseCase(ioc.Logger, categoryRepository)
-	categoryHandler := rest.NewCategoryHandler(categoryCreateUseCase)
+	categoryRepository := repository.NewCategoryRepository(ioc.DB, ioc.Observability)
+	categoryCreateUseCase := usecase.NewCreateCategoryUseCase(ioc.Observability, categoryRepository)
+	categoryHandler := rest.NewCategoryHandler(ioc.Observability, categoryCreateUseCase)
 	rest.NewCategoryRoutes(router, ioc.MiddlewareAuth, rest.WithCreateCategoryHandler(categoryHandler.Create))
 }

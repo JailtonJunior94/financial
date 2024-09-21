@@ -12,18 +12,18 @@ import (
 	"github.com/jailtonjunior94/financial/pkg/logger"
 	"github.com/jailtonjunior94/financial/pkg/o11y"
 
-	metricMiddleware "github.com/jailtonjunior94/financial/pkg/api/middlewares"
+	sharedMiddleware "github.com/jailtonjunior94/financial/pkg/api/middlewares"
 )
 
 type Container struct {
-	DB               *sql.DB
-	Logger           logger.Logger
-	Config           *configs.Config
-	Jwt              auth.JwtAdapter
-	Hash             encrypt.HashAdapter
-	MiddlewareAuth   middlewares.Authorization
-	Observability    o11y.Observability
-	MetricMiddleware metricMiddleware.HTTPMetricsMiddleware
+	DB                     *sql.DB
+	Logger                 logger.Logger
+	Config                 *configs.Config
+	Jwt                    auth.JwtAdapter
+	Hash                   encrypt.HashAdapter
+	MiddlewareAuth         middlewares.Authorization
+	Observability          o11y.Observability
+	PanicRecoverMiddleware sharedMiddleware.PanicRecoverMiddleware
 }
 
 func NewContainer(ctx context.Context) *Container {
@@ -50,19 +50,16 @@ func NewContainer(ctx context.Context) *Container {
 	hash := encrypt.NewHashAdapter()
 	jwt := auth.NewJwtAdapter(config, observability)
 	middlewareAuth := middlewares.NewAuthorization(config, jwt)
-	// metricsMiddleware, err := metricMiddleware.NewHTTPMetricsMiddleware(observability)
-	// if err != nil {
-	// 	panic(err)
-	// }
+	panicRecoverMiddleware := sharedMiddleware.NewPanicRecoverMiddleware(observability)
 
 	return &Container{
-		DB:             db,
-		Logger:         logger,
-		Config:         config,
-		Jwt:            jwt,
-		Hash:           hash,
-		MiddlewareAuth: middlewareAuth,
-		Observability:  observability,
-		// MetricMiddleware: metricsMiddleware,
+		DB:                     db,
+		Logger:                 logger,
+		Config:                 config,
+		Jwt:                    jwt,
+		Hash:                   hash,
+		MiddlewareAuth:         middlewareAuth,
+		Observability:          observability,
+		PanicRecoverMiddleware: panicRecoverMiddleware,
 	}
 }
