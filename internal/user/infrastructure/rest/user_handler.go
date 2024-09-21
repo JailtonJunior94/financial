@@ -5,17 +5,17 @@ import (
 	"net/http"
 
 	"github.com/jailtonjunior94/financial/internal/user/usecase"
-	"github.com/jailtonjunior94/financial/pkg/observability"
+	"github.com/jailtonjunior94/financial/pkg/o11y"
 	"github.com/jailtonjunior94/financial/pkg/responses"
 )
 
 type UserHandler struct {
-	o11y              observability.Observability
+	o11y              o11y.Observability
 	createUserUseCase usecase.CreateUserUseCase
 }
 
 func NewUserHandler(
-	o11y observability.Observability,
+	o11y o11y.Observability,
 	createUserUseCase usecase.CreateUserUseCase,
 ) *UserHandler {
 	return &UserHandler{

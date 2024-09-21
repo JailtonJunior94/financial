@@ -10,17 +10,20 @@ import (
 	"github.com/jailtonjunior94/financial/pkg/database/postgres"
 	"github.com/jailtonjunior94/financial/pkg/encrypt"
 	"github.com/jailtonjunior94/financial/pkg/logger"
-	"github.com/jailtonjunior94/financial/pkg/observability"
+	"github.com/jailtonjunior94/financial/pkg/o11y"
+
+	metricMiddleware "github.com/jailtonjunior94/financial/pkg/api/middlewares"
 )
 
 type Container struct {
-	DB             *sql.DB
-	Logger         logger.Logger
-	Config         *configs.Config
-	Jwt            auth.JwtAdapter
-	Hash           encrypt.HashAdapter
-	MiddlewareAuth middlewares.Authorization
-	Observability  observability.Observability
+	DB               *sql.DB
+	Logger           logger.Logger
+	Config           *configs.Config
+	Jwt              auth.JwtAdapter
+	Hash             encrypt.HashAdapter
+	MiddlewareAuth   middlewares.Authorization
+	Observability    o11y.Observability
+	MetricMiddleware metricMiddleware.HTTPMetricsMiddleware
 }
 
 func NewContainer(ctx context.Context) *Container {
@@ -34,19 +37,23 @@ func NewContainer(ctx context.Context) *Container {
 		panic(err)
 	}
 
-	observability := observability.NewObservability(
-		observability.WithServiceName(config.ServiceName),
-		observability.WithServiceVersion(config.ServiceVersion),
-		observability.WithResource(),
-		observability.WithLoggerProvider(ctx, config.OtelExporterEndpoint),
-		observability.WithTracerProvider(ctx, config.OtelExporterEndpoint),
-		observability.WithMeterProvider(ctx, config.OtelExporterEndpoint),
+	observability := o11y.NewObservability(
+		o11y.WithServiceName(config.ServiceName),
+		o11y.WithServiceVersion(config.ServiceVersion),
+		o11y.WithResource(),
+		o11y.WithLoggerProvider(ctx, config.OtelExporterEndpoint),
+		o11y.WithTracerProvider(ctx, config.OtelExporterEndpoint),
+		o11y.WithMeterProvider(ctx, config.OtelExporterEndpoint),
 	)
 
 	logger := logger.NewLogger()
 	hash := encrypt.NewHashAdapter()
 	jwt := auth.NewJwtAdapter(config, observability)
 	middlewareAuth := middlewares.NewAuthorization(config, jwt)
+	// metricsMiddleware, err := metricMiddleware.NewHTTPMetricsMiddleware(observability)
+	// if err != nil {
+	// 	panic(err)
+	// }
 
 	return &Container{
 		DB:             db,
@@ -56,5 +63,6 @@ func NewContainer(ctx context.Context) *Container {
 		Hash:           hash,
 		MiddlewareAuth: middlewareAuth,
 		Observability:  observability,
+		// MetricMiddleware: metricsMiddleware,
 	}
 }

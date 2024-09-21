@@ -22,6 +22,7 @@ require (
 	go.opentelemetry.io/otel/exporters/stdout/stdoutmetric v1.30.0
 	go.opentelemetry.io/otel/exporters/stdout/stdouttrace v1.30.0
 	go.opentelemetry.io/otel/log v0.6.0
+	go.opentelemetry.io/otel/metric v1.30.0
 	go.opentelemetry.io/otel/sdk v1.30.0
 	go.opentelemetry.io/otel/sdk/log v0.6.0
 	go.opentelemetry.io/otel/sdk/metric v1.30.0
@@ -85,7 +86,6 @@ require (
 	github.com/yusufpapurcu/wmi v1.2.3 // indirect
 	go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp v0.45.0 // indirect
 	go.opentelemetry.io/otel/exporters/otlp/otlptrace v1.30.0 // indirect
-	go.opentelemetry.io/otel/metric v1.30.0 // indirect
 	go.opentelemetry.io/proto/otlp v1.3.1 // indirect
 	go.uber.org/atomic v1.9.0 // indirect
 	go.uber.org/multierr v1.8.0 // indirect

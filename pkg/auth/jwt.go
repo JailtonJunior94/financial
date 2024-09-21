@@ -8,7 +8,7 @@ import (
 	"time"
 
 	"github.com/jailtonjunior94/financial/configs"
-	"github.com/jailtonjunior94/financial/pkg/observability"
+	"github.com/jailtonjunior94/financial/pkg/o11y"
 
 	"github.com/golang-jwt/jwt"
 )
@@ -26,7 +26,7 @@ type (
 
 	jwtAdapter struct {
 		config *configs.Config
-		o11y   observability.Observability
+		o11y   o11y.Observability
 	}
 
 	User struct {
@@ -39,7 +39,7 @@ func NewUser(id, email string) *User {
 	return &User{ID: id, Email: email}
 }
 
-func NewJwtAdapter(config *configs.Config, o11y observability.Observability) JwtAdapter {
+func NewJwtAdapter(config *configs.Config, o11y o11y.Observability) JwtAdapter {
 	return &jwtAdapter{config: config, o11y: o11y}
 }
 
@@ -56,10 +56,10 @@ func (j *jwtAdapter) GenerateToken(ctx context.Context, id, email string) (strin
 	token := jwt.NewWithClaims(jwt.SigningMethodHS256, claims)
 	tokenSigned, err := token.SignedString([]byte(j.config.AuthSecretKey))
 	if err != nil {
-		span.AddStatus(observability.Error, "error trying to generate token")
+		span.AddStatus(o11y.Error, "error trying to generate token")
 		span.AddAttributes(
-			observability.Attributes{Key: "e-mail", Value: email},
-			observability.Attributes{Key: "error", Value: err.Error()},
+			o11y.Attributes{Key: "e-mail", Value: email},
+			o11y.Attributes{Key: "error", Value: err.Error()},
 		)
 		return "", ErrGenerateToken
 	}
@@ -78,7 +78,7 @@ func (j *jwtAdapter) ValidateToken(ctx context.Context, tokenRequest string) (*U
 	secret := []byte(j.config.AuthSecretKey)
 	token, err := jwt.Parse(tokenString, func(token *jwt.Token) (interface{}, error) {
 		if _, ok := token.Method.(*jwt.SigningMethodHMAC); !ok {
-			span.AddStatus(observability.Error, fmt.Sprintf("unexpected signing method: %v", token.Header["alg"]))
+			span.AddStatus(o11y.Error, fmt.Sprintf("unexpected signing method: %v", token.Header["alg"]))
 			return nil, ErrInvalidToken
 		}
 		return secret, nil

@@ -6,7 +6,7 @@ import (
 	"github.com/jailtonjunior94/financial/internal/user/domain/factories"
 	"github.com/jailtonjunior94/financial/internal/user/domain/interfaces"
 	"github.com/jailtonjunior94/financial/pkg/encrypt"
-	"github.com/jailtonjunior94/financial/pkg/observability"
+	"github.com/jailtonjunior94/financial/pkg/o11y"
 )
 
 type (
@@ -15,14 +15,14 @@ type (
 	}
 
 	createUserUseCase struct {
-		o11y       observability.Observability
+		o11y       o11y.Observability
 		hash       encrypt.HashAdapter
 		repository interfaces.UserRepository
 	}
 )
 
 func NewCreateUserUseCase(
-	o11y observability.Observability,
+	o11y o11y.Observability,
 	hash encrypt.HashAdapter,
 	repository interfaces.UserRepository,
 ) CreateUserUseCase {
@@ -39,19 +39,19 @@ func (u *createUserUseCase) Execute(ctx context.Context, input *CreateUserInput)
 
 	user, err := factories.CreateUser(input.Name, input.Email)
 	if err != nil {
-		span.AddStatus(observability.Error, err.Error())
+		span.AddStatus(o11y.Error, err.Error())
 		span.AddAttributes(
-			observability.Attributes{Key: "error", Value: err.Error()},
+			o11y.Attributes{Key: "error", Value: err.Error()},
 		)
 		return nil, err
 	}
 
 	hash, err := u.hash.GenerateHash(input.Password)
 	if err != nil {
-		span.AddStatus(observability.Error, "error generating hash")
+		span.AddStatus(o11y.Error, "error generating hash")
 		span.AddAttributes(
-			observability.Attributes{Key: "e-mail", Value: input.Email},
-			observability.Attributes{Key: "error", Value: err.Error()},
+			o11y.Attributes{Key: "e-mail", Value: input.Email},
+			o11y.Attributes{Key: "error", Value: err.Error()},
 		)
 		return nil, err
 	}
@@ -59,10 +59,10 @@ func (u *createUserUseCase) Execute(ctx context.Context, input *CreateUserInput)
 	user.SetPassword(hash)
 	userCreated, err := u.repository.Insert(ctx, user)
 	if err != nil {
-		span.AddStatus(observability.Error, "error created user in database")
+		span.AddStatus(o11y.Error, "error created user in database")
 		span.AddAttributes(
-			observability.Attributes{Key: "e-mail", Value: input.Email},
-			observability.Attributes{Key: "error", Value: err.Error()},
+			o11y.Attributes{Key: "e-mail", Value: input.Email},
+			o11y.Attributes{Key: "error", Value: err.Error()},
 		)
 		return nil, err
 	}

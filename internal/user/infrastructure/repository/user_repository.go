@@ -6,26 +6,26 @@ import (
 
 	"github.com/jailtonjunior94/financial/internal/user/domain/entities"
 	"github.com/jailtonjunior94/financial/internal/user/domain/interfaces"
-	"github.com/jailtonjunior94/financial/pkg/observability"
+	"github.com/jailtonjunior94/financial/pkg/o11y"
 )
 
 type userRepository struct {
-	db            *sql.DB
-	observability observability.Observability
+	db   *sql.DB
+	o11y o11y.Observability
 }
 
 func NewUserRepository(
 	db *sql.DB,
-	observability observability.Observability,
+	o11y o11y.Observability,
 ) interfaces.UserRepository {
 	return &userRepository{
-		db:            db,
-		observability: observability,
+		db:   db,
+		o11y: o11y,
 	}
 }
 
 func (r *userRepository) Insert(ctx context.Context, user *entities.User) (*entities.User, error) {
-	ctx, span := r.observability.Tracer().Start(ctx, "user_repository.Create")
+	ctx, span := r.o11y.Tracer().Start(ctx, "user_repository.insert")
 	defer span.End()
 
 	query := `insert into
@@ -63,7 +63,7 @@ func (r *userRepository) Insert(ctx context.Context, user *entities.User) (*enti
 }
 
 func (r *userRepository) FindByEmail(ctx context.Context, email string) (*entities.User, error) {
-	ctx, span := r.observability.Tracer().Start(ctx, "user_repository.FindByEmail")
+	ctx, span := r.o11y.Tracer().Start(ctx, "user_repository.find_by_email")
 	defer span.End()
 
 	query := `select

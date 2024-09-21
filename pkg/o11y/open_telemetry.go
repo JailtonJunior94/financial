@@ -1,4 +1,4 @@
-package observability
+package o11y
 
 import (
 	"context"
@@ -68,7 +68,6 @@ type (
 		resource       *resource.Resource
 		meterProvider  *metric.MeterProvider
 		tracerProvider *sdktrace.TracerProvider
-		loggerProvider *sdkLogger.LoggerProvider
 		logger         *slog.Logger
 	}
 )
@@ -104,13 +103,11 @@ func (o *observability) TracerProvider() *sdktrace.TracerProvider {
 }
 
 func (o *observability) LoggerProvider() *slog.Logger {
-	o.logger = otelslog.NewLogger(o.serviceName,
-		otelslog.WithLoggerProvider(o.loggerProvider),
-	)
 	return o.logger
 }
 
 func (o *observability) Start(ctx context.Context, name string, opts ...trace.SpanStartOption) (context.Context, Span) {
+	o.logger.InfoContext(ctx, name)
 	if len(opts) == 0 {
 		ctx, startSpan := o.tracer.Start(ctx, name)
 		return ctx, &span{startSpan}
@@ -136,6 +133,8 @@ func (s *span) AddAttributes(attrs ...Attributes) {
 			s.Span.SetAttributes(attribute.Key(attr.Key).Float64(attr.Value.(float64)))
 		case bool:
 			s.Span.SetAttributes(attribute.Key(attr.Key).Bool(attr.Value.(bool)))
+		case error:
+			s.Span.SetAttributes(attribute.Key(attr.Key).String(attr.Value.(error).Error()))
 		default:
 		}
 	}
@@ -180,7 +179,6 @@ func WithTracerProvider(ctx context.Context, endpoint string) Option {
 			otlptracegrpc.WithInsecure(),
 			otlptracegrpc.WithEndpoint(endpoint),
 		)
-
 		if err != nil {
 			log.Fatal(err)
 		}
@@ -209,14 +207,21 @@ func WithLoggerProvider(ctx context.Context, endpoint string) Option {
 			log.Fatal(err)
 		}
 
-		loggerProcessor := sdkLogger.NewBatchProcessor(loggerExporter)
+		loggerProcessor := sdkLogger.NewSimpleProcessor(loggerExporter)
 		loggerProvider := sdkLogger.NewLoggerProvider(
-			sdkLogger.WithResource(observability.resource),
 			sdkLogger.WithProcessor(loggerProcessor),
+			sdkLogger.WithResource(observability.resource),
 		)
 
-		observability.loggerProvider = loggerProvider
-		global.SetLoggerProvider(observability.loggerProvider)
+		global.SetLoggerProvider(loggerProvider)
+		observability.logger = otelslog.NewLogger(
+			observability.serviceName,
+			otelslog.WithLoggerProvider(loggerProvider),
+			otelslog.WithVersion(observability.serviceVersion),
+		)
+
+		// observability.logger = slog.New(slog.NewJSONHandler(os.Stdout, &slog.HandlerOptions{}))
+		loggerProvider.Logger(observability.serviceName)
 	}
 }
 

@@ -8,7 +8,7 @@ import (
 	"github.com/jailtonjunior94/financial/internal/user/domain/interfaces"
 	"github.com/jailtonjunior94/financial/pkg/auth"
 	"github.com/jailtonjunior94/financial/pkg/encrypt"
-	"github.com/jailtonjunior94/financial/pkg/observability"
+	"github.com/jailtonjunior94/financial/pkg/o11y"
 )
 
 var (
@@ -30,12 +30,12 @@ type tokenUseCase struct {
 	config     *configs.Config
 	hash       encrypt.HashAdapter
 	repository interfaces.UserRepository
-	o11y       observability.Observability
+	o11y       o11y.Observability
 }
 
 func NewTokenUseCase(
 	config *configs.Config,
-	o11y observability.Observability,
+	o11y o11y.Observability,
 	hash encrypt.HashAdapter,
 	jwt auth.JwtAdapter,
 	repository interfaces.UserRepository,
@@ -55,38 +55,38 @@ func (u *tokenUseCase) Execute(ctx context.Context, input *AuthInput) (*AuthOutp
 
 	user, err := u.repository.FindByEmail(ctx, input.Email)
 	if err != nil {
-		span.AddStatus(observability.Error, "error find user by e-mail")
+		span.AddStatus(o11y.Error, "error find user by e-mail")
 		span.AddAttributes(
-			observability.Attributes{Key: EmailKey, Value: input.Email},
-			observability.Attributes{Key: "error", Value: err.Error()},
+			o11y.Attributes{Key: EmailKey, Value: input.Email},
+			o11y.Attributes{Key: "error", Value: err},
 		)
 		return nil, err
 	}
 
 	if user == nil {
-		span.AddStatus(observability.Error, "user not found")
+		span.AddStatus(o11y.Error, "user not found")
 		span.AddAttributes(
-			observability.Attributes{Key: EmailKey, Value: input.Email},
-			observability.Attributes{Key: "error", Value: err.Error()},
+			o11y.Attributes{Key: EmailKey, Value: input.Email},
+			o11y.Attributes{Key: "error", Value: err},
 		)
 		return nil, ErrUserNotFound
 	}
 
 	if !u.hash.CheckHash(user.Password, input.Password) {
-		span.AddStatus(observability.Error, "error checking hash")
+		span.AddStatus(o11y.Error, "error checking hash")
 		span.AddAttributes(
-			observability.Attributes{Key: EmailKey, Value: input.Email},
-			observability.Attributes{Key: "error", Value: err.Error()},
+			o11y.Attributes{Key: EmailKey, Value: input.Email},
+			o11y.Attributes{Key: "error", Value: err},
 		)
 		return nil, ErrCheckHash
 	}
 
 	token, err := u.jwt.GenerateToken(ctx, user.ID.String(), user.Email.String())
 	if err != nil {
-		span.AddStatus(observability.Error, "error generate token")
+		span.AddStatus(o11y.Error, "error generate token")
 		span.AddAttributes(
-			observability.Attributes{Key: EmailKey, Value: input.Email},
-			observability.Attributes{Key: "error", Value: err.Error()},
+			o11y.Attributes{Key: EmailKey, Value: input.Email},
+			o11y.Attributes{Key: "error", Value: err},
 		)
 		return nil, err
 	}

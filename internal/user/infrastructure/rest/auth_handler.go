@@ -4,17 +4,17 @@ import (
 	"net/http"
 
 	"github.com/jailtonjunior94/financial/internal/user/usecase"
-	"github.com/jailtonjunior94/financial/pkg/observability"
+	"github.com/jailtonjunior94/financial/pkg/o11y"
 	"github.com/jailtonjunior94/financial/pkg/responses"
 )
 
 type AuthHandler struct {
 	tokenUseCase usecase.TokenUseCase
-	o11y         observability.Observability
+	o11y         o11y.Observability
 }
 
 func NewAuthHandler(
-	o11y observability.Observability,
+	o11y o11y.Observability,
 	tokenUseCase usecase.TokenUseCase,
 ) *AuthHandler {
 	return &AuthHandler{

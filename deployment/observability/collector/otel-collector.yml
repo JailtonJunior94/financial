@@ -16,9 +16,11 @@ exporters:
     user_agent: "opentelemetry-collector"
     metric:
       prefix: "otel"
+      endpoint: "monitoring.googleapis.com:443"
     trace:
       endpoint: "cloudtrace.googleapis.com:443"
     log:
+      default_log_name: "otel"
       endpoint: "logging.googleapis.com:443"
 
   jaeger:
