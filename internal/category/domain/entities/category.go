@@ -4,7 +4,8 @@ import (
 	"errors"
 	"time"
 
-	"github.com/google/uuid"
+	"github.com/jailtonjunior94/financial/internal/shared/entity"
+	sharedVos "github.com/jailtonjunior94/financial/internal/shared/vos"
 )
 
 var (
@@ -14,39 +15,22 @@ var (
 )
 
 type Category struct {
-	ID        string
-	UserID    string
-	Name      string
-	Sequence  int
-	CreatedAt time.Time
-	UpdatedAt *time.Time
-	Active    bool
+	entity.Base
+	UserID   sharedVos.UUID
+	ParentID *sharedVos.UUID
+	Name     string
+	Sequence uint
 }
 
-func NewCategory(userID, name string, sequence int) (*Category, error) {
+func NewCategory(userID sharedVos.UUID, parentID *sharedVos.UUID, name string, sequence uint) (*Category, error) {
 	category := &Category{
-		ID:        uuid.New().String(),
-		UserID:    userID,
-		Name:      name,
-		Sequence:  sequence,
-		CreatedAt: time.Now(),
-		Active:    true,
-	}
-	if err := category.IsValid(); err != nil {
-		return nil, err
+		UserID:   userID,
+		ParentID: parentID,
+		Name:     name,
+		Sequence: sequence,
+		Base: entity.Base{
+			CreatedAt: time.Now(),
+		},
 	}
 	return category, nil
-}
-
-func (u *Category) IsValid() error {
-	if u.UserID == "" {
-		return ErrUserIDIsRequired
-	}
-	if u.Name == "" {
-		return ErrNameIsRequired
-	}
-	if u.Sequence < 0 {
-		return ErrSequenceIsRequired
-	}
-	return nil
 }

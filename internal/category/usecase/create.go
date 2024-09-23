@@ -3,7 +3,7 @@ package usecase
 import (
 	"context"
 
-	"github.com/jailtonjunior94/financial/internal/category/domain/entities"
+	"github.com/jailtonjunior94/financial/internal/category/domain/factories"
 	"github.com/jailtonjunior94/financial/internal/category/domain/interfaces"
 	"github.com/jailtonjunior94/financial/pkg/o11y"
 )
@@ -33,13 +33,22 @@ func (u *createCategoryUseCase) Execute(ctx context.Context, userID string, inpu
 	ctx, span := u.o11y.Start(ctx, "create_category_usecase.execute")
 	defer span.End()
 
-	newCategory, err := entities.NewCategory(userID, input.Name, input.Sequence)
+	newCategory, err := factories.CreateCategory(userID, input.ParentID, input.Name, input.Sequence)
 	if err != nil {
-		span.AddAttributes(
-			ctx, o11y.Error, "error parsing category",
-			o11y.Attributes{Key: "user_id", Value: userID},
-		)
+		span.AddAttributes(ctx, o11y.Error, err.Error(), o11y.Attributes{Key: "error", Value: err})
 		return nil, err
+	}
+
+	if newCategory.ParentID != nil {
+		parent, err := u.repository.FindByID(ctx, newCategory.UserID, *newCategory.ParentID)
+		if err != nil {
+			span.AddAttributes(
+				ctx, o11y.Error, "error finding parent category",
+				o11y.Attributes{Key: "parent_id", Value: input.ParentID},
+			)
+			return nil, err
+		}
+		newCategory.ParentID = &parent.ID
 	}
 
 	category, err := u.repository.Insert(ctx, newCategory)
@@ -53,7 +62,7 @@ func (u *createCategoryUseCase) Execute(ctx context.Context, userID string, inpu
 	}
 
 	return &CreateCategoryOutput{
-		ID:        category.ID,
+		ID:        category.ID.String(),
 		Name:      category.Name,
 		Sequence:  category.Sequence,
 		CreatedAt: category.CreatedAt,

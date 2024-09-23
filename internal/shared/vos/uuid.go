@@ -68,6 +68,25 @@ func (vo *UUID) String() string {
 	return vo.Value.String()
 }
 
+func (vo *UUID) IsEmpty() bool {
+	return vo.Value == uuid.Nil
+}
+
 func (vo *UUID) UUID() uuid.UUID {
 	return vo.Value
+}
+
+func (vo *UUID) SafeUUID() *uuid.UUID {
+	if vo == nil {
+		return nil
+	}
+
+	if vo.IsEmpty() {
+		return nil
+	}
+
+	if vo.Value == uuid.Nil {
+		return nil
+	}
+	return &vo.Value
 }
