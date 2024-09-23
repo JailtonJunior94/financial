@@ -36,7 +36,7 @@ func (r *userRepository) Insert(ctx context.Context, user *entities.User) (*enti
 					deleted_at
 				)
 				values
-				($1, $2, $3, $4, $5, $6, $7)`
+				(?, ?, ?, ?, ?, ?, ?)`
 
 	stmt, err := r.db.PrepareContext(ctx, query)
 	if err != nil {
@@ -50,7 +50,7 @@ func (r *userRepository) Insert(ctx context.Context, user *entities.User) (*enti
 
 	_, err = stmt.ExecContext(
 		ctx,
-		user.ID.Value,
+		user.ID.String(),
 		user.Name.String(),
 		user.Email.String(),
 		user.Password,
@@ -84,7 +84,7 @@ func (r *userRepository) FindByEmail(ctx context.Context, email string) (*entiti
 			from
 				users
 			where
-				email = $1
+				email = ?
 				and deleted_at is null;`
 
 	var user entities.User

@@ -15,7 +15,7 @@ type UUID struct {
 }
 
 func NewUUID() (UUID, error) {
-	uuid, err := uuid.NewRandom()
+	uuid, err := uuid.NewV7()
 	if err != nil {
 		return UUID{}, err
 	}

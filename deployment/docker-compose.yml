@@ -6,16 +6,16 @@ services:
       dockerfile: deployment/Dockerfile
     command: migrate
     environment:
-      - DB_DRIVER=postgres
-      - DB_HOST=cockroachdb
-      - DB_PORT=26257
-      - DB_USER=root
-      - DB_PASSWORD=financial@password
+      - DB_DRIVER=mysql
+      - DB_HOST=mysql
+      - DB_PORT=3306
+      - DB_USER=mysql
+      - DB_PASSWORD=mysql
       - DB_NAME=financial
       - DB_MAX_IDLE_CONNS=10
       - MIGRATE_PATH=file://migrations/financial
     depends_on:
-      - cockroachdb
+      - mysql
 
   financial:
     container_name: financial
@@ -42,34 +42,34 @@ services:
     depends_on:
       - financial_migration
 
-  # mysql:
-  #   image: mysql:8.1.0
-  #   command: --default-authentication-plugin=mysql_native_password
-  #   restart: always
-  #   environment:
-  #     MYSQL_ROOT_PASSWORD: financial
-  #     MYSQL_DATABASE: financial
-  #     MYSQL_USER: mysql
-  #     MYSQL_PASSWORD: mysql
-  #   ports:
-  #     - "3306:3306"
-  #   volumes:
-  #     - .docker/mysql:/var/lib/mysql
-
-  cockroachdb:
+  mysql:
+    image: mysql:8.1.0
+    command: --default-authentication-plugin=mysql_native_password
     restart: always
-    container_name: cockroachdb
-    image: cockroachdb/cockroach:v23.2.4
-    command: start-single-node --insecure
-    ports:
-      - "26257:26257"
-      - "8080:8080"
-    volumes:
-      - ./cockroachdb_data:/cockroach/cockroach-data
     environment:
-      COCKROACH_DATABASE: financial
-      COCKROACH_USER: root
-      COCKROACH_PASSWORD: financial@password
+      MYSQL_ROOT_PASSWORD: financial
+      MYSQL_DATABASE: financial
+      MYSQL_USER: mysql
+      MYSQL_PASSWORD: mysql
+    ports:
+      - "3306:3306"
+    volumes:
+      - .docker/mysql:/var/lib/mysql
+
+  # cockroachdb:
+  #   restart: always
+  #   container_name: cockroachdb
+  #   image: cockroachdb/cockroach:v23.2.4
+  #   command: start-single-node --insecure
+  #   ports:
+  #     - "26257:26257"
+  #     - "8080:8080"
+  #   volumes:
+  #     - ./cockroachdb_data:/cockroach/cockroach-data
+  #   environment:
+  #     COCKROACH_DATABASE: financial
+  #     COCKROACH_USER: root
+  #     COCKROACH_PASSWORD: financial@password
 
   rabbitmq:
     container_name: messaging-rabbitmq
@@ -134,3 +134,6 @@ services:
     ports:
       - "16686:16686"
       - "14250:14250"
+
+volumes:
+  mysql:
