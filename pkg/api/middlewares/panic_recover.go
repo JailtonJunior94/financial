@@ -36,8 +36,7 @@ func (m *panicRecoverMiddleware) Recover(next http.Handler) http.Handler {
 				}
 
 				errFormated := fmt.Sprintf("stacktrace from panic: \n" + string(debug.Stack()))
-				span.AddStatus(o11y.Error, err.Error())
-				span.AddAttributes(
+				span.AddAttributes(r.Context(), o11y.Error, err.Error(),
 					o11y.Attributes{Key: "stacktrace", Value: errFormated},
 					o11y.Attributes{Key: "error", Value: err},
 				)

@@ -22,7 +22,7 @@ func NewUserRepository(db *sql.DB, o11y o11y.Observability) interfaces.UserRepos
 }
 
 func (r *userRepository) Insert(ctx context.Context, user *entities.User) (*entities.User, error) {
-	ctx, span := r.o11y.Tracer().Start(ctx, "user_repository.insert")
+	ctx, span := r.o11y.Start(ctx, "user_repository.insert")
 	defer span.End()
 
 	query := `insert into
@@ -40,6 +40,11 @@ func (r *userRepository) Insert(ctx context.Context, user *entities.User) (*enti
 
 	stmt, err := r.db.PrepareContext(ctx, query)
 	if err != nil {
+		span.AddAttributes(
+			ctx, o11y.Error, "error prepare query insert user",
+			o11y.Attributes{Key: "email", Value: user.Email},
+			o11y.Attributes{Key: "error", Value: err},
+		)
 		return nil, err
 	}
 
@@ -54,13 +59,18 @@ func (r *userRepository) Insert(ctx context.Context, user *entities.User) (*enti
 		user.DeletedAt,
 	)
 	if err != nil {
+		span.AddAttributes(
+			ctx, o11y.Error, "error insert user",
+			o11y.Attributes{Key: "email", Value: user.Email},
+			o11y.Attributes{Key: "error", Value: err},
+		)
 		return nil, err
 	}
 	return user, nil
 }
 
 func (r *userRepository) FindByEmail(ctx context.Context, email string) (*entities.User, error) {
-	ctx, span := r.o11y.Tracer().Start(ctx, "user_repository.find_by_email")
+	ctx, span := r.o11y.Start(ctx, "user_repository.find_by_email")
 	defer span.End()
 
 	query := `select
@@ -90,8 +100,10 @@ func (r *userRepository) FindByEmail(ctx context.Context, email string) (*entiti
 
 	if err != nil {
 		if err == sql.ErrNoRows {
+			span.AddAttributes(ctx, o11y.Ok, "user not found", o11y.Attributes{Key: "e-mail", Value: email})
 			return nil, nil
 		}
+		span.AddAttributes(ctx, o11y.Error, "error finding user", o11y.Attributes{Key: "e-mail", Value: email})
 		return nil, err
 	}
 	return &user, nil

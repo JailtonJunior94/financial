@@ -35,15 +35,17 @@ func (u *createCategoryUseCase) Execute(ctx context.Context, userID string, inpu
 
 	newCategory, err := entities.NewCategory(userID, input.Name, input.Sequence)
 	if err != nil {
-		span.AddStatus(o11y.Error, "error parsing category")
-		span.AddAttributes(o11y.Attributes{Key: "user_id", Value: userID})
+		span.AddAttributes(
+			ctx, o11y.Error, "error parsing category",
+			o11y.Attributes{Key: "user_id", Value: userID},
+		)
 		return nil, err
 	}
 
 	category, err := u.repository.Insert(ctx, newCategory)
 	if err != nil {
-		span.AddStatus(o11y.Error, "error creating category")
 		span.AddAttributes(
+			ctx, o11y.Error, "error creating category",
 			o11y.Attributes{Key: "user_id", Value: userID},
 			o11y.Attributes{Key: "error", Value: err},
 		)

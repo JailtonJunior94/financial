@@ -48,7 +48,11 @@ func (r *categoryRepository) Insert(ctx context.Context, category *entities.Cate
 
 	stmt, err := r.db.PrepareContext(ctx, query)
 	if err != nil {
-		panic(err)
+		span.AddAttributes(
+			ctx, o11y.Error, "error creating category",
+			o11y.Attributes{Key: "user_id", Value: category.UserID},
+			o11y.Attributes{Key: "error", Value: err},
+		)
 		return nil, err
 	}
 
@@ -63,8 +67,8 @@ func (r *categoryRepository) Insert(ctx context.Context, category *entities.Cate
 		category.Active,
 	)
 	if err != nil {
-		span.AddStatus(o11y.Error, "error creating category")
 		span.AddAttributes(
+			ctx, o11y.Error, "error creating category",
 			o11y.Attributes{Key: "user_id", Value: category.UserID},
 			o11y.Attributes{Key: "error", Value: err},
 		)

@@ -56,8 +56,7 @@ func (j *jwtAdapter) GenerateToken(ctx context.Context, id, email string) (strin
 	token := jwt.NewWithClaims(jwt.SigningMethodHS256, claims)
 	tokenSigned, err := token.SignedString([]byte(j.config.AuthSecretKey))
 	if err != nil {
-		span.AddStatus(o11y.Error, "error trying to generate token")
-		span.AddAttributes(
+		span.AddAttributes(ctx, o11y.Error, "error trying to generate token",
 			o11y.Attributes{Key: "e-mail", Value: email},
 			o11y.Attributes{Key: "error", Value: err.Error()},
 		)
@@ -78,7 +77,7 @@ func (j *jwtAdapter) ValidateToken(ctx context.Context, tokenRequest string) (*U
 	secret := []byte(j.config.AuthSecretKey)
 	token, err := jwt.Parse(tokenString, func(token *jwt.Token) (interface{}, error) {
 		if _, ok := token.Method.(*jwt.SigningMethodHMAC); !ok {
-			span.AddStatus(o11y.Error, fmt.Sprintf("unexpected signing method: %v", token.Header["alg"]))
+			span.AddAttributes(ctx, o11y.Error, fmt.Sprintf("unexpected signing method: %v", token.Header["alg"]))
 			return nil, ErrInvalidToken
 		}
 		return secret, nil

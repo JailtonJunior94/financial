@@ -16,7 +16,7 @@ services:
       - MIGRATE_PATH=file://migrations/financial
     depends_on:
       - cockroachdb
-      
+
   financial:
     container_name: financial
     build:
@@ -81,7 +81,7 @@ services:
       - "5672:5672"
       - "15672:15672"
     healthcheck:
-      test: [ "CMD", "rabbitmq-diagnostics", "-q", "ping" ]
+      test: ["CMD", "rabbitmq-diagnostics", "-q", "ping"]
       interval: 5s
       timeout: 10s
       retries: 5
@@ -134,7 +134,3 @@ services:
     ports:
       - "16686:16686"
       - "14250:14250"
-
-volumes:
-  mysql:
-    driver: local

@@ -55,8 +55,8 @@ func (u *tokenUseCase) Execute(ctx context.Context, input *AuthInput) (*AuthOutp
 
 	user, err := u.repository.FindByEmail(ctx, input.Email)
 	if err != nil {
-		span.AddStatus(o11y.Error, "error find user by e-mail")
 		span.AddAttributes(
+			ctx, o11y.Error, "error find user by e-mail",
 			o11y.Attributes{Key: EmailKey, Value: input.Email},
 			o11y.Attributes{Key: "error", Value: err},
 		)
@@ -64,8 +64,8 @@ func (u *tokenUseCase) Execute(ctx context.Context, input *AuthInput) (*AuthOutp
 	}
 
 	if user == nil {
-		span.AddStatus(o11y.Error, "user not found")
 		span.AddAttributes(
+			ctx, o11y.Error, "user not found",
 			o11y.Attributes{Key: EmailKey, Value: input.Email},
 			o11y.Attributes{Key: "error", Value: err},
 		)
@@ -73,8 +73,8 @@ func (u *tokenUseCase) Execute(ctx context.Context, input *AuthInput) (*AuthOutp
 	}
 
 	if !u.hash.CheckHash(user.Password, input.Password) {
-		span.AddStatus(o11y.Error, "error checking hash")
 		span.AddAttributes(
+			ctx, o11y.Error, "error checking hash",
 			o11y.Attributes{Key: EmailKey, Value: input.Email},
 			o11y.Attributes{Key: "error", Value: err},
 		)
@@ -83,8 +83,8 @@ func (u *tokenUseCase) Execute(ctx context.Context, input *AuthInput) (*AuthOutp
 
 	token, err := u.jwt.GenerateToken(ctx, user.ID.String(), user.Email.String())
 	if err != nil {
-		span.AddStatus(o11y.Error, "error generate token")
 		span.AddAttributes(
+			ctx, o11y.Error, "error generate token",
 			o11y.Attributes{Key: EmailKey, Value: input.Email},
 			o11y.Attributes{Key: "error", Value: err},
 		)

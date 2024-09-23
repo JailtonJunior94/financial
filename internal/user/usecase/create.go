@@ -39,19 +39,16 @@ func (u *createUserUseCase) Execute(ctx context.Context, input *CreateUserInput)
 
 	user, err := factories.CreateUser(input.Name, input.Email)
 	if err != nil {
-		span.AddStatus(o11y.Error, err.Error())
-		span.AddAttributes(
-			o11y.Attributes{Key: "error", Value: err.Error()},
-		)
+		span.AddAttributes(ctx, o11y.Error, err.Error(), o11y.Attributes{Key: "error", Value: err})
 		return nil, err
 	}
 
 	hash, err := u.hash.GenerateHash(input.Password)
 	if err != nil {
-		span.AddStatus(o11y.Error, "error generating hash")
 		span.AddAttributes(
+			ctx, o11y.Error, "error generating hash",
 			o11y.Attributes{Key: "e-mail", Value: input.Email},
-			o11y.Attributes{Key: "error", Value: err.Error()},
+			o11y.Attributes{Key: "error", Value: err},
 		)
 		return nil, err
 	}
@@ -59,10 +56,10 @@ func (u *createUserUseCase) Execute(ctx context.Context, input *CreateUserInput)
 	user.SetPassword(hash)
 	userCreated, err := u.repository.Insert(ctx, user)
 	if err != nil {
-		span.AddStatus(o11y.Error, "error created user in database")
 		span.AddAttributes(
+			ctx, o11y.Error, "error created user in database",
 			o11y.Attributes{Key: "e-mail", Value: input.Email},
-			o11y.Attributes{Key: "error", Value: err.Error()},
+			o11y.Attributes{Key: "error", Value: err},
 		)
 		return nil, err
 	}

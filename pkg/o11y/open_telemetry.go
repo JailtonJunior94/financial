@@ -38,20 +38,21 @@ const (
 type (
 	Observability interface {
 		Tracer() trace.Tracer
+		LoggerProvider() *slog.Logger
 		MeterProvider() *metric.MeterProvider
 		TracerProvider() *sdktrace.TracerProvider
-		LoggerProvider() *slog.Logger
 		Start(ctx context.Context, name string, opts ...trace.SpanStartOption) (context.Context, Span)
 	}
 
 	Span interface {
 		trace.Span
-		AddAttributes(attrs ...Attributes)
-		AddStatus(code Code, description string)
+		AddStatus(ctx context.Context, code Code, description string)
+		AddAttributes(ctx context.Context, code Code, description string, attrs ...Attributes)
 	}
 
 	span struct {
 		trace.Span
+		logger *slog.Logger
 	}
 
 	Attributes struct {
@@ -107,20 +108,21 @@ func (o *observability) LoggerProvider() *slog.Logger {
 }
 
 func (o *observability) Start(ctx context.Context, name string, opts ...trace.SpanStartOption) (context.Context, Span) {
-	o.logger.InfoContext(ctx, name)
 	if len(opts) == 0 {
 		ctx, startSpan := o.tracer.Start(ctx, name)
-		return ctx, &span{startSpan}
+		return ctx, &span{Span: startSpan, logger: o.logger}
 	}
-	ctx, startSpan := o.tracer.Start(ctx, name, opts[0])
-	return ctx, &span{startSpan}
+	ctx, startSpan := o.tracer.Start(ctx, name, opts...)
+	return ctx, &span{Span: startSpan, logger: o.logger}
 }
 
-func (s *span) AddStatus(code Code, description string) {
+func (s *span) AddStatus(ctx context.Context, code Code, description string) {
 	s.Span.SetStatus(codes.Code(code), description)
 }
 
-func (s *span) AddAttributes(attrs ...Attributes) {
+func (s *span) AddAttributes(ctx context.Context, code Code, description string, attrs ...Attributes) {
+	s.Span.SetStatus(codes.Code(code), description)
+	s.addLogger(ctx, code, description, attrs...)
 	for _, attr := range attrs {
 		switch attr.Value.(type) {
 		case string:
@@ -138,6 +140,22 @@ func (s *span) AddAttributes(attrs ...Attributes) {
 		default:
 		}
 	}
+}
+
+func (s *span) addLogger(ctx context.Context, code Code, description string, attrs ...Attributes) {
+	slogAttrs := make([]any, len(attrs))
+	for i, attr := range attrs {
+		slogAttrs[i] = slog.Attr{
+			Key:   attr.Key,
+			Value: slog.AnyValue(attr.Value),
+		}
+	}
+
+	if code == Error {
+		s.logger.ErrorContext(ctx, description, slogAttrs...)
+		return
+	}
+	s.logger.InfoContext(ctx, description, slogAttrs...)
 }
 
 func WithServiceName(serviceName string) Option {
