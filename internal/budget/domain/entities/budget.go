@@ -25,3 +25,21 @@ func NewBudget(userID vos.UUID, amount vos.Money, date time.Time) *Budget {
 		},
 	}
 }
+
+func (b *Budget) AddItems(items []*BudgetItem) bool {
+	b.Items = append(b.Items, items...)
+	return b.CalculatePercentageTotal()
+}
+
+func (b *Budget) AddItem(item *BudgetItem) bool {
+	b.Items = append(b.Items, item)
+	return b.CalculatePercentageTotal()
+}
+
+func (b *Budget) CalculatePercentageTotal() bool {
+	var total vos.Percentage
+	for _, item := range b.Items {
+		total = total.Add(item.PercentageGoal)
+	}
+	return total.Equals(vos.NewPercentage(100))
+}

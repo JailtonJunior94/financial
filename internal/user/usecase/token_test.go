@@ -31,10 +31,12 @@ func TestTokenSuite(t *testing.T) {
 }
 
 func (s *TokenSuite) SetupTest() {
+	s.ctx = context.Background()
 	s.config = &configs.Config{
 		AuthExpirationAt: 8,
 		AuthSecretKey:    "my_secret_key",
 	}
+	s.o11y = o11y.NewDevelopmentObservability("test", "1.0.0")
 	s.jwt = auth.NewJwtAdapter(s.config, s.o11y)
 	s.hash = encrypt.NewHashAdapter()
 }
@@ -66,7 +68,7 @@ func (s *TokenSuite) TestToken() {
 				userRepository: func() *repositoryMock.UserRepository {
 					userRepository := &repositoryMock.UserRepository{}
 					userRepository.
-						On("FindByEmail", s.ctx, mock.Anything).
+						On("FindByEmail", mock.Anything, mock.Anything).
 						Return(user, nil)
 					return userRepository
 				}(),
