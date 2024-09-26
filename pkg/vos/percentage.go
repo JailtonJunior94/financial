@@ -47,3 +47,7 @@ func (p Percentage) LessThan(other Percentage) bool {
 func (p Percentage) GreaterThan(other Percentage) bool {
 	return p.value > other.value
 }
+
+func (p Percentage) Percentage() float64 {
+	return p.value
+}

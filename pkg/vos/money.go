@@ -47,3 +47,7 @@ func (m Money) LessThan(other Money) bool {
 func (m Money) GreaterThan(other Money) bool {
 	return m.value > other.value
 }
+
+func (m Money) Money() float64 {
+	return m.value
+}
