@@ -3,7 +3,7 @@ package factories
 import (
 	"time"
 
-	sharedVos "github.com/jailtonjunior94/financial/internal/shared/vos"
+	sharedVos "github.com/jailtonjunior94/financial/pkg/vos"
 
 	"github.com/jailtonjunior94/financial/internal/user/domain/entities"
 	"github.com/jailtonjunior94/financial/internal/user/domain/vos"

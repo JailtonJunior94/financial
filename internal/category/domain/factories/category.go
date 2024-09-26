@@ -2,7 +2,7 @@ package factories
 
 import (
 	"github.com/jailtonjunior94/financial/internal/category/domain/entities"
-	"github.com/jailtonjunior94/financial/internal/shared/vos"
+	"github.com/jailtonjunior94/financial/pkg/vos"
 )
 
 func CreateCategory(userID, parentID, name string, sequence uint) (*entities.Category, error) {

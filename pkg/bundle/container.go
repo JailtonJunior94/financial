@@ -5,10 +5,10 @@ import (
 	"database/sql"
 
 	"github.com/jailtonjunior94/financial/configs"
-	"github.com/jailtonjunior94/financial/internal/shared/http/middlewares"
 	"github.com/jailtonjunior94/financial/pkg/auth"
 	"github.com/jailtonjunior94/financial/pkg/database/mysql"
 	"github.com/jailtonjunior94/financial/pkg/encrypt"
+	"github.com/jailtonjunior94/financial/pkg/http/middlewares"
 	"github.com/jailtonjunior94/financial/pkg/logger"
 	"github.com/jailtonjunior94/financial/pkg/o11y"
 

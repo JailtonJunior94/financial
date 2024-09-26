@@ -4,8 +4,8 @@ import (
 	"errors"
 	"time"
 
-	"github.com/jailtonjunior94/financial/internal/shared/entity"
-	sharedVos "github.com/jailtonjunior94/financial/internal/shared/vos"
+	"github.com/jailtonjunior94/financial/pkg/entity"
+	sharedVos "github.com/jailtonjunior94/financial/pkg/vos"
 )
 
 var (

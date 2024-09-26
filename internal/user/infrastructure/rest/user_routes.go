@@ -3,7 +3,7 @@ package rest
 import (
 	"net/http"
 
-	"github.com/jailtonjunior94/financial/internal/shared/http/middlewares"
+	"github.com/jailtonjunior94/financial/pkg/http/middlewares"
 
 	"github.com/go-chi/chi/v5"
 )
