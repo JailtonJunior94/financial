@@ -1,8 +1,8 @@
 package category
 
 import (
-	"github.com/jailtonjunior94/financial/internal/category/infrastructure/repository"
-	"github.com/jailtonjunior94/financial/internal/category/infrastructure/rest"
+	"github.com/jailtonjunior94/financial/internal/category/infrastructure/http"
+	"github.com/jailtonjunior94/financial/internal/category/infrastructure/repositories"
 	"github.com/jailtonjunior94/financial/internal/category/usecase"
 	"github.com/jailtonjunior94/financial/pkg/bundle"
 
@@ -10,8 +10,12 @@ import (
 )
 
 func RegisterCategoryModule(ioc *bundle.Container, router *chi.Mux) {
-	categoryRepository := repository.NewCategoryRepository(ioc.DB, ioc.Observability)
+	categoryRepository := repositories.NewCategoryRepository(ioc.DB, ioc.Observability)
 	categoryCreateUseCase := usecase.NewCreateCategoryUseCase(ioc.Observability, categoryRepository)
-	categoryHandler := rest.NewCategoryHandler(ioc.Observability, categoryCreateUseCase)
-	rest.NewCategoryRoutes(router, ioc.MiddlewareAuth, rest.WithCreateCategoryHandler(categoryHandler.Create))
+	categoryHandler := http.NewCategoryHandler(ioc.Observability, categoryCreateUseCase)
+	http.NewCategoryRoutes(
+		router,
+		ioc.MiddlewareAuth,
+		http.WithCreateCategoryHandler(categoryHandler.Create),
+	)
 }

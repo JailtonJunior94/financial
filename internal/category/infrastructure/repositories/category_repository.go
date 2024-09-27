@@ -1,4 +1,4 @@
-package repository
+package repositories
 
 import (
 	"context"
@@ -53,8 +53,8 @@ func (r *categoryRepository) FindByID(ctx context.Context, userID, id vos.UUID) 
 		&category.Name,
 		&category.Sequence,
 		&category.CreatedAt,
-		&category.UpdatedAt,
-		&category.DeletedAt,
+		&category.UpdatedAt.Time,
+		&category.DeletedAt.Time,
 	)
 
 	if err != nil {
@@ -104,8 +104,8 @@ func (r *categoryRepository) Insert(ctx context.Context, category *entities.Cate
 		category.Name,
 		category.Sequence,
 		category.CreatedAt,
-		category.UpdatedAt,
-		category.DeletedAt,
+		category.UpdatedAt.Time,
+		category.DeletedAt.Time,
 	)
 	if err != nil {
 		span.AddAttributes(

@@ -1,4 +1,4 @@
-package repository
+package repositories
 
 import (
 	"context"
@@ -55,8 +55,8 @@ func (r *userRepository) Insert(ctx context.Context, user *entities.User) (*enti
 		user.Email.String(),
 		user.Password,
 		user.CreatedAt,
-		user.UpdatedAt,
-		user.DeletedAt,
+		user.UpdatedAt.Time,
+		user.DeletedAt.Time,
 	)
 	if err != nil {
 		span.AddAttributes(
@@ -94,8 +94,8 @@ func (r *userRepository) FindByEmail(ctx context.Context, email string) (*entiti
 		&user.Email.Value,
 		&user.Password,
 		&user.CreatedAt,
-		&user.UpdatedAt,
-		&user.DeletedAt,
+		&user.UpdatedAt.Time,
+		&user.DeletedAt.Time,
 	)
 
 	if err != nil {

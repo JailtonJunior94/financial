@@ -11,6 +11,7 @@ import (
 	"syscall"
 	"time"
 
+	"github.com/jailtonjunior94/financial/internal/budget"
 	"github.com/jailtonjunior94/financial/internal/category"
 	"github.com/jailtonjunior94/financial/internal/user"
 	"github.com/jailtonjunior94/financial/pkg/bundle"
@@ -27,7 +28,7 @@ func NewApiServer() *apiServer {
 	return &apiServer{}
 }
 
-func (s *apiServer) Server() {
+func (s *apiServer) Run() {
 	ctx := context.Background()
 	ioc := bundle.NewContainer(ctx)
 
@@ -76,6 +77,8 @@ func (s *apiServer) Server() {
 	user.RegisterUserModule(ioc, router)
 	/* Category */
 	category.RegisterCategoryModule(ioc, router)
+	/* Budget */
+	budget.RegisterBudgetModule(ioc, router)
 
 	/* Graceful shutdown */
 	server := http.Server{

@@ -4,8 +4,9 @@ migrate:
 
 .PHONY: mockery
 generate_mock:
-	@mockery --dir=internal/user/domain/interfaces --name=UserRepository --filename=user_repository_mock.go --output=internal/user/infrastructure/repository/mock --outpkg=repositoryMock
-	@mockery --dir=internal/category/domain/interfaces --name=CategoryRepository --filename=category_repository_mock.go --output=internal/category/infrastructure/repository/mock --outpkg=repositoryMock
+	@mockery --dir=internal/user/domain/interfaces --name=UserRepository --filename=user_repository_mock.go --output=internal/user/infrastructure/repositories/mock --outpkg=repositoryMock
+	@mockery --dir=internal/category/domain/interfaces --name=CategoryRepository --filename=category_repository_mock.go --output=internal/category/infrastructure/repositories/mock --outpkg=repositoryMock
+	@mockery --dir=internal/budget/domain/interfaces --name=BudgetRepository --filename=budget_repository_mock.go --output=internal/budget/infrastructure/repositories/mock --outpkg=repositoryMock
 
 test:
 	go test -coverprofile coverage.out -failfast ./...

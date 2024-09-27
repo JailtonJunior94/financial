@@ -9,6 +9,10 @@ import (
 type Base struct {
 	ID        vos.UUID
 	CreatedAt time.Time
-	UpdatedAt *time.Time
-	DeletedAt *time.Time
+	UpdatedAt vos.NullableTime
+	DeletedAt vos.NullableTime
+}
+
+func (b *Base) SetID(id vos.UUID) {
+	b.ID = id
 }

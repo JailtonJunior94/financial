@@ -1,4 +1,4 @@
-package rest
+package http
 
 import (
 	"encoding/json"
@@ -27,7 +27,7 @@ func NewCategoryHandler(
 }
 
 func (h *CategoryHandler) Create(w http.ResponseWriter, r *http.Request) {
-	ctx, span := h.o11y.Tracer().Start(r.Context(), "category_handler.create")
+	ctx, span := h.o11y.Start(r.Context(), "category_handler.create")
 	defer span.End()
 
 	user := r.Context().Value(middlewares.UserCtxKey).(*auth.User)

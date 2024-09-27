@@ -7,7 +7,7 @@ import (
 
 	"github.com/jailtonjunior94/financial/configs"
 	"github.com/jailtonjunior94/financial/internal/user/domain/factories"
-	repositoryMock "github.com/jailtonjunior94/financial/internal/user/infrastructure/repository/mock"
+	repositoryMock "github.com/jailtonjunior94/financial/internal/user/infrastructure/repositories/mock"
 	"github.com/jailtonjunior94/financial/pkg/auth"
 	"github.com/jailtonjunior94/financial/pkg/encrypt"
 	"github.com/jailtonjunior94/financial/pkg/o11y"
