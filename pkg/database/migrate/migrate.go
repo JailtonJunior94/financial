@@ -3,8 +3,9 @@ package migrate
 import (
 	"errors"
 
-	"github.com/golang-migrate/migrate/v4"
 	"github.com/jailtonjunior94/financial/pkg/logger"
+
+	"github.com/golang-migrate/migrate/v4"
 )
 
 var (
@@ -25,21 +26,23 @@ type (
 )
 
 func (m *migration) Execute() error {
-	_, _, err := m.migrate.Version()
+	version, _, err := m.migrate.Version()
 	if err != nil && !errors.Is(err, migrate.ErrNilVersion) {
 		m.logger.Info(err.Error())
 		return ErrMigrateVersion
 	}
 
 	err = m.migrate.Up()
-	if errors.Is(err, migrate.ErrNoChange) {
-		m.logger.Info(err.Error())
-		return nil
-	}
-
 	if err != nil {
-		m.logger.Error(err.Error())
-		return err
+		if errors.Is(err, migrate.ErrNoChange) {
+			m.logger.Info(err.Error())
+			return nil
+		}
+
+		if forceErr := m.migrate.Force(int(version)); forceErr != nil {
+			m.logger.Info(err.Error())
+			return forceErr
+		}
 	}
 	return nil
 }

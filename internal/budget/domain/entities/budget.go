@@ -9,17 +9,19 @@ import (
 
 type Budget struct {
 	entity.Base
-	UserID vos.UUID
-	Date   time.Time
-	Amount vos.Money
-	Items  []*BudgetItem
+	UserID         vos.UUID
+	Date           time.Time
+	AmountGoal     vos.Money
+	AmountUsed     vos.Money
+	PercentageUsed vos.Percentage
+	Items          []*BudgetItem
 }
 
-func NewBudget(userID vos.UUID, amount vos.Money, date time.Time) *Budget {
+func NewBudget(userID vos.UUID, amountGoal vos.Money, date time.Time) *Budget {
 	return &Budget{
-		UserID: userID,
-		Amount: amount,
-		Date:   date,
+		Date:       date,
+		UserID:     userID,
+		AmountGoal: amountGoal,
 		Base: entity.Base{
 			CreatedAt: time.Now().UTC(),
 		},
@@ -28,12 +30,28 @@ func NewBudget(userID vos.UUID, amount vos.Money, date time.Time) *Budget {
 
 func (b *Budget) AddItems(items []*BudgetItem) bool {
 	b.Items = append(b.Items, items...)
+	b.CalculateAmountUsed()
+	b.CalculatePercentageUsed()
 	return b.CalculatePercentageTotal()
 }
 
 func (b *Budget) AddItem(item *BudgetItem) bool {
 	b.Items = append(b.Items, item)
+	b.CalculateAmountUsed()
+	b.CalculatePercentageUsed()
 	return b.CalculatePercentageTotal()
+}
+
+func (b *Budget) CalculateAmountUsed() {
+	for _, item := range b.Items {
+		b.AmountUsed = b.AmountUsed.Add(item.AmountUsed)
+	}
+}
+
+func (b *Budget) CalculatePercentageUsed() {
+	for _, item := range b.Items {
+		b.PercentageUsed = b.PercentageUsed.Add(item.PercentageUsed)
+	}
 }
 
 func (b *Budget) CalculatePercentageTotal() bool {

@@ -1,1 +1,1 @@
-DELETE TABLE categories;
+DELETE TABLE IF EXISTS categories;

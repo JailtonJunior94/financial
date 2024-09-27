@@ -29,9 +29,9 @@ func NewBudgetItem(
 		BudgetID:        budget.ID,
 		CategoryID:      categoryID,
 		PercentageGoal:  percentageGoal,
+		AmountUsed:      vos.NewMoney(0),
 		PercentageUsed:  vos.NewPercentage(0),
 		PercentageTotal: vos.NewPercentage(100),
-		AmountUsed:      vos.NewMoney(0),
 		Base: entity.Base{
 			CreatedAt: time.Now().UTC(),
 		},
@@ -42,13 +42,13 @@ func NewBudgetItem(
 }
 
 func (b *BudgetItem) CalculateAmountGoal() {
-	b.AmountGoal = b.Budget.Amount.Mul(b.PercentageGoal.Percentage())
+	b.AmountGoal = b.Budget.AmountGoal.Mul(b.PercentageGoal.Percentage())
 }
 
 func (b *BudgetItem) AddAmountUsed(amount vos.Money) {
 	b.AmountUsed = b.AmountUsed.Add(amount)
 	b.PercentageUsed = b.PercentageUsed.Add(b.PercentageGoal)
 
-	total, _ := b.AmountUsed.Div(b.Budget.Amount.Money())
+	total, _ := b.AmountUsed.Div(b.Budget.AmountGoal.Money())
 	b.PercentageTotal = vos.NewPercentage(total.Mul(100).Money())
 }

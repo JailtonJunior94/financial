@@ -32,7 +32,7 @@ func TestNewBudget(t *testing.T) {
 		},
 		expected: func(budget *Budget) {
 			assert.NotNil(t, budget)
-			assert.True(t, budget.Amount.Equals(vos.NewMoney(14_400.00)))
+			assert.True(t, budget.AmountGoal.Equals(vos.NewMoney(14_400.00)))
 		},
 	}}
 

@@ -1,1 +1,1 @@
-DELETE TABLE users;
+DELETE TABLE IF EXISTS users;
