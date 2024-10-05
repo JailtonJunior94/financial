@@ -8,7 +8,8 @@ import (
 	"time"
 
 	"github.com/jailtonjunior94/financial/configs"
-	"github.com/jailtonjunior94/financial/pkg/o11y"
+
+	"github.com/JailtonJunior94/devkit-go/pkg/o11y"
 
 	"github.com/golang-jwt/jwt"
 )

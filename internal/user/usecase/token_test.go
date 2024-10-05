@@ -10,7 +10,8 @@ import (
 	repositoryMock "github.com/jailtonjunior94/financial/internal/user/infrastructure/repositories/mock"
 	"github.com/jailtonjunior94/financial/pkg/auth"
 	"github.com/jailtonjunior94/financial/pkg/encrypt"
-	"github.com/jailtonjunior94/financial/pkg/o11y"
+
+	"github.com/JailtonJunior94/devkit-go/pkg/o11y"
 
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/suite"

@@ -5,8 +5,9 @@ import (
 	"net/http"
 	"runtime/debug"
 
-	"github.com/jailtonjunior94/financial/pkg/o11y"
 	"github.com/jailtonjunior94/financial/pkg/responses"
+
+	"github.com/JailtonJunior94/devkit-go/pkg/o11y"
 )
 
 type (

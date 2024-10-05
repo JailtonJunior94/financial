@@ -8,7 +8,8 @@ import (
 	"github.com/jailtonjunior94/financial/internal/user/domain/interfaces"
 	"github.com/jailtonjunior94/financial/pkg/auth"
 	"github.com/jailtonjunior94/financial/pkg/encrypt"
-	"github.com/jailtonjunior94/financial/pkg/o11y"
+
+	"github.com/JailtonJunior94/devkit-go/pkg/o11y"
 )
 
 var (

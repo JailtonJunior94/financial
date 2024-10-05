@@ -8,8 +8,9 @@ import (
 	"github.com/jailtonjunior94/financial/internal/budget/usecase"
 	"github.com/jailtonjunior94/financial/pkg/auth"
 	"github.com/jailtonjunior94/financial/pkg/http/middlewares"
-	"github.com/jailtonjunior94/financial/pkg/o11y"
 	"github.com/jailtonjunior94/financial/pkg/responses"
+
+	"github.com/JailtonJunior94/devkit-go/pkg/o11y"
 )
 
 type CategoryHandler struct {

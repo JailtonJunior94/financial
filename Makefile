@@ -1,3 +1,7 @@
+generate_dotenv:
+	@echo "Generating .env file..."
+	@cp cmd/.env.example cmd/.env
+
 .PHONY: migrate
 migrate:
 	@migrate create -ext sql -dir database/migrations -format unix $(NAME)
