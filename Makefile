@@ -2,6 +2,10 @@ generate_dotenv:
 	@echo "Generating .env file..."
 	@cp cmd/.env.example cmd/.env
 
+golint:
+	go install github.com/golangci/golangci-lint/cmd/golangci-lint@v1.61.0
+	golangci-lint run ./...
+
 .PHONY: migrate
 migrate:
 	@migrate create -ext sql -dir database/migrations -format unix $(NAME)
