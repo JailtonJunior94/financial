@@ -3,8 +3,8 @@ package entities
 import (
 	"time"
 
-	"github.com/jailtonjunior94/financial/pkg/entity"
-	"github.com/jailtonjunior94/financial/pkg/vos"
+	"github.com/JailtonJunior94/devkit-go/pkg/entity"
+	"github.com/JailtonJunior94/devkit-go/pkg/vos"
 )
 
 type Budget struct {

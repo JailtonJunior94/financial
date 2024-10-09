@@ -5,9 +5,9 @@ import (
 	"net/http"
 
 	"github.com/jailtonjunior94/financial/internal/user/usecase"
-	"github.com/jailtonjunior94/financial/pkg/responses"
 
 	"github.com/JailtonJunior94/devkit-go/pkg/o11y"
+	"github.com/JailtonJunior94/devkit-go/pkg/responses"
 )
 
 type UserHandler struct {

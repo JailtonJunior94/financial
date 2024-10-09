@@ -3,7 +3,7 @@ package migrate
 import (
 	"errors"
 
-	"github.com/jailtonjunior94/financial/pkg/logger"
+	"github.com/JailtonJunior94/devkit-go/pkg/logger"
 
 	"github.com/golang-migrate/migrate/v4"
 )

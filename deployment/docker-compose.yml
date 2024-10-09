@@ -1,6 +1,5 @@
 services:
   financial_migration:
-    container_name: financial_migration
     build:
       context: ..
       dockerfile: deployment/Dockerfile
@@ -18,7 +17,6 @@ services:
       - mysql
 
   financial:
-    container_name: financial
     build:
       context: ..
       dockerfile: deployment/Dockerfile
@@ -28,17 +26,16 @@ services:
     environment:
       - DEVELOPMENT_MODE=true
       - HTTP_SERVER_PORT=80
-      - DB_DRIVER=postgres
-      - DB_HOST=cockroachdb
-      - DB_PORT=26257
-      - DB_USER=root
-      - DB_PASSWORD=financial@password
+      - DB_DRIVER=mysql
+      - DB_HOST=mysql
+      - DB_PORT=3306
+      - DB_USER=mysql
+      - DB_PASSWORD=mysql
       - DB_NAME=financial
       - DB_MAX_IDLE_CONNS=10
-      - MIGRATE_PATH=file://../database/migrations
       - AUTH_EXPIRATION_AT=8
       - AUTH_SECRET_KEY="RmluYW5jaWFsQ29udHJvbEFtYmllbnRlUHJvZHVjdGlvbg=="
-      - OTEL_EXPORTER_OTLP_ENDPOINT=otel_collector
+      - OTEL_EXPORTER_OTLP_ENDPOINT=otel_collector:4317
     depends_on:
       - financial_migration
 
@@ -56,23 +53,7 @@ services:
     volumes:
       - .docker/mysql:/var/lib/mysql
 
-  # cockroachdb:
-  #   restart: always
-  #   container_name: cockroachdb
-  #   image: cockroachdb/cockroach:v23.2.4
-  #   command: start-single-node --insecure
-  #   ports:
-  #     - "26257:26257"
-  #     - "8080:8080"
-  #   volumes:
-  #     - ./cockroachdb_data:/cockroach/cockroach-data
-  #   environment:
-  #     COCKROACH_DATABASE: financial
-  #     COCKROACH_USER: root
-  #     COCKROACH_PASSWORD: financial@password
-
   rabbitmq:
-    container_name: messaging-rabbitmq
     image: rabbitmq:3.13.1-management-alpine
     environment:
       RABBITMQ_DEFAULT_USER: root
@@ -87,7 +68,6 @@ services:
       retries: 5
 
   otel_collector:
-    container_name: observability-otel-collector
     image: otel/opentelemetry-collector-contrib:0.82.0
     restart: always
     command:
@@ -110,7 +90,6 @@ services:
       - jaeger
 
   prometheus:
-    container_name: observability-prometheus
     image: prom/prometheus:v2.51.2
     restart: always
     command:
@@ -121,7 +100,6 @@ services:
       - "9090:9090"
 
   grafana:
-    container_name: observability-grafana
     image: grafana/grafana:10.4.2
     volumes:
       - ./observability/grafana/grafana-datasources.yml:/etc/grafana/provisioning/datasources/datasources.yml
@@ -129,7 +107,6 @@ services:
       - "3000:3000"
 
   jaeger:
-    container_name: observability-jaeger
     image: jaegertracing/all-in-one:1
     ports:
       - "16686:16686"

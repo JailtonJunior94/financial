@@ -3,7 +3,8 @@ package factories
 import (
 	"github.com/jailtonjunior94/financial/internal/budget/domain/dtos"
 	"github.com/jailtonjunior94/financial/internal/budget/domain/entities"
-	"github.com/jailtonjunior94/financial/pkg/vos"
+
+	"github.com/JailtonJunior94/devkit-go/pkg/vos"
 )
 
 func CreateBudget(userID string, input *dtos.BugetInput) (*entities.Budget, error) {

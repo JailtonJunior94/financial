@@ -11,17 +11,17 @@ exporters:
   prometheus:
     endpoint: "0.0.0.0:8889"
 
-  googlecloud:
-    project: "financial-420621"
-    user_agent: "opentelemetry-collector"
-    metric:
-      prefix: "otel"
-      endpoint: "monitoring.googleapis.com:443"
-    trace:
-      endpoint: "cloudtrace.googleapis.com:443"
-    log:
-      default_log_name: "otel"
-      endpoint: "logging.googleapis.com:443"
+  # googlecloud:
+  #   project: "financial-420621"
+  #   user_agent: "opentelemetry-collector"
+  #   metric:
+  #     prefix: "otel"
+  #     endpoint: "monitoring.googleapis.com:443"
+  #   trace:
+  #     endpoint: "cloudtrace.googleapis.com:443"
+  #   log:
+  #     default_log_name: "otel"
+  #     endpoint: "logging.googleapis.com:443"
 
   jaeger:
     endpoint: "jaeger:14250"
@@ -39,12 +39,12 @@ service:
     metrics:
       receivers: [otlp]
       processors: [batch]
-      exporters: [prometheus, googlecloud]
+      exporters: [prometheus]
     traces:
       receivers: [otlp]
       processors: [batch]
-      exporters: [jaeger, googlecloud]
-    logs:
-      receivers: [otlp]
-      processors: [batch]
-      exporters: [googlecloud]
+      exporters: [jaeger]
+    # logs:
+    #   receivers: [otlp]
+    #   processors: [batch]
+    #   exporters: [googlecloud]

@@ -9,8 +9,8 @@ import (
 	"github.com/jailtonjunior94/financial/internal/user/domain/factories"
 	repositoryMock "github.com/jailtonjunior94/financial/internal/user/infrastructure/repositories/mock"
 	"github.com/jailtonjunior94/financial/pkg/auth"
-	"github.com/jailtonjunior94/financial/pkg/encrypt"
 
+	"github.com/JailtonJunior94/devkit-go/pkg/encrypt"
 	"github.com/JailtonJunior94/devkit-go/pkg/o11y"
 
 	"github.com/stretchr/testify/mock"
@@ -54,7 +54,7 @@ func (s *TokenSuite) TestToken() {
 
 	passwordHash, _ := s.hash.GenerateHash("my_password@2024")
 	user, _ := factories.CreateUser("John Mckinley", "john.mckinley@examplepetstore.com")
-	user.SetPassword(passwordHash)
+	_ = user.SetPassword(passwordHash)
 
 	scenarios := []struct {
 		name     string

@@ -20,7 +20,7 @@ type TX interface {
 }
 
 type UnitOfWork interface {
-	Register(name RepositoryName, factory RepositoryFactory) error
+	Register(name RepositoryName, factory RepositoryFactory)
 	Remove(name RepositoryName) error
 	Has(name RepositoryName) bool
 	Clear()
@@ -39,13 +39,8 @@ func NewUnitOfWork(db *sql.DB) *unitOfWork {
 	}
 }
 
-func (u *unitOfWork) Register(name RepositoryName, factory RepositoryFactory) error {
-	if _, ok := u.repositories[name]; ok {
-		return ErrRepositoryAlreadyRegistered
-	}
-
+func (u *unitOfWork) Register(name RepositoryName, factory RepositoryFactory) {
 	u.repositories[name] = factory
-	return nil
 }
 
 func (u *unitOfWork) Remove(name RepositoryName) error {

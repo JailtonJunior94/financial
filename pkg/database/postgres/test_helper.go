@@ -7,7 +7,8 @@ import (
 	"time"
 
 	migration "github.com/jailtonjunior94/financial/pkg/database/migrate"
-	"github.com/jailtonjunior94/financial/pkg/logger"
+
+	"github.com/JailtonJunior94/devkit-go/pkg/logger"
 
 	"github.com/testcontainers/testcontainers-go"
 	postgresContainer "github.com/testcontainers/testcontainers-go/modules/postgres"

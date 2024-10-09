@@ -5,7 +5,8 @@ import (
 	"time"
 
 	"github.com/jailtonjunior94/financial/internal/user/domain/vos"
-	"github.com/jailtonjunior94/financial/pkg/entity"
+
+	"github.com/JailtonJunior94/devkit-go/pkg/entity"
 )
 
 var (

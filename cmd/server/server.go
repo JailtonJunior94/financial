@@ -15,7 +15,8 @@ import (
 	"github.com/jailtonjunior94/financial/internal/category"
 	"github.com/jailtonjunior94/financial/internal/user"
 	"github.com/jailtonjunior94/financial/pkg/bundle"
-	"github.com/jailtonjunior94/financial/pkg/responses"
+
+	"github.com/JailtonJunior94/devkit-go/pkg/responses"
 
 	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/chi/v5/middleware"

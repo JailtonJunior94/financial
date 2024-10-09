@@ -5,8 +5,8 @@ import (
 
 	"github.com/jailtonjunior94/financial/internal/user/domain/factories"
 	"github.com/jailtonjunior94/financial/internal/user/domain/interfaces"
-	"github.com/jailtonjunior94/financial/pkg/encrypt"
 
+	"github.com/JailtonJunior94/devkit-go/pkg/encrypt"
 	"github.com/JailtonJunior94/devkit-go/pkg/o11y"
 )
 
@@ -54,7 +54,14 @@ func (u *createUserUseCase) Execute(ctx context.Context, input *CreateUserInput)
 		return nil, err
 	}
 
-	user.SetPassword(hash)
+	if err := user.SetPassword(hash); err != nil {
+		span.AddAttributes(
+			ctx, o11y.Error, "error setting password",
+			o11y.Attributes{Key: "error", Value: err},
+		)
+		return nil, err
+	}
+
 	userCreated, err := u.repository.Insert(ctx, user)
 	if err != nil {
 		span.AddAttributes(

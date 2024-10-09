@@ -4,8 +4,8 @@ import (
 	"errors"
 	"time"
 
-	"github.com/jailtonjunior94/financial/pkg/entity"
-	sharedVos "github.com/jailtonjunior94/financial/pkg/vos"
+	"github.com/JailtonJunior94/devkit-go/pkg/entity"
+	sharedVos "github.com/JailtonJunior94/devkit-go/pkg/vos"
 )
 
 var (

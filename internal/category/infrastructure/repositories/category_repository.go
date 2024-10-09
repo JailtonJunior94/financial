@@ -6,9 +6,9 @@ import (
 
 	"github.com/jailtonjunior94/financial/internal/category/domain/entities"
 	"github.com/jailtonjunior94/financial/internal/category/domain/interfaces"
-	"github.com/jailtonjunior94/financial/pkg/vos"
 
 	"github.com/JailtonJunior94/devkit-go/pkg/o11y"
+	"github.com/JailtonJunior94/devkit-go/pkg/vos"
 )
 
 type categoryRepository struct {

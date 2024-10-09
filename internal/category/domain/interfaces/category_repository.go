@@ -4,7 +4,8 @@ import (
 	"context"
 
 	"github.com/jailtonjunior94/financial/internal/category/domain/entities"
-	"github.com/jailtonjunior94/financial/pkg/vos"
+
+	"github.com/JailtonJunior94/devkit-go/pkg/vos"
 )
 
 type CategoryRepository interface {

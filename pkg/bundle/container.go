@@ -6,11 +6,12 @@ import (
 
 	"github.com/jailtonjunior94/financial/configs"
 	sharedMiddleware "github.com/jailtonjunior94/financial/pkg/api/middlewares"
+
+	"github.com/JailtonJunior94/devkit-go/pkg/encrypt"
+	"github.com/JailtonJunior94/devkit-go/pkg/logger"
 	"github.com/jailtonjunior94/financial/pkg/auth"
 	"github.com/jailtonjunior94/financial/pkg/database/mysql"
-	"github.com/jailtonjunior94/financial/pkg/encrypt"
 	"github.com/jailtonjunior94/financial/pkg/http/middlewares"
-	"github.com/jailtonjunior94/financial/pkg/logger"
 
 	"github.com/JailtonJunior94/devkit-go/pkg/o11y"
 )
