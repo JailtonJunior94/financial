@@ -1,35 +1,21 @@
 package http
 
 import (
-	"net/http"
-
-	"github.com/go-chi/chi/v5"
+	"github.com/JailtonJunior94/devkit-go/pkg/httpserver"
 )
 
-type (
-	AuthRoutes func(authRoute *authRoute)
-	authRoute  struct {
-		TokenHandler func(w http.ResponseWriter, r *http.Request)
-	}
-)
-
-func NewAuthRoute(router *chi.Mux, authRoutes ...AuthRoutes) *authRoute {
-	route := &authRoute{}
-	for _, auth := range authRoutes {
-		auth(route)
-	}
-	route.Register(router)
-	return route
+type authRoutes struct {
+	routes []httpserver.Route
 }
 
-func (u *authRoute) Register(router *chi.Mux) {
-	router.Route("/api/v1/token", func(r chi.Router) {
-		r.Post("/", u.TokenHandler)
-	})
+func NewAuthRoutes() *authRoutes {
+	return &authRoutes{}
 }
 
-func WithTokenHandler(handler func(w http.ResponseWriter, r *http.Request)) AuthRoutes {
-	return func(userRouter *authRoute) {
-		userRouter.TokenHandler = handler
-	}
+func (u *authRoutes) Register(route httpserver.Route) {
+	u.routes = append(u.routes, route)
+}
+
+func (u *authRoutes) Routes() []httpserver.Route {
+	return u.routes
 }

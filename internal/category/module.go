@@ -1,21 +1,28 @@
 package category
 
 import (
+	"github.com/jailtonjunior94/financial/internal/category/application/usecase"
 	"github.com/jailtonjunior94/financial/internal/category/infrastructure/http"
 	"github.com/jailtonjunior94/financial/internal/category/infrastructure/repositories"
-	"github.com/jailtonjunior94/financial/internal/category/usecase"
 	"github.com/jailtonjunior94/financial/pkg/bundle"
 
-	"github.com/go-chi/chi/v5"
+	"github.com/JailtonJunior94/devkit-go/pkg/httpserver"
 )
 
-func RegisterCategoryModule(ioc *bundle.Container, router *chi.Mux) {
+func RegisterCategoryModule(ioc *bundle.Container) []httpserver.Route {
 	categoryRepository := repositories.NewCategoryRepository(ioc.DB, ioc.Observability)
-	categoryCreateUseCase := usecase.NewCreateCategoryUseCase(ioc.Observability, categoryRepository)
-	categoryHandler := http.NewCategoryHandler(ioc.Observability, categoryCreateUseCase)
-	http.NewCategoryRoutes(
-		router,
-		ioc.MiddlewareAuth,
-		http.WithCreateCategoryHandler(categoryHandler.Create),
+	findCategoryUsecase := usecase.NewFindCategoryUseCase(ioc.Observability, categoryRepository)
+	createCategoryUsecase := usecase.NewCreateCategoryUseCase(ioc.Observability, categoryRepository)
+
+	categoryHandler := http.NewCategoryHandler(
+		ioc.Observability,
+		createCategoryUsecase,
+		findCategoryUsecase,
 	)
+
+	categoryRoutes := http.NewCategoryRoutes()
+	categoryRoutes.Register(httpserver.NewRoute("GET", "/api/v1/categories", categoryHandler.Find, ioc.MiddlewareAuth.Authorization))
+	categoryRoutes.Register(httpserver.NewRoute("POST", "/api/v1/categories", categoryHandler.Create, ioc.MiddlewareAuth.Authorization))
+
+	return categoryRoutes.Routes()
 }

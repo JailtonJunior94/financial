@@ -23,8 +23,54 @@ func NewCategoryRepository(db *sql.DB, o11y o11y.Observability) interfaces.Categ
 	}
 }
 
-func (r *categoryRepository) Find(ctx context.Context, userID string) ([]*entities.Category, error) {
-	return nil, nil
+func (r *categoryRepository) Find(ctx context.Context, userID vos.UUID) ([]*entities.Category, error) {
+	ctx, span := r.o11y.Start(ctx, "category_repository.find_by_id")
+	defer span.End()
+
+	query := `select
+				id,
+				user_id,
+				parent_id,
+				name,
+				sequence,
+				created_at,
+				updated_at,
+				deleted_at
+			from
+				categories c
+			where
+				user_id = ?
+				and deleted_at is null
+			order by
+				sequence;`
+
+	rows, err := r.db.QueryContext(ctx, query, userID.String())
+	if err != nil {
+		span.AddAttributes(ctx, o11y.Error, "error finding categories", o11y.Attributes{Key: "user_id", Value: userID.String()})
+		return nil, err
+	}
+	defer rows.Close()
+
+	var categories []*entities.Category
+	for rows.Next() {
+		var category entities.Category
+		err := rows.Scan(
+			&category.ID.Value,
+			&category.UserID.Value,
+			&category.ParentID,
+			&category.Name,
+			&category.Sequence,
+			&category.CreatedAt,
+			&category.UpdatedAt.Time,
+			&category.DeletedAt.Time,
+		)
+		if err != nil {
+			span.AddAttributes(ctx, o11y.Error, "error scanning categories", o11y.Attributes{Key: "user_id", Value: userID.String()})
+			return nil, err
+		}
+		categories = append(categories, &category)
+	}
+	return categories, nil
 }
 
 func (r *categoryRepository) FindByID(ctx context.Context, userID, id vos.UUID) (*entities.Category, error) {

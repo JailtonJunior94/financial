@@ -54,18 +54,27 @@ services:
       - .docker/mysql:/var/lib/mysql
 
   rabbitmq:
-    image: rabbitmq:3.13.1-management-alpine
+    image: rabbitmq:4.0.2-management-alpine
     environment:
-      RABBITMQ_DEFAULT_USER: root
+      RABBITMQ_USER: guest
+      RABBITMQ_PASSWORD: pass@rabbitmq
+      RABBITMQ_DEFAULT_USER: guest
       RABBITMQ_DEFAULT_PASS: pass@rabbitmq
     ports:
       - "5672:5672"
       - "15672:15672"
+    volumes:
+      - rabbitmq_data:/var/lib/rabbitmq
     healthcheck:
       test: ["CMD", "rabbitmq-diagnostics", "-q", "ping"]
       interval: 5s
       timeout: 10s
       retries: 5
+    deploy:
+      resources:
+        limits:
+          cpus: "0.50"
+          memory: 512M
 
   otel_collector:
     image: otel/opentelemetry-collector-contrib:0.82.0
@@ -114,3 +123,4 @@ services:
 
 volumes:
   mysql:
+  rabbitmq_data:

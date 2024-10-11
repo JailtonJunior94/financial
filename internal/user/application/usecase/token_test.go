@@ -6,6 +6,7 @@ import (
 	"testing"
 
 	"github.com/jailtonjunior94/financial/configs"
+	"github.com/jailtonjunior94/financial/internal/user/application/dtos"
 	"github.com/jailtonjunior94/financial/internal/user/domain/factories"
 	repositoryMock "github.com/jailtonjunior94/financial/internal/user/infrastructure/repositories/mock"
 	"github.com/jailtonjunior94/financial/pkg/auth"
@@ -45,7 +46,7 @@ func (s *TokenSuite) SetupTest() {
 func (s *TokenSuite) TestToken() {
 	type (
 		args struct {
-			input *AuthInput
+			input *dtos.AuthInput
 		}
 		fields struct {
 			userRepository *repositoryMock.UserRepository
@@ -60,11 +61,11 @@ func (s *TokenSuite) TestToken() {
 		name     string
 		args     args
 		fields   fields
-		expected func(res *AuthOutput, err error)
+		expected func(res *dtos.AuthOutput, err error)
 	}{
 		{
 			name: "must return a token when username and password are valid",
-			args: args{input: &AuthInput{Email: "john.mckinley@examplepetstore.com", Password: "my_password@2024"}},
+			args: args{input: &dtos.AuthInput{Email: "john.mckinley@examplepetstore.com", Password: "my_password@2024"}},
 			fields: fields{
 				userRepository: func() *repositoryMock.UserRepository {
 					userRepository := &repositoryMock.UserRepository{}
@@ -74,7 +75,7 @@ func (s *TokenSuite) TestToken() {
 					return userRepository
 				}(),
 			},
-			expected: func(res *AuthOutput, err error) {
+			expected: func(res *dtos.AuthOutput, err error) {
 				s.NoError(err)
 				s.NotNil(res)
 			},

@@ -1,4 +1,4 @@
-package usecase
+package dtos
 
 import "time"
 
@@ -12,5 +12,5 @@ type CreateUserOutput struct {
 	ID        string    `json:"id"`
 	Name      string    `json:"name"`
 	Email     string    `json:"email"`
-	CreatedAt time.Time `json:"createdAt"`
+	CreatedAt time.Time `json:"created_at"`
 }

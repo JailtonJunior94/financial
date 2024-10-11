@@ -5,6 +5,7 @@ import (
 	"errors"
 
 	"github.com/jailtonjunior94/financial/configs"
+	"github.com/jailtonjunior94/financial/internal/user/application/dtos"
 	"github.com/jailtonjunior94/financial/internal/user/domain/interfaces"
 
 	"github.com/jailtonjunior94/financial/pkg/auth"
@@ -24,7 +25,7 @@ const (
 )
 
 type TokenUseCase interface {
-	Execute(ctx context.Context, input *AuthInput) (*AuthOutput, error)
+	Execute(ctx context.Context, input *dtos.AuthInput) (*dtos.AuthOutput, error)
 }
 
 type tokenUseCase struct {
@@ -51,7 +52,7 @@ func NewTokenUseCase(
 	}
 }
 
-func (u *tokenUseCase) Execute(ctx context.Context, input *AuthInput) (*AuthOutput, error) {
+func (u *tokenUseCase) Execute(ctx context.Context, input *dtos.AuthInput) (*dtos.AuthOutput, error) {
 	ctx, span := u.o11y.Start(ctx, "create_user_usecase.execute")
 	defer span.End()
 
@@ -92,5 +93,5 @@ func (u *tokenUseCase) Execute(ctx context.Context, input *AuthInput) (*AuthOutp
 		)
 		return nil, err
 	}
-	return NewAuthOutput(token, u.config.AuthExpirationAt), nil
+	return dtos.NewAuthOutput(token, u.config.AuthExpirationAt), nil
 }

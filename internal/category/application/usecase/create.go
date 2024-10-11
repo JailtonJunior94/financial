@@ -3,6 +3,7 @@ package usecase
 import (
 	"context"
 
+	"github.com/jailtonjunior94/financial/internal/category/application/dtos"
 	"github.com/jailtonjunior94/financial/internal/category/domain/factories"
 	"github.com/jailtonjunior94/financial/internal/category/domain/interfaces"
 
@@ -11,7 +12,7 @@ import (
 
 type (
 	CreateCategoryUseCase interface {
-		Execute(ctx context.Context, userID string, input *CreateCategoryInput) (*CreateCategoryOutput, error)
+		Execute(ctx context.Context, userID string, input *dtos.CreateCategoryInput) (*dtos.CategoryOutput, error)
 	}
 
 	createCategoryUseCase struct {
@@ -30,7 +31,7 @@ func NewCreateCategoryUseCase(
 	}
 }
 
-func (u *createCategoryUseCase) Execute(ctx context.Context, userID string, input *CreateCategoryInput) (*CreateCategoryOutput, error) {
+func (u *createCategoryUseCase) Execute(ctx context.Context, userID string, input *dtos.CreateCategoryInput) (*dtos.CategoryOutput, error) {
 	ctx, span := u.o11y.Start(ctx, "create_category_usecase.execute")
 	defer span.End()
 
@@ -62,7 +63,7 @@ func (u *createCategoryUseCase) Execute(ctx context.Context, userID string, inpu
 		return nil, err
 	}
 
-	return &CreateCategoryOutput{
+	return &dtos.CategoryOutput{
 		ID:        category.ID.String(),
 		Name:      category.Name,
 		Sequence:  category.Sequence,

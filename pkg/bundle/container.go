@@ -5,14 +5,12 @@ import (
 	"database/sql"
 
 	"github.com/jailtonjunior94/financial/configs"
-	sharedMiddleware "github.com/jailtonjunior94/financial/pkg/api/middlewares"
+	"github.com/jailtonjunior94/financial/pkg/api/middlewares"
+	"github.com/jailtonjunior94/financial/pkg/auth"
+	"github.com/jailtonjunior94/financial/pkg/database/mysql"
 
 	"github.com/JailtonJunior94/devkit-go/pkg/encrypt"
 	"github.com/JailtonJunior94/devkit-go/pkg/logger"
-	"github.com/jailtonjunior94/financial/pkg/auth"
-	"github.com/jailtonjunior94/financial/pkg/database/mysql"
-	"github.com/jailtonjunior94/financial/pkg/http/middlewares"
-
 	"github.com/JailtonJunior94/devkit-go/pkg/o11y"
 )
 
@@ -22,9 +20,9 @@ type Container struct {
 	Config                 *configs.Config
 	Jwt                    auth.JwtAdapter
 	Hash                   encrypt.HashAdapter
-	MiddlewareAuth         middlewares.Authorization
 	Observability          o11y.Observability
-	PanicRecoverMiddleware sharedMiddleware.PanicRecoverMiddleware
+	MiddlewareAuth         middlewares.Authorization
+	PanicRecoverMiddleware middlewares.PanicRecoverMiddleware
 }
 
 func NewContainer(ctx context.Context) *Container {
@@ -51,7 +49,7 @@ func NewContainer(ctx context.Context) *Container {
 	hash := encrypt.NewHashAdapter()
 	jwt := auth.NewJwtAdapter(config, observability)
 	middlewareAuth := middlewares.NewAuthorization(config, jwt)
-	panicRecoverMiddleware := sharedMiddleware.NewPanicRecoverMiddleware(observability)
+	panicRecoverMiddleware := middlewares.NewPanicRecoverMiddleware(observability)
 
 	return &Container{
 		DB:                     db,

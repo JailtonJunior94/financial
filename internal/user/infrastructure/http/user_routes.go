@@ -1,38 +1,21 @@
 package http
 
 import (
-	"net/http"
-
-	"github.com/jailtonjunior94/financial/pkg/http/middlewares"
-
-	"github.com/go-chi/chi/v5"
+	"github.com/JailtonJunior94/devkit-go/pkg/httpserver"
 )
 
-type (
-	Routes    func(userRoute *userRoute)
-	userRoute struct {
-		Authorization     middlewares.Authorization
-		CreateUserHandler func(w http.ResponseWriter, r *http.Request)
-	}
-)
-
-func NewUserRoute(router *chi.Mux, userRoutes ...Routes) *userRoute {
-	route := &userRoute{}
-	for _, userRoute := range userRoutes {
-		userRoute(route)
-	}
-	route.Register(router)
-	return route
+type userRoutes struct {
+	routes []httpserver.Route
 }
 
-func (u *userRoute) Register(router *chi.Mux) {
-	router.Route("/api/v1/users", func(r chi.Router) {
-		r.Post("/", u.CreateUserHandler)
-	})
+func NewUserRoutes() *userRoutes {
+	return &userRoutes{}
 }
 
-func WithCreateUserHandler(handler func(w http.ResponseWriter, r *http.Request)) Routes {
-	return func(userRouter *userRoute) {
-		userRouter.CreateUserHandler = handler
-	}
+func (u *userRoutes) Register(route httpserver.Route) {
+	u.routes = append(u.routes, route)
+}
+
+func (u *userRoutes) Routes() []httpserver.Route {
+	return u.routes
 }

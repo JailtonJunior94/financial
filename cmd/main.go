@@ -22,27 +22,12 @@ func main() {
 		Short: "Financial Migrations",
 		Run: func(cmd *cobra.Command, args []string) {
 			container := bundle.NewContainer(context.Background())
-			switch container.Config.DBDriver {
-			case "postgres":
-				{
-					migrate, err := migration.NewMigrateCockroachDB(container.Logger, container.DB, container.Config.MigratePath, container.Config.DBName)
-					if err != nil {
-						log.Fatal(err)
-					}
-					if err = migrate.Execute(); err != nil {
-						log.Fatal(err)
-					}
-				}
-			case "mysql":
-				{
-					migrate, err := migration.NewMigrateMySql(container.Logger, container.DB, container.Config.MigratePath, container.Config.DBName)
-					if err != nil {
-						log.Fatal(err)
-					}
-					if err = migrate.Execute(); err != nil {
-						log.Fatal(err)
-					}
-				}
+			migrate, err := migration.NewMigrateMySql(container.Logger, container.DB, container.Config.MigratePath, container.Config.DBName)
+			if err != nil {
+				log.Fatal(err)
+			}
+			if err = migrate.Execute(); err != nil {
+				log.Fatal(err)
 			}
 		},
 	}
@@ -51,7 +36,7 @@ func main() {
 		Use:   "api",
 		Short: "Financial API",
 		Run: func(cmd *cobra.Command, args []string) {
-			server.NewApiServer().Run()
+			server.Run()
 		},
 	}
 

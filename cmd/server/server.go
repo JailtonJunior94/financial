@@ -2,34 +2,21 @@ package server
 
 import (
 	"context"
-	"fmt"
 	"log"
-	"net"
 	"net/http"
 	"os"
 	"os/signal"
 	"syscall"
-	"time"
 
-	"github.com/jailtonjunior94/financial/internal/budget"
 	"github.com/jailtonjunior94/financial/internal/category"
 	"github.com/jailtonjunior94/financial/internal/user"
 	"github.com/jailtonjunior94/financial/pkg/bundle"
 
+	"github.com/JailtonJunior94/devkit-go/pkg/httpserver"
 	"github.com/JailtonJunior94/devkit-go/pkg/responses"
-
-	"github.com/go-chi/chi/v5"
-	"github.com/go-chi/chi/v5/middleware"
 )
 
-type apiServer struct {
-}
-
-func NewApiServer() *apiServer {
-	return &apiServer{}
-}
-
-func (s *apiServer) Run() {
+func Run() {
 	ctx := context.Background()
 	ioc := bundle.NewContainer(ctx)
 
@@ -55,62 +42,45 @@ func (s *apiServer) Run() {
 		}
 	}()
 
-	router := chi.NewRouter()
-	router.Use(
-		middleware.RealIP,
-		middleware.RequestID,
-		ioc.PanicRecoverMiddleware.Recover,
-		middleware.AllowContentType("application/json", "application/x-www-form-urlencoded"),
-		middleware.SetHeader("Content-Type", "application/json"),
-	)
-
-	router.Get("/health", func(w http.ResponseWriter, r *http.Request) {
+	healthRoute := httpserver.NewRoute(http.MethodGet, "/health", func(w http.ResponseWriter, r *http.Request) error {
 		if err := ioc.DB.Ping(); err != nil {
 			responses.Error(w, http.StatusInternalServerError, "database error connection failed or database is not running")
-			return
+			return err
 		}
 		responses.JSON(w, http.StatusOK, map[string]interface{}{"status": "ok"})
+		return nil
 	})
 
-	/* Auth */
-	user.RegisterAuthModule(ioc, router)
-	/* User */
-	user.RegisterUserModule(ioc, router)
-	/* Category */
-	category.RegisterCategoryModule(ioc, router)
-	/* Budget */
-	budget.RegisterBudgetModule(ioc, router)
+	routes := []httpserver.Route{healthRoute}
+	authRoutes := user.RegisterAuthModule(ioc)
+	userRoutes := user.RegisterUserModule(ioc)
+	categoryRoutes := category.RegisterCategoryModule(ioc)
 
-	/* Graceful shutdown */
-	server := http.Server{
-		ReadTimeout:       time.Duration(10) * time.Second,
-		ReadHeaderTimeout: time.Duration(10) * time.Second,
-		Handler:           router,
-	}
+	routes = append(routes, authRoutes...)
+	routes = append(routes, userRoutes...)
+	routes = append(routes, categoryRoutes...)
 
-	listener, err := net.Listen("tcp", fmt.Sprintf(":%s", ioc.Config.HttpServerPort))
-	if err != nil {
-		log.Fatal(err)
-	}
+	server := httpserver.New(
+		httpserver.WithPort(ioc.Config.HttpServerPort),
+		httpserver.WithRoutes(routes...),
+		httpserver.WithMiddlewares(
+			httpserver.RequestID,
+		),
+	)
+
+	shutdown := server.Run()
+
+	interrupt := make(chan os.Signal, 1)
+	signal.Notify(interrupt, syscall.SIGINT, syscall.SIGTERM)
 
 	go func() {
-		if err := server.Serve(listener); err != nil && err != http.ErrServerClosed {
-			log.Fatal(err)
+		if err := <-server.ShutdownListener(); err != nil && err != http.ErrServerClosed {
+			interrupt <- syscall.SIGTERM
 		}
 	}()
 
-	s.gracefulShutdown(&server)
-}
-
-func (s *apiServer) gracefulShutdown(server *http.Server) {
-	quit := make(chan os.Signal, 1)
-	signal.Notify(quit, syscall.SIGINT, syscall.SIGTERM)
-	<-quit
-
-	ctxShutdown, cancel := context.WithTimeout(context.Background(), 5*time.Second)
-	defer cancel()
-
-	if err := server.Shutdown(ctxShutdown); err != nil {
+	<-interrupt
+	if err := shutdown(context.Background()); err != nil {
 		log.Fatal(err)
 	}
 }

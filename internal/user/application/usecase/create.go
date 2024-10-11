@@ -3,6 +3,7 @@ package usecase
 import (
 	"context"
 
+	"github.com/jailtonjunior94/financial/internal/user/application/dtos"
 	"github.com/jailtonjunior94/financial/internal/user/domain/factories"
 	"github.com/jailtonjunior94/financial/internal/user/domain/interfaces"
 
@@ -12,7 +13,7 @@ import (
 
 type (
 	CreateUserUseCase interface {
-		Execute(ctx context.Context, input *CreateUserInput) (*CreateUserOutput, error)
+		Execute(ctx context.Context, input *dtos.CreateUserInput) (*dtos.CreateUserOutput, error)
 	}
 
 	createUserUseCase struct {
@@ -34,7 +35,7 @@ func NewCreateUserUseCase(
 	}
 }
 
-func (u *createUserUseCase) Execute(ctx context.Context, input *CreateUserInput) (*CreateUserOutput, error) {
+func (u *createUserUseCase) Execute(ctx context.Context, input *dtos.CreateUserInput) (*dtos.CreateUserOutput, error) {
 	ctx, span := u.o11y.Start(ctx, "create_user_usecase.execute")
 	defer span.End()
 
@@ -72,7 +73,7 @@ func (u *createUserUseCase) Execute(ctx context.Context, input *CreateUserInput)
 		return nil, err
 	}
 
-	return &CreateUserOutput{
+	return &dtos.CreateUserOutput{
 		ID:        userCreated.ID.String(),
 		Name:      userCreated.Name.String(),
 		Email:     userCreated.Email.String(),

@@ -3,7 +3,7 @@ module github.com/jailtonjunior94/financial
 go 1.23
 
 require (
-	github.com/JailtonJunior94/devkit-go v1.2.1
+	github.com/JailtonJunior94/devkit-go v1.2.2
 	github.com/go-chi/chi/v5 v5.1.0
 	github.com/go-sql-driver/mysql v1.8.1
 	github.com/golang-jwt/jwt v3.2.2+incompatible

@@ -1,38 +1,21 @@
 package http
 
 import (
-	"net/http"
-
-	"github.com/go-chi/chi/v5"
-	"github.com/jailtonjunior94/financial/pkg/http/middlewares"
+	"github.com/JailtonJunior94/devkit-go/pkg/httpserver"
 )
 
-type (
-	Routes        func(categoryRoute *categoryRoute)
-	categoryRoute struct {
-		Authorization         middlewares.Authorization
-		CreateCategoryHandler func(w http.ResponseWriter, r *http.Request)
-	}
-)
-
-func NewCategoryRoutes(router *chi.Mux, middleware middlewares.Authorization, categoryRoutes ...Routes) *categoryRoute {
-	route := &categoryRoute{}
-	for _, categoryRoute := range categoryRoutes {
-		categoryRoute(route)
-	}
-	route.Register(middleware, router)
-	return route
+type categoryRoutes struct {
+	routes []httpserver.Route
 }
 
-func (u *categoryRoute) Register(middleware middlewares.Authorization, router *chi.Mux) {
-	router.Route("/api/v1/categories", func(r chi.Router) {
-		r.Use(middleware.Authorization)
-		r.Post("/", u.CreateCategoryHandler)
-	})
+func NewCategoryRoutes() *categoryRoutes {
+	return &categoryRoutes{}
 }
 
-func WithCreateCategoryHandler(handler func(w http.ResponseWriter, r *http.Request)) Routes {
-	return func(categoryRouter *categoryRoute) {
-		categoryRouter.CreateCategoryHandler = handler
-	}
+func (u *categoryRoutes) Register(route httpserver.Route) {
+	u.routes = append(u.routes, route)
+}
+
+func (u *categoryRoutes) Routes() []httpserver.Route {
+	return u.routes
 }

@@ -11,7 +11,6 @@ import (
 type (
 	Authorization interface {
 		Authorization(next http.Handler) http.Handler
-		GetUserFromContext(ctx context.Context) *auth.User
 	}
 
 	authorization struct {
@@ -24,7 +23,7 @@ type (
 	}
 )
 
-var UserCtxKey = &contextKey{"user"}
+var userCtxKey = &contextKey{"user"}
 
 func NewAuthorization(config *configs.Config, jwt auth.JwtAdapter) Authorization {
 	return &authorization{config: config, jwt: jwt}
@@ -37,13 +36,12 @@ func (a *authorization) Authorization(next http.Handler) http.Handler {
 			w.WriteHeader(http.StatusUnauthorized)
 			return
 		}
-
-		ctx := context.WithValue(r.Context(), UserCtxKey, user)
+		ctx := context.WithValue(r.Context(), userCtxKey, user)
 		next.ServeHTTP(w, r.WithContext(ctx))
 	})
 }
 
-func (a *authorization) GetUserFromContext(ctx context.Context) *auth.User {
-	raw, _ := ctx.Value(UserCtxKey).(*auth.User)
+func GetUserFromContext(ctx context.Context) *auth.User {
+	raw, _ := ctx.Value(userCtxKey).(*auth.User)
 	return raw
 }
