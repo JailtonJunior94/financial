@@ -1,17 +1,10 @@
 package entities
 
 import (
-	"errors"
 	"time"
 
 	"github.com/JailtonJunior94/devkit-go/pkg/entity"
 	sharedVos "github.com/JailtonJunior94/devkit-go/pkg/vos"
-)
-
-var (
-	ErrNameIsRequired     = errors.New("name is required")
-	ErrUserIDIsRequired   = errors.New("user_id is required")
-	ErrSequenceIsRequired = errors.New("sequence is required")
 )
 
 type Category struct {

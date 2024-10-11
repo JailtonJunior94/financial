@@ -15,7 +15,13 @@ func RegisterAuthModule(ioc *bundle.Container) []httpserver.Route {
 	authHandler := http.NewAuthHandler(ioc.Observability, authUseCase)
 
 	authRoutes := http.NewUserRoutes()
-	authRoutes.Register(httpserver.NewRoute("POST", "/api/v1/token", authHandler.Token))
+	authRoutes.Register(
+		httpserver.NewRoute(
+			"POST",
+			"/api/v1/token",
+			authHandler.Token,
+		),
+	)
 	return authRoutes.Routes()
 }
 
@@ -25,6 +31,12 @@ func RegisterUserModule(ioc *bundle.Container) []httpserver.Route {
 	userHandler := http.NewUserHandler(ioc.Observability, createUserUseCase)
 
 	userRoutes := http.NewUserRoutes()
-	userRoutes.Register(httpserver.NewRoute("POST", "/api/v1/users", userHandler.Create))
+	userRoutes.Register(
+		httpserver.NewRoute(
+			"POST",
+			"/api/v1/users",
+			userHandler.Create,
+		),
+	)
 	return userRoutes.Routes()
 }

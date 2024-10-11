@@ -21,8 +21,22 @@ func RegisterCategoryModule(ioc *bundle.Container) []httpserver.Route {
 	)
 
 	categoryRoutes := http.NewCategoryRoutes()
-	categoryRoutes.Register(httpserver.NewRoute("GET", "/api/v1/categories", categoryHandler.Find, ioc.MiddlewareAuth.Authorization))
-	categoryRoutes.Register(httpserver.NewRoute("POST", "/api/v1/categories", categoryHandler.Create, ioc.MiddlewareAuth.Authorization))
+	categoryRoutes.Register(
+		httpserver.NewRoute(
+			"GET",
+			"/api/v1/categories",
+			categoryHandler.Find,
+			ioc.MiddlewareAuth.Authorization,
+		),
+	)
+	categoryRoutes.Register(
+		httpserver.NewRoute(
+			"POST",
+			"/api/v1/categories",
+			categoryHandler.Create,
+			ioc.MiddlewareAuth.Authorization,
+		),
+	)
 
 	return categoryRoutes.Routes()
 }

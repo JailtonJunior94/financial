@@ -27,23 +27,22 @@ func NewUserHandler(
 }
 
 func (h *UserHandler) Create(w http.ResponseWriter, r *http.Request) error {
-	ctx, span := h.o11y.Tracer().Start(r.Context(), "user_handler.create")
+	ctx, span := h.o11y.Start(r.Context(), "user_handler.create")
 	defer span.End()
 
 	var input *dtos.CreateUserInput
 	err := json.NewDecoder(r.Body).Decode(&input)
 	if err != nil {
 		span.RecordError(err)
-		responses.Error(w, http.StatusUnprocessableEntity, "Unprocessable Entity")
-		return nil
+		return err
 	}
 
 	output, err := h.createUserUseCase.Execute(ctx, input)
 	if err != nil {
 		span.RecordError(err)
-		responses.Error(w, http.StatusBadRequest, "error creating user")
-		return nil
+		return err
 	}
+
 	responses.JSON(w, http.StatusCreated, output)
 	return nil
 }

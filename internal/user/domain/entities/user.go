@@ -1,16 +1,12 @@
 package entities
 
 import (
-	"errors"
 	"time"
 
 	"github.com/jailtonjunior94/financial/internal/user/domain/vos"
+	financialErrors "github.com/jailtonjunior94/financial/pkg/error"
 
 	"github.com/JailtonJunior94/devkit-go/pkg/entity"
-)
-
-var (
-	ErrPasswordIsRequired = errors.New("password is required")
 )
 
 type User struct {
@@ -33,7 +29,7 @@ func NewUser(name vos.UserName, email vos.Email) (*User, error) {
 
 func (u *User) SetPassword(password string) error {
 	if password == "" {
-		return ErrPasswordIsRequired
+		return financialErrors.ErrPasswordIsRequired
 	}
 	u.Password = password
 	return nil

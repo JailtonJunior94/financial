@@ -10,6 +10,7 @@ import (
 
 	"github.com/jailtonjunior94/financial/internal/category"
 	"github.com/jailtonjunior94/financial/internal/user"
+	"github.com/jailtonjunior94/financial/pkg/api/middlewares"
 	"github.com/jailtonjunior94/financial/pkg/bundle"
 
 	"github.com/JailtonJunior94/devkit-go/pkg/httpserver"
@@ -44,7 +45,6 @@ func Run() {
 
 	healthRoute := httpserver.NewRoute(http.MethodGet, "/health", func(w http.ResponseWriter, r *http.Request) error {
 		if err := ioc.DB.Ping(); err != nil {
-			responses.Error(w, http.StatusInternalServerError, "database error connection failed or database is not running")
 			return err
 		}
 		responses.JSON(w, http.StatusOK, map[string]interface{}{"status": "ok"})
@@ -63,6 +63,7 @@ func Run() {
 	server := httpserver.New(
 		httpserver.WithPort(ioc.Config.HttpServerPort),
 		httpserver.WithRoutes(routes...),
+		httpserver.WithErrorHandler(middlewares.ErrorHandler),
 		httpserver.WithMiddlewares(
 			httpserver.RequestID,
 		),

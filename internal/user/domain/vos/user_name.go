@@ -1,14 +1,12 @@
 package vos
 
 import (
-	"errors"
 	"strings"
+
+	financialError "github.com/jailtonjunior94/financial/pkg/error"
 )
 
-var (
-	ErrNameCannotBeEmpty = errors.New("name cannot be empty")
-	ErrNameTooLong       = errors.New("name cannot be more than 100 characters")
-)
+var ()
 
 type UserName struct {
 	Value string
@@ -16,11 +14,11 @@ type UserName struct {
 
 func NewUserName(value string) (UserName, error) {
 	if len(strings.TrimSpace(value)) == 0 {
-		return UserName{}, ErrCannotBeEmpty
+		return UserName{}, financialError.ErrCannotBeEmpty
 	}
 
 	if len(value) > 100 {
-		return UserName{}, ErrTooLong
+		return UserName{}, financialError.ErrTooLong
 	}
 	return UserName{Value: value}, nil
 }

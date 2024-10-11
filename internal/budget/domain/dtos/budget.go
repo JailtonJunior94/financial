@@ -11,20 +11,20 @@ type (
 
 	BugetItemInput struct {
 		Amount     float64 `json:"amount"`
-		CategoryID string  `json:"categoryId"`
+		CategoryID string  `json:"category_id"`
 	}
 
 	BudgetItem struct {
-		CategoryID     string  `json:"categoryId"`
-		PercentageGoal float64 `json:"percentageGoal"`
+		CategoryID     string  `json:"category_id"`
+		PercentageGoal float64 `json:"percentage_goal"`
 	}
 
 	BudgetOutput struct {
 		ID         string    `json:"id"`
 		Date       time.Time `json:"date"`
-		AmountGoal float64   `json:"amountGoal"`
-		AmountUsed float64   `json:"amountUsed"`
+		AmountGoal float64   `json:"amount_goal"`
+		AmountUsed float64   `json:"amount_used"`
 		Percentage float64   `json:"percentage"`
-		CreatedAt  time.Time `json:"createdAt"`
+		CreatedAt  time.Time `json:"created_at"`
 	}
 )

@@ -40,16 +40,15 @@ func (h *CategoryHandler) Create(w http.ResponseWriter, r *http.Request) error {
 	err := json.NewDecoder(r.Body).Decode(&input)
 	if err != nil {
 		span.RecordError(err)
-		responses.Error(w, http.StatusUnprocessableEntity, "unprocessable entity")
-		return nil
+		return err
 	}
 
 	output, err := h.createCategoryUseCase.Execute(ctx, user.ID, input)
 	if err != nil {
 		span.RecordError(err)
-		responses.Error(w, http.StatusBadRequest, "error creating category")
-		return nil
+		return err
 	}
+
 	responses.JSON(w, http.StatusCreated, output)
 	return nil
 }
@@ -62,9 +61,9 @@ func (h *CategoryHandler) Find(w http.ResponseWriter, r *http.Request) error {
 	output, err := h.findCategoryUseCase.Execute(ctx, user.ID)
 	if err != nil {
 		span.RecordError(err)
-		responses.Error(w, http.StatusBadRequest, "error finding categories")
-		return nil
+		return err
 	}
+
 	responses.JSON(w, http.StatusCreated, output)
 	return nil
 }

@@ -1,15 +1,10 @@
 package vos
 
 import (
-	"errors"
 	"net/mail"
 	"strings"
-)
 
-var (
-	ErrCannotBeEmpty = errors.New("name cannot be empty")
-	ErrInvalidEmail  = errors.New("invalid email format")
-	ErrTooLong       = errors.New("name cannot be more than 255 characters")
+	financialError "github.com/jailtonjunior94/financial/pkg/error"
 )
 
 type Email struct {
@@ -18,15 +13,15 @@ type Email struct {
 
 func NewEmail(value string) (Email, error) {
 	if len(strings.TrimSpace(value)) == 0 {
-		return Email{}, ErrCannotBeEmpty
+		return Email{}, financialError.ErrCannotBeEmpty
 	}
 
 	if len(value) > 255 {
-		return Email{}, ErrTooLong
+		return Email{}, financialError.ErrTooLong
 	}
 
 	if _, err := mail.ParseAddress(value); err != nil {
-		return Email{}, ErrInvalidEmail
+		return Email{}, financialError.ErrInvalidEmail
 	}
 	return Email{Value: value}, nil
 }

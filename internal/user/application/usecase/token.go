@@ -2,21 +2,15 @@ package usecase
 
 import (
 	"context"
-	"errors"
 
 	"github.com/jailtonjunior94/financial/configs"
 	"github.com/jailtonjunior94/financial/internal/user/application/dtos"
 	"github.com/jailtonjunior94/financial/internal/user/domain/interfaces"
-
 	"github.com/jailtonjunior94/financial/pkg/auth"
+	financialErrors "github.com/jailtonjunior94/financial/pkg/error"
 
 	"github.com/JailtonJunior94/devkit-go/pkg/encrypt"
 	"github.com/JailtonJunior94/devkit-go/pkg/o11y"
-)
-
-var (
-	ErrUserNotFound = errors.New("user not found")
-	ErrCheckHash    = errors.New("error checking hash")
 )
 
 const (
@@ -72,7 +66,7 @@ func (u *tokenUseCase) Execute(ctx context.Context, input *dtos.AuthInput) (*dto
 			o11y.Attributes{Key: EmailKey, Value: input.Email},
 			o11y.Attributes{Key: "error", Value: err},
 		)
-		return nil, ErrUserNotFound
+		return nil, financialErrors.ErrUserNotFound
 	}
 
 	if !u.hash.CheckHash(user.Password, input.Password) {
@@ -81,7 +75,7 @@ func (u *tokenUseCase) Execute(ctx context.Context, input *dtos.AuthInput) (*dto
 			o11y.Attributes{Key: EmailKey, Value: input.Email},
 			o11y.Attributes{Key: "error", Value: err},
 		)
-		return nil, ErrCheckHash
+		return nil, financialErrors.ErrCheckHash
 	}
 
 	token, err := u.jwt.GenerateToken(ctx, user.ID.String(), user.Email.String())

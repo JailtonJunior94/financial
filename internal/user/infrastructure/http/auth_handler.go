@@ -26,7 +26,7 @@ func NewAuthHandler(
 }
 
 func (h *AuthHandler) Token(w http.ResponseWriter, r *http.Request) error {
-	ctx, span := h.o11y.Tracer().Start(r.Context(), "auth_handler.token")
+	ctx, span := h.o11y.Start(r.Context(), "auth_handler.token")
 	defer span.End()
 
 	input := &dtos.AuthInput{
@@ -37,9 +37,9 @@ func (h *AuthHandler) Token(w http.ResponseWriter, r *http.Request) error {
 	output, err := h.tokenUseCase.Execute(ctx, input)
 	if err != nil {
 		span.RecordError(err)
-		responses.Error(w, http.StatusInternalServerError, "Internal Server Error")
-		return nil
+		return err
 	}
+
 	responses.JSON(w, http.StatusOK, output)
 	return nil
 }
