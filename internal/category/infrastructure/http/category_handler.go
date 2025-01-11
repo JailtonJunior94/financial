@@ -10,23 +10,28 @@ import (
 
 	"github.com/JailtonJunior94/devkit-go/pkg/o11y"
 	"github.com/JailtonJunior94/devkit-go/pkg/responses"
+
+	"github.com/go-chi/chi/v5"
 )
 
 type CategoryHandler struct {
 	o11y                  o11y.Observability
 	createCategoryUseCase usecase.CreateCategoryUseCase
 	findCategoryUseCase   usecase.FindCategoryUseCase
+	findCategoryByUseCase usecase.FindCategoryByUseCase
 }
 
 func NewCategoryHandler(
 	o11y o11y.Observability,
 	createCategoryUseCase usecase.CreateCategoryUseCase,
 	findCategoryUseCase usecase.FindCategoryUseCase,
+	findCategoryByUseCase usecase.FindCategoryByUseCase,
 ) *CategoryHandler {
 	return &CategoryHandler{
 		o11y:                  o11y,
 		findCategoryUseCase:   findCategoryUseCase,
 		createCategoryUseCase: createCategoryUseCase,
+		findCategoryByUseCase: findCategoryByUseCase,
 	}
 }
 
@@ -64,6 +69,21 @@ func (h *CategoryHandler) Find(w http.ResponseWriter, r *http.Request) error {
 		return err
 	}
 
-	responses.JSON(w, http.StatusCreated, output)
+	responses.JSON(w, http.StatusOK, output)
+	return nil
+}
+
+func (h *CategoryHandler) FindBy(w http.ResponseWriter, r *http.Request) error {
+	ctx, span := h.o11y.Start(r.Context(), "category_handler.find")
+	defer span.End()
+
+	user := middlewares.GetUserFromContext(ctx)
+	output, err := h.findCategoryByUseCase.Execute(ctx, user.ID, chi.URLParam(r, "id"))
+	if err != nil {
+		span.RecordError(err)
+		return err
+	}
+
+	responses.JSON(w, http.StatusOK, output)
 	return nil
 }

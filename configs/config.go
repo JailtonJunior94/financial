@@ -1,6 +1,9 @@
 package configs
 
 import (
+	"log"
+
+	"github.com/fsnotify/fsnotify"
 	"github.com/spf13/viper"
 )
 
@@ -31,14 +34,20 @@ func LoadConfig(path string) (*Config, error) {
 	viper.SetConfigType("env")
 	viper.AutomaticEnv()
 
-	err := viper.ReadInConfig()
-	if err != nil {
+	if err := viper.ReadInConfig(); err != nil {
 		return nil, err
 	}
 
-	err = viper.Unmarshal(&cfg)
-	if err != nil {
+	if err := viper.Unmarshal(&cfg); err != nil {
 		return nil, err
 	}
+
+	viper.WatchConfig()
+	viper.OnConfigChange(func(e fsnotify.Event) {
+		if err := viper.Unmarshal(&cfg); err != nil {
+			log.Printf("unable to decode into struct, %v", err)
+		}
+	})
+
 	return cfg, nil
 }

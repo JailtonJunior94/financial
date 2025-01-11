@@ -13,6 +13,7 @@ type Category struct {
 	ParentID *sharedVos.UUID
 	Name     string
 	Sequence uint
+	Children []Category
 }
 
 func NewCategory(userID sharedVos.UUID, parentID *sharedVos.UUID, name string, sequence uint) (*Category, error) {
@@ -26,4 +27,8 @@ func NewCategory(userID sharedVos.UUID, parentID *sharedVos.UUID, name string, s
 		},
 	}
 	return category, nil
+}
+
+func (c *Category) AddChildrens(childrens []Category) {
+	c.Children = childrens
 }

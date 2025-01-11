@@ -12,9 +12,10 @@ type (
 	}
 
 	CategoryOutput struct {
-		ID        string    `json:"id"`
-		Name      string    `json:"name"`
-		Sequence  uint      `json:"sequence"`
-		CreatedAt time.Time `json:"created_at"`
+		ID        string           `json:"id"`
+		Name      string           `json:"name"`
+		Sequence  uint             `json:"sequence"`
+		CreatedAt time.Time        `json:"created_at"`
+		Children  []CategoryOutput `json:"children,omitempty"`
 	}
 )

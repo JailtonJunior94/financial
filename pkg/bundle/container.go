@@ -3,6 +3,7 @@ package bundle
 import (
 	"context"
 	"database/sql"
+	"log"
 
 	"github.com/jailtonjunior94/financial/configs"
 	"github.com/jailtonjunior94/financial/pkg/api/middlewares"
@@ -28,12 +29,12 @@ type Container struct {
 func NewContainer(ctx context.Context) *Container {
 	config, err := configs.LoadConfig(".")
 	if err != nil {
-		panic(err)
+		log.Fatalf("error loading config: %v", err)
 	}
 
 	db, err := mysql.NewMySqlDatabase(config)
 	if err != nil {
-		panic(err)
+		log.Fatalf("error connecting to database: %v", err)
 	}
 
 	observability := o11y.NewObservability(
@@ -53,10 +54,10 @@ func NewContainer(ctx context.Context) *Container {
 
 	return &Container{
 		DB:                     db,
-		Logger:                 logger,
-		Config:                 config,
 		Jwt:                    jwt,
 		Hash:                   hash,
+		Logger:                 logger,
+		Config:                 config,
 		MiddlewareAuth:         middlewareAuth,
 		Observability:          observability,
 		PanicRecoverMiddleware: panicRecoverMiddleware,

@@ -30,7 +30,6 @@ func (r *categoryRepository) Find(ctx context.Context, userID vos.UUID) ([]*enti
 	query := `select
 				id,
 				user_id,
-				parent_id,
 				name,
 				sequence,
 				created_at,
@@ -57,7 +56,6 @@ func (r *categoryRepository) Find(ctx context.Context, userID vos.UUID) ([]*enti
 		err := rows.Scan(
 			&category.ID.Value,
 			&category.UserID.Value,
-			&category.ParentID,
 			&category.Name,
 			&category.Sequence,
 			&category.CreatedAt,
@@ -78,40 +76,74 @@ func (r *categoryRepository) FindByID(ctx context.Context, userID, id vos.UUID) 
 	defer span.End()
 
 	query := `select
-				id,
-				user_id,
-				parent_id,
-				name,
-				sequence,
-				created_at,
-				updated_at,
-				deleted_at
-			  from
-				categories c
-			  where
-				c.user_id = ?
-				and c.id = ?;`
+					c.id,
+					c.user_id,
+					c.parent_id,
+					c.name,
+					c.sequence,
+					c.created_at,
+					c.updated_at,
+					c.deleted_at,
+					c2.id,
+					c2.user_id,
+					c2.name,
+					c2.sequence,
+					c2.created_at,
+					c2.updated_at,
+					c2.deleted_at
+				from
+					categories c
+					left join categories c2 on c.id = c2.parent_id
+				where
+					c.user_id = ?
+					and c.deleted_at is null
+					and c.id = ?
+				order by
+					c.sequence;`
 
-	var category entities.Category
-	err := r.db.QueryRowContext(ctx, query, userID.String(), id.String()).Scan(
-		&category.ID.Value,
-		&category.UserID.Value,
-		&category.ParentID,
-		&category.Name,
-		&category.Sequence,
-		&category.CreatedAt,
-		&category.UpdatedAt.Time,
-		&category.DeletedAt.Time,
-	)
-
+	rows, err := r.db.QueryContext(ctx, query, userID.String(), id.String())
 	if err != nil {
-		if err == sql.ErrNoRows {
-			span.AddAttributes(ctx, o11y.Ok, "category not found", o11y.Attributes{Key: "id", Value: id.String()})
-			return nil, nil
-		}
-		span.AddAttributes(ctx, o11y.Error, "error finding category", o11y.Attributes{Key: "id", Value: id.String()})
+		span.AddAttributes(ctx, o11y.Error, "error finding category", o11y.Attributes{Key: "user_id", Value: userID.String()})
 		return nil, err
 	}
+	defer rows.Close()
+
+	var category entities.Category
+	var subCategory entities.Category
+	var subCategories = make(map[vos.UUID][]entities.Category)
+
+	for rows.Next() {
+		err := rows.Scan(
+			&category.ID.Value,
+			&category.UserID.Value,
+			&category.ParentID,
+			&category.Name,
+			&category.Sequence,
+			&category.CreatedAt,
+			&category.UpdatedAt.Time,
+			&category.DeletedAt.Time,
+			&subCategory.ID.Value,
+			&subCategory.UserID.Value,
+			&subCategory.Name,
+			&subCategory.Sequence,
+			&subCategory.CreatedAt,
+			&subCategory.UpdatedAt.Time,
+			&subCategory.DeletedAt.Time,
+		)
+
+		if err != nil {
+			span.AddAttributes(ctx, o11y.Error, "error scanning category", o11y.Attributes{Key: "user_id", Value: userID.String()})
+			return nil, err
+		}
+
+		if _, ok := subCategories[category.ID]; !ok {
+			subCategories[category.ID] = []entities.Category{subCategory}
+			continue
+		}
+		subCategories[category.ID] = append(subCategories[category.ID], subCategory)
+	}
+
+	category.AddChildrens(subCategories[category.ID])
 	return &category, nil
 }
 

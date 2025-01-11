@@ -41,18 +41,6 @@ func (u *createCategoryUseCase) Execute(ctx context.Context, userID string, inpu
 		return nil, err
 	}
 
-	if newCategory.ParentID != nil {
-		parent, err := u.repository.FindByID(ctx, newCategory.UserID, *newCategory.ParentID)
-		if err != nil {
-			span.AddAttributes(
-				ctx, o11y.Error, "error finding parent category",
-				o11y.Attributes{Key: "parent_id", Value: input.ParentID},
-			)
-			return nil, err
-		}
-		newCategory.ParentID = &parent.ID
-	}
-
 	category, err := u.repository.Insert(ctx, newCategory)
 	if err != nil {
 		span.AddAttributes(
