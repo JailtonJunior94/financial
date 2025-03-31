@@ -23,18 +23,20 @@ func TestNewBudget(t *testing.T) {
 		name     string
 		args     args
 		expected func(budget *Budget)
-	}{{
-		name: "should create a new budget",
-		args: args{
-			userID: userID,
-			amount: amount,
-			date:   time.Now().UTC(),
+	}{
+		{
+			name: "should create a new budget",
+			args: args{
+				userID: userID,
+				amount: amount,
+				date:   time.Now().UTC(),
+			},
+			expected: func(budget *Budget) {
+				assert.NotNil(t, budget)
+				assert.True(t, budget.AmountGoal.Equals(vos.NewMoney(14_400.00)))
+			},
 		},
-		expected: func(budget *Budget) {
-			assert.NotNil(t, budget)
-			assert.True(t, budget.AmountGoal.Equals(vos.NewMoney(14_400.00)))
-		},
-	}}
+	}
 
 	for _, scenario := range scenarios {
 		t.Run(scenario.name, func(t *testing.T) {
@@ -89,16 +91,18 @@ func TestAddItems(t *testing.T) {
 		name     string
 		args     args
 		expected func(sValid bool)
-	}{{
-		name: "should add items to the budget",
-		args: args{
-			budget: budget,
-			items:  items,
+	}{
+		{
+			name: "should add items to the budget",
+			args: args{
+				budget: budget,
+				items:  items,
+			},
+			expected: func(isValid bool) {
+				assert.True(t, isValid)
+			},
 		},
-		expected: func(isValid bool) {
-			assert.True(t, isValid)
-		},
-	}}
+	}
 
 	for _, scenario := range scenarios {
 		t.Run(scenario.name, func(t *testing.T) {
