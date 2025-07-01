@@ -47,7 +47,7 @@ func Run() {
 		if err := ioc.DB.Ping(); err != nil {
 			return err
 		}
-		responses.JSON(w, http.StatusOK, map[string]interface{}{"status": "ok"})
+		responses.JSON(w, http.StatusOK, map[string]any{"status": "ok"})
 		return nil
 	})
 

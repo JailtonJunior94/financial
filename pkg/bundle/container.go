@@ -41,9 +41,9 @@ func NewContainer(ctx context.Context) *Container {
 		o11y.WithServiceName(config.ServiceName),
 		o11y.WithServiceVersion(config.ServiceVersion),
 		o11y.WithResource(),
-		o11y.WithLoggerProvider(ctx, config.OtelExporterEndpoint),
 		o11y.WithTracerProvider(ctx, config.OtelExporterEndpoint),
 		o11y.WithMeterProvider(ctx, config.OtelExporterEndpoint),
+		o11y.WithLoggerProvider(ctx, config.OtelExporterHTTPEndpoint),
 	)
 
 	logger := logger.NewLogger()

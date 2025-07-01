@@ -28,7 +28,7 @@ build_financial_api:
 	@CGO_ENABLED=0 go build -ldflags="-w -s" -o ./bin/financial ./cmd/main.go
 
 start_docker_without_api:
-	docker compose -f deployment/docker-compose.yml up --build -d financial_migration mysql rabbitmq grafana prometheus otel_collector jaeger 
+	docker compose -f deployment/docker-compose.yml up --build -d financial_migration mysql rabbitmq grafana prometheus otel_collector jaeger loki
 
 start_docker:
 	docker compose -f deployment/docker-compose.yml up --build -d

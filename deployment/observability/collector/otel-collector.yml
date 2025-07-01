@@ -1,50 +1,44 @@
 receivers:
   otlp:
     protocols:
-      grpc:
       http:
+        endpoint: 0.0.0.0:4318
+      grpc:
+        endpoint: 0.0.0.0:4317
 
 processors:
   batch:
+    timeout: 10s
+    send_batch_size: 1024
 
 exporters:
+  debug:
   prometheus:
-    endpoint: "0.0.0.0:8889"
-
-  # googlecloud:
-  #   project: "financial-420621"
-  #   user_agent: "opentelemetry-collector"
-  #   metric:
-  #     prefix: "otel"
-  #     endpoint: "monitoring.googleapis.com:443"
-  #   trace:
-  #     endpoint: "cloudtrace.googleapis.com:443"
-  #   log:
-  #     default_log_name: "otel"
-  #     endpoint: "logging.googleapis.com:443"
-
-  jaeger:
-    endpoint: "jaeger:14250"
+    endpoint: 0.0.0.0:8889
+  otlp/jaeger:
+    endpoint: jaeger:4317
     tls:
       insecure: true
+  otlphttp:
+    endpoint: http://loki:3100/otlp
 
 extensions:
   health_check:
   pprof:
   zpages:
 
+
 service:
-  extensions: [health_check, pprof, zpages]
   pipelines:
-    metrics:
-      receivers: [otlp]
-      processors: [batch]
-      exporters: [prometheus]
     traces:
-      receivers: [otlp]
-      processors: [batch]
-      exporters: [jaeger]
-    # logs:
-    #   receivers: [otlp]
-    #   processors: [batch]
-    #   exporters: [googlecloud]
+      receivers: [ otlp ]
+      processors: [ batch ]
+      exporters: [ otlp/jaeger, debug ]
+    metrics:
+      receivers: [ otlp ]
+      processors: [ batch ]
+      exporters: [ prometheus, debug ]
+    logs:
+      receivers: [ otlp ]
+      processors: [ batch ]
+      exporters: [ otlphttp, debug ]
