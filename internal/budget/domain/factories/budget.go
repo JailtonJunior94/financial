@@ -1,6 +1,8 @@
 package factories
 
 import (
+	"fmt"
+
 	"github.com/jailtonjunior94/financial/internal/budget/domain/dtos"
 	"github.com/jailtonjunior94/financial/internal/budget/domain/entities"
 
@@ -10,12 +12,12 @@ import (
 func CreateBudget(userID string, input *dtos.BugetInput) (*entities.Budget, error) {
 	user, err := vos.NewUUIDFromString(userID)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("create_budget: %v", err)
 	}
 
 	budgetID, err := vos.NewUUID()
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("create_budget: %v", err)
 	}
 
 	budget := entities.NewBudget(user, vos.NewMoney(input.AmountGoal), input.Date)
@@ -24,12 +26,12 @@ func CreateBudget(userID string, input *dtos.BugetInput) (*entities.Budget, erro
 	for _, item := range input.Items {
 		category, err := vos.NewUUIDFromString(item.CategoryID)
 		if err != nil {
-			return nil, err
+			return nil, fmt.Errorf("create_budget: %v", err)
 		}
 
 		budgetItemID, err := vos.NewUUID()
 		if err != nil {
-			return nil, err
+			return nil, fmt.Errorf("create_budget: %v", err)
 		}
 		newItem := entities.NewBudgetItem(budget, category, vos.NewPercentage(item.PercentageGoal))
 		newItem.SetID(budgetItemID)

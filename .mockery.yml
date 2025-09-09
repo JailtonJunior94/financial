@@ -1,0 +1,24 @@
+structname: '{{ .InterfaceName }}'
+filename: "{{ .InterfaceName | snakecase }}.go"
+template: testify
+template-data:
+  unroll-variadic: true
+packages:
+  github.com/jailtonjunior94/financial/internal/user/domain/interfaces:
+    config:
+      dir: ./internal/user/infrastructure/repositories/mocks
+      pkgname: repositoryMock
+    interfaces:
+      UserRepository: {}
+  github.com/jailtonjunior94/financial/internal/category/domain/interfaces:
+    config:
+      dir: ./internal/category/infrastructure/repositories/mocks
+      pkgname: repositoryMock
+    interfaces:
+      CategoryRepository: {}
+  github.com/jailtonjunior94/financial/internal/budget/domain/interfaces:
+    config:
+      dir: ./internal/budget/infrastructure/repositories/mocks
+      pkgname: repositoryMock
+    interfaces:
+      BudgetRepository: {}

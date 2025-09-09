@@ -38,7 +38,7 @@ func (r *categoryRepository) Find(ctx context.Context, userID vos.UUID) ([]*enti
 			from
 				categories c
 			where
-				user_id = ?
+				user_id = $1
 				and deleted_at is null
 			order by
 				sequence;`
@@ -95,9 +95,9 @@ func (r *categoryRepository) FindByID(ctx context.Context, userID, id vos.UUID) 
 					categories c
 					left join categories c2 on c.id = c2.parent_id
 				where
-					c.user_id = ?
+					c.user_id = $1
 					and c.deleted_at is null
-					and c.id = ?
+					and c.id = $2
 				order by
 					c.sequence;`
 
@@ -163,7 +163,7 @@ func (r *categoryRepository) Insert(ctx context.Context, category *entities.Cate
 					deleted_at
 				)
 				values
-					(?, ?, ?, ?, ?, ?, ?, ?)`
+					($1, $2, $3, $4, $5, $6, $7, $8)`
 
 	stmt, err := r.db.PrepareContext(ctx, query)
 	if err != nil {

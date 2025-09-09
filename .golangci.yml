@@ -1,0 +1,35 @@
+version: "2"
+
+run:
+  timeout: 15m
+  concurrency: 5
+  verbose: true
+  skip-dirs:
+  - "cmd"
+
+issues:
+  exclude-dirs:
+  - mocks
+  exclude-files:
+  - vendor
+  exclude-rules:
+  - path: _test\.go
+    linters:
+    - errcheck
+    - gosec
+
+linters:
+  disable:
+  - godox
+  enable-all: false
+  enable:
+  - bodyclose
+  - gochecknoinits
+  - gocritic
+  - errcheck
+  - godot
+  - govet
+  - gocyclo
+  - ineffassign
+  - staticcheck
+  - gosec

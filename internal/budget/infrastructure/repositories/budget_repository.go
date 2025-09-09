@@ -2,24 +2,22 @@ package repositories
 
 import (
 	"context"
-	"database/sql"
 
 	"github.com/jailtonjunior94/financial/internal/budget/domain/entities"
 	"github.com/jailtonjunior94/financial/internal/budget/domain/interfaces"
+	"github.com/jailtonjunior94/financial/pkg/database"
 
 	"github.com/JailtonJunior94/devkit-go/pkg/o11y"
 )
 
 type budgetRepository struct {
-	db   *sql.DB
-	tx   *sql.Tx
+	exec database.DBExecutor
 	o11y o11y.Observability
 }
 
-func NewBudgetRepository(db *sql.DB, tx *sql.Tx, o11y o11y.Observability) interfaces.BudgetRepository {
+func NewBudgetRepository(exec database.DBExecutor, o11y o11y.Observability) interfaces.BudgetRepository {
 	return &budgetRepository{
-		db:   db,
-		tx:   tx,
+		exec: exec,
 		o11y: o11y,
 	}
 }
@@ -41,9 +39,9 @@ func (r *budgetRepository) Insert(ctx context.Context, budget *entities.Budget) 
 					deleted_at
 					)
 			  values
-				(?, ?, ?, ?, ?, ?, ?, ?, ?)`
+				($1, $2, $3, $4, $5, $6, $7, $8, $9)`
 
-	_, err := r.tx.ExecContext(
+	_, err := r.exec.ExecContext(
 		ctx,
 		query,
 		budget.ID.Value,
@@ -82,10 +80,10 @@ func (r *budgetRepository) InsertItems(ctx context.Context, items []*entities.Bu
 					deleted_at
 					)
 				values
-					(?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
+					($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)`
 
 	for _, item := range items {
-		_, err := r.tx.ExecContext(
+		_, err := r.exec.ExecContext(
 			ctx,
 			query,
 			item.ID.Value,

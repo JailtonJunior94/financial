@@ -22,12 +22,18 @@ func main() {
 		Short: "Financial Migrations",
 		Run: func(cmd *cobra.Command, args []string) {
 			container := bundle.NewContainer(context.Background())
-			migrate, err := migration.NewMigrateMySql(container.Logger, container.DB, container.Config.MigratePath, container.Config.DBName)
+			migrate, err := migration.NewMigrateCockroachDB(
+				container.Logger,
+				container.DB,
+				container.Config.DBConfig.MigratePath,
+				container.Config.DBConfig.Name,
+			)
 			if err != nil {
-				log.Fatal(err)
+				log.Fatalf("error initializing migrations: %v", err)
 			}
+
 			if err = migrate.Execute(); err != nil {
-				log.Fatal(err)
+				log.Fatalf("error executing migrations: %v", err)
 			}
 		},
 	}
@@ -50,6 +56,6 @@ func main() {
 
 	root.AddCommand(migrate, api, consumers)
 	if err := root.Execute(); err != nil {
-		log.Fatal(err)
+		log.Fatalf("error executing command: %v", err)
 	}
 }

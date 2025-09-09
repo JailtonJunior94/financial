@@ -87,5 +87,5 @@ func (u *tokenUseCase) Execute(ctx context.Context, input *dtos.AuthInput) (*dto
 		)
 		return nil, err
 	}
-	return dtos.NewAuthOutput(token, u.config.AuthExpirationAt), nil
+	return dtos.NewAuthOutput(token, u.config.AuthConfig.AuthTokenDuration), nil
 }

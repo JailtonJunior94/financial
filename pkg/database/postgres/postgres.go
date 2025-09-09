@@ -15,7 +15,7 @@ var (
 )
 
 func NewPostgresDatabase(config *configs.Config) (*sql.DB, error) {
-	sqlDB, err := sql.Open(config.DBDriver, dsn(config))
+	sqlDB, err := sql.Open(config.DBConfig.Driver, dsn(config))
 	if err != nil {
 		return nil, ErrSQLOpenConn
 	}
@@ -24,17 +24,17 @@ func NewPostgresDatabase(config *configs.Config) (*sql.DB, error) {
 	if err != nil {
 		return nil, ErrSQLOpenConn
 	}
-	sqlDB.SetMaxIdleConns(config.DBMaxIdleConns)
+	sqlDB.SetMaxIdleConns(config.DBConfig.DBMaxIdleConns)
 	return sqlDB, nil
 }
 
 func dsn(config *configs.Config) string {
 	return fmt.Sprintf(
 		"host=%s port=%s user=%s password=%s dbname=%s sslmode=disable",
-		config.DBHost,
-		config.DBPort,
-		config.DBUser,
-		config.DBPassword,
-		config.DBName,
+		config.DBConfig.Host,
+		config.DBConfig.Port,
+		config.DBConfig.User,
+		config.DBConfig.Password,
+		config.DBConfig.Name,
 	)
 }

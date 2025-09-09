@@ -1,4 +1,4 @@
-FROM golang:1.24 AS builder
+FROM golang:1.25.0 AS builder
 
 WORKDIR /go/src/financial
 
@@ -18,9 +18,9 @@ COPY go.mod go.sum ./
 RUN go mod download
 
 COPY . .
-RUN make build_financial_api
+RUN make build
 
-FROM alpine:3.16
+FROM alpine:3.22.1
 WORKDIR /app
 
 COPY --from=builder /etc/ssl/certs/ca-certificates.crt /etc/ssl/certs/

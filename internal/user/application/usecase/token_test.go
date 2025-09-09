@@ -8,7 +8,7 @@ import (
 	"github.com/jailtonjunior94/financial/configs"
 	"github.com/jailtonjunior94/financial/internal/user/application/dtos"
 	"github.com/jailtonjunior94/financial/internal/user/domain/factories"
-	repositoryMock "github.com/jailtonjunior94/financial/internal/user/infrastructure/repositories/mock"
+	repositoryMock "github.com/jailtonjunior94/financial/internal/user/infrastructure/repositories/mocks"
 	"github.com/jailtonjunior94/financial/pkg/auth"
 
 	"github.com/JailtonJunior94/devkit-go/pkg/encrypt"
@@ -21,11 +21,12 @@ import (
 type TokenSuite struct {
 	suite.Suite
 
-	ctx    context.Context
-	config *configs.Config
-	hash   encrypt.HashAdapter
-	jwt    auth.JwtAdapter
-	o11y   o11y.Observability
+	ctx        context.Context
+	config     *configs.Config
+	jwt        auth.JwtAdapter
+	o11y       o11y.Observability
+	hash       encrypt.HashAdapter
+	repository *repositoryMock.UserRepository
 }
 
 func TestTokenSuite(t *testing.T) {
@@ -35,12 +36,20 @@ func TestTokenSuite(t *testing.T) {
 func (s *TokenSuite) SetupTest() {
 	s.ctx = context.Background()
 	s.config = &configs.Config{
-		AuthExpirationAt: 8,
-		AuthSecretKey:    "my_secret_key",
+		AuthConfig: configs.AuthConfig{
+			AuthTokenDuration: 60,
+			AuthSecretKey:     "your_secret_key",
+		},
 	}
+
 	s.o11y = o11y.NewDevelopmentObservability("test", "1.0.0")
-	s.jwt = auth.NewJwtAdapter(s.config, s.o11y)
 	s.hash = encrypt.NewHashAdapter()
+	s.jwt = auth.NewJwtAdapter(s.config, s.o11y)
+	s.repository = repositoryMock.NewUserRepository(s.T())
+}
+
+func (s *TokenSuite) TearDownTest() {
+	s.repository.AssertExpectations(s.T())
 }
 
 func (s *TokenSuite) TestToken() {
@@ -49,13 +58,15 @@ func (s *TokenSuite) TestToken() {
 			input *dtos.AuthInput
 		}
 		fields struct {
-			userRepository *repositoryMock.UserRepository
+			repository *repositoryMock.UserRepository
 		}
 	)
 
 	passwordHash, _ := s.hash.GenerateHash("my_password@2024")
-	user, _ := factories.CreateUser("John Mckinley", "john.mckinley@examplepetstore.com")
-	_ = user.SetPassword(passwordHash)
+	user, err := factories.CreateUser("John Mckinley", "john.mckinley@examplepetstore.com")
+	s.Require().NoError(err)
+	err = user.SetPassword(passwordHash)
+	s.Require().NoError(err)
 
 	scenarios := []struct {
 		name     string
@@ -67,12 +78,13 @@ func (s *TokenSuite) TestToken() {
 			name: "must return a token when username and password are valid",
 			args: args{input: &dtos.AuthInput{Email: "john.mckinley@examplepetstore.com", Password: "my_password@2024"}},
 			fields: fields{
-				userRepository: func() *repositoryMock.UserRepository {
-					userRepository := &repositoryMock.UserRepository{}
-					userRepository.
-						On("FindByEmail", mock.Anything, mock.Anything).
-						Return(user, nil)
-					return userRepository
+				repository: func() *repositoryMock.UserRepository {
+					s.repository.
+						EXPECT().
+						FindByEmail(mock.Anything, mock.Anything).
+						Return(user, nil).
+						Once()
+					return s.repository
 				}(),
 			},
 			expected: func(res *dtos.AuthOutput, err error) {
@@ -84,7 +96,7 @@ func (s *TokenSuite) TestToken() {
 
 	for _, scenario := range scenarios {
 		s.T().Run(scenario.name, func(t *testing.T) {
-			tokenUseCase := NewTokenUseCase(s.config, s.o11y, s.hash, s.jwt, scenario.fields.userRepository)
+			tokenUseCase := NewTokenUseCase(s.config, s.o11y, s.hash, s.jwt, scenario.fields.repository)
 			token, err := tokenUseCase.Execute(s.ctx, scenario.args.input)
 			scenario.expected(token, err)
 		})

@@ -3,3 +3,4 @@ bin
 .docker
 coverage.out
 cockroachdb_data
+__debug*

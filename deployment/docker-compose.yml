@@ -1,57 +1,23 @@
 services:
-  financial_migration:
-    build:
-      context: ..
-      dockerfile: deployment/Dockerfile
-    command: migrate
-    environment:
-      - DB_DRIVER=mysql
-      - DB_HOST=mysql
-      - DB_PORT=3306
-      - DB_USER=mysql
-      - DB_PASSWORD=mysql
-      - DB_NAME=financial
-      - DB_MAX_IDLE_CONNS=10
-      - MIGRATE_PATH=file://migrations/financial
-    depends_on:
-      - mysql
-
-  financial:
-    build:
-      context: ..
-      dockerfile: deployment/Dockerfile
-    ports:
-      - "8000:80"
-    command: "api"
-    environment:
-      - DEVELOPMENT_MODE=true
-      - HTTP_SERVER_PORT=80
-      - DB_DRIVER=mysql
-      - DB_HOST=mysql
-      - DB_PORT=3306
-      - DB_USER=mysql
-      - DB_PASSWORD=mysql
-      - DB_NAME=financial
-      - DB_MAX_IDLE_CONNS=10
-      - AUTH_EXPIRATION_AT=8
-      - AUTH_SECRET_KEY="RmluYW5jaWFsQ29udHJvbEFtYmllbnRlUHJvZHVjdGlvbg=="
-      - OTEL_EXPORTER_OTLP_ENDPOINT=otel_collector:4317
-    depends_on:
-      - financial_migration
-
-  mysql:
-    image: mysql:8.1.0
-    command: --default-authentication-plugin=mysql_native_password
+  cockroachdb:
+    image: cockroachdb/cockroach:v23.2.4
+    command: start-single-node --insecure
     restart: always
-    environment:
-      MYSQL_ROOT_PASSWORD: financial
-      MYSQL_DATABASE: financial
-      MYSQL_USER: mysql
-      MYSQL_PASSWORD: mysql
     ports:
-      - "3306:3306"
+      - "26257:26257"
+      - "8080:8080"
+    healthcheck:
+      test: ["CMD", "cockroach", "node", "status", "--insecure"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 30s
     volumes:
-      - .docker/mysql:/var/lib/mysql
+      - ./cockroachdb_data:/cockroach/cockroach-data
+    environment:
+      COCKROACH_DATABASE: financial
+      COCKROACH_USER: root
+      COCKROACH_PASSWORD: financial@password
 
   rabbitmq:
     image: rabbitmq:4.0.2-management-alpine
@@ -76,108 +42,46 @@ services:
           cpus: "0.50"
           memory: 512M
 
-  otel_collector:
-    image: otel/opentelemetry-collector-contrib:0.128.0
-    restart: always
-    command:
-      - --config=/etc/otelcol-contrib/otel-collector.yml
-    volumes:
-      - ./observability/collector/otel-collector.yml:/etc/otelcol-contrib/otel-collector.yml
-    ports:
-      - "4318:4318"
-      - "4317:4317"
-      - "8889:8889"
-    depends_on:
-      - jaeger
-      - prometheus
-      - loki
-      - grafana
-
-  prometheus:
-    image: prom/prometheus:v2.53.5
-    restart: always
-    command:
-      - --config.file=/etc/prometheus/prometheus.yml
-      - "--storage.tsdb.path=/prometheus"
-      - "--web.console.libraries=/usr/share/prometheus/console_libraries"
-      - "--web.console.templates=/usr/share/prometheus/consoles"
-    volumes:
-      - ./observability/prometheus/prometheus.yml:/etc/prometheus/prometheus.yml
-    ports:
-      - "9090:9090"
-
-  jaeger:
-    image: jaegertracing/all-in-one:1
-    ports:
-      - "16686:16686" # UI
-      - "14250:14250" # Model used by collector
-      - "14268:14268" # HTTP accept directly from clients
-      - "6831:6831/udp" # Accept jaeger.thrift in compact Thrift protocol over UDP
-      - "6832:6832/udp" # Accept jaeger.thrift in binary Thrift protocol over UDP
+  financial_migration:
+    build:
+      context: ..
+      dockerfile: deployment/Dockerfile
+    command: migrate
     environment:
-      - COLLECTOR_ZIPKIN_HOST_PORT=:9411
-
-  grafana:
-    image: grafana/grafana:12.0.2
-    environment:
-      - GF_PATHS_PROVISIONING=/etc/grafana/provisioning
-      - GF_AUTH_ANONYMOUS_ENABLED=true
-      - GF_AUTH_ANONYMOUS_ORG_ROLE=Admin
-      - GF_FEATURE_TOGGLES_ENABLE=alertingSimplifiedRouting,alertingQueryAndExpressionsStepMode
-    entrypoint:
-      - sh
-      - -euc
-      - |
-        mkdir -p /etc/grafana/provisioning/datasources
-        cat <<EOF > /etc/grafana/provisioning/datasources/ds.yaml
-        apiVersion: 1
-        datasources:
-        - name: Loki
-          type: loki
-          access: proxy 
-          orgId: 1
-          url: http://loki:3100
-          basicAuth: false
-          isDefault: false
-          version: 1
-          editable: false
-        - name: Jaeger
-          type: jaeger
-          access: proxy
-          orgId: 1
-          url: http://jaeger:16686
-          basicAuth: false
-          isDefault: false
-          version: 1
-          editable: false
-          uid: jaeger
-        - name: Prometheus
-          type: prometheus
-          access: proxy
-          orgId: 1
-          url: http://prometheus:9090
-          basicAuth: false
-          isDefault: true
-          version: 1
-          editable: false
-          uid: prometheus
-        EOF
-        /run.sh
-    volumes:
-      - ./observability/grafana/grafana-datasources.yml:/etc/grafana/provisioning/datasources/datasources.yml
-    ports:
-      - "3000:3000"
+      - DB_DRIVER=postgres
+      - DB_HOST=cockroachdb
+      - DB_PORT=26257
+      - DB_USER=root
+      - DB_PASSWORD=financial@password
+      - DB_NAME=financial
+      - DB_MAX_IDLE_CONNS=10
+      - MIGRATE_PATH=file://../database/migrations
     depends_on:
-      - loki
-      - jaeger
-      - prometheus
+      - cockroachdb
 
-  loki:
-    image: grafana/loki:3.3.0
-    ports:
-      - "3100:3100"
-    command: -config.file=/etc/loki/local-config.yaml
+  # financial:
+  #   build:
+  #     context: ..
+  #     dockerfile: deployment/Dockerfile
+  #   ports:
+  #     - "8000:80"
+  #   command: "api"
+  #   environment:
+  #     - DEVELOPMENT_MODE=true
+  #     - HTTP_SERVER_PORT=80
+  #     - DB_DRIVER=postgres
+  #     - DB_HOST=cockroachdb
+  #     - DB_PORT=26257
+  #     - DB_USER=root
+  #     - DB_PASSWORD=order@password
+  #     - DB_NAME=orders
+  #     - DB_MAX_IDLE_CONNS=10
+  #     - AUTH_EXPIRATION_AT=8
+  #     - AUTH_SECRET_KEY="RmluYW5jaWFsQ29udHJvbEFtYmllbnRlUHJvZHVjdGlvbg=="
+  #     - OTEL_EXPORTER_OTLP_ENDPOINT=otel_collector:4317
+  #   depends_on:
+  #     - financial_migration
 
 volumes:
-  mysql:
   rabbitmq_data:
+  cockroachdb_data:

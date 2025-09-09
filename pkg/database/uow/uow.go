@@ -4,75 +4,68 @@ import (
 	"context"
 	"database/sql"
 	"errors"
+	"fmt"
+
+	"github.com/jailtonjunior94/financial/pkg/database"
 )
-
-var (
-	ErrRepositoryNotRegistered     = errors.New("repository not registered")
-	ErrRepositoryAlreadyRegistered = errors.New("repository already registered")
-)
-
-type Repository any
-type RepositoryName string
-type RepositoryFactory func(tx *sql.Tx) Repository
-
-type TX interface {
-	Get(name RepositoryName) (Repository, error)
-}
 
 type UnitOfWork interface {
-	Register(name RepositoryName, factory RepositoryFactory)
-	Remove(name RepositoryName) error
-	Has(name RepositoryName) bool
-	Clear()
-	Do(ctx context.Context, fn func(ctx context.Context, tx TX) error) error
+	Executor() database.DBExecutor
+	Do(ctx context.Context, fn func(ctx context.Context) error) error
 }
 
 type unitOfWork struct {
-	db           *sql.DB
-	repositories map[RepositoryName]RepositoryFactory
+	db *sql.DB
+	tx *sql.Tx
 }
 
-func NewUnitOfWork(db *sql.DB) *unitOfWork {
-	return &unitOfWork{
-		db:           db,
-		repositories: make(map[RepositoryName]RepositoryFactory),
+func NewUnitOfWork(db *sql.DB) UnitOfWork {
+	return &unitOfWork{db: db}
+}
+
+func (u *unitOfWork) Executor() database.DBExecutor {
+	if u.tx != nil {
+		return u.tx
 	}
+	return u.db
 }
 
-func (u *unitOfWork) Register(name RepositoryName, factory RepositoryFactory) {
-	u.repositories[name] = factory
-}
-
-func (u *unitOfWork) Remove(name RepositoryName) error {
-	if _, ok := u.repositories[name]; !ok {
-		return ErrRepositoryNotRegistered
-	}
-
-	delete(u.repositories, name)
-	return nil
-}
-
-func (u *unitOfWork) Has(name RepositoryName) bool {
-	_, ok := u.repositories[name]
-	return ok
-}
-
-func (u *unitOfWork) Clear() {
-	u.repositories = make(map[RepositoryName]RepositoryFactory)
-}
-
-func (u *unitOfWork) Do(ctx context.Context, fn func(ctx context.Context, tx TX) error) error {
+func (u *unitOfWork) Do(ctx context.Context, fn func(ctx context.Context) error) error {
 	tx, err := u.db.BeginTx(ctx, nil)
 	if err != nil {
 		return err
 	}
-	defer tx.Rollback()
+	u.tx = tx
 
-	err = fn(ctx, NewTransaction(tx, u.repositories))
-	if err != nil {
+	if err = fn(ctx); err != nil {
+		if errRollback := u.Rollback(); errRollback != nil {
+			return fmt.Errorf("original error: %s, rollback error: %s", err, errRollback)
+		}
+		return err
+	}
+	return u.CommitOrRollback()
+}
+
+func (u *unitOfWork) CommitOrRollback() error {
+	if err := u.tx.Commit(); err != nil {
+		if errRollback := u.Rollback(); errRollback != nil {
+			return fmt.Errorf("original error: %s, rollback error: %s", err, errRollback)
+		}
+		return err
+	}
+	u.tx = nil
+	return nil
+}
+
+func (u *unitOfWork) Rollback() error {
+	if u.tx != nil {
+		return errors.New("no transaction to rollback")
+	}
+
+	if err := u.tx.Rollback(); err != nil {
 		return err
 	}
 
-	err = tx.Commit()
-	return err
+	u.tx = nil
+	return nil
 }

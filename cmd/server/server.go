@@ -25,21 +25,21 @@ func Run() {
 	tracerProvider := ioc.Observability.TracerProvider()
 	defer func() {
 		if err := tracerProvider.Shutdown(ctx); err != nil {
-			log.Fatal(err)
+			log.Fatalf("error on close tracer provider: %v", err)
 		}
 	}()
 
 	meterProvider := ioc.Observability.MeterProvider()
 	defer func() {
 		if err := meterProvider.Shutdown(ctx); err != nil {
-			log.Fatal(err)
+			log.Fatalf("error on close meter provider: %v", err)
 		}
 	}()
 
 	/* Close DBConnection */
 	defer func() {
 		if err := ioc.DB.Close(); err != nil {
-			log.Fatal(err)
+			log.Fatalf("error on close database connection: %v", err)
 		}
 	}()
 
@@ -61,7 +61,7 @@ func Run() {
 	routes = append(routes, categoryRoutes...)
 
 	server := httpserver.New(
-		httpserver.WithPort(ioc.Config.HttpServerPort),
+		httpserver.WithPort(ioc.Config.HTTPConfig.Port),
 		httpserver.WithRoutes(routes...),
 		httpserver.WithErrorHandler(middlewares.ErrorHandler),
 		httpserver.WithMiddlewares(
@@ -82,6 +82,6 @@ func Run() {
 
 	<-interrupt
 	if err := shutdown(context.Background()); err != nil {
-		log.Fatal(err)
+		log.Fatalf("error on server shutdown: %v", err)
 	}
 }

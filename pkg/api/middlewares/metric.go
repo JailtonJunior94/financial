@@ -16,7 +16,6 @@ type (
 	}
 
 	httpMetricsMiddleware struct {
-		meter           metric.Meter
 		requestCounter  metric.Int64Counter
 		requestDuration metric.Float64Histogram
 	}
@@ -28,20 +27,17 @@ type (
 )
 
 func NewHTTPMetricsMiddleware(o11y o11y.Observability) (HTTPMetricsMiddleware, error) {
-	meter := o11y.MeterProvider().Meter("financial")
-
-	counter, err := meter.Int64Counter("http.requests", metric.WithDescription("HTTP Requests Counter"))
+	counter, err := o11y.Meter().Int64Counter("http.requests", metric.WithDescription("HTTP Requests Counter"))
 	if err != nil {
 		return nil, err
 	}
 
-	duration, err := meter.Float64Histogram("http.request.duration", metric.WithDescription("HTTP Request Duration"))
+	duration, err := o11y.Meter().Float64Histogram("http.request.duration", metric.WithDescription("HTTP Request Duration"))
 	if err != nil {
 		return nil, err
 	}
 
 	return &httpMetricsMiddleware{
-		meter:           meter,
 		requestCounter:  counter,
 		requestDuration: duration,
 	}, nil

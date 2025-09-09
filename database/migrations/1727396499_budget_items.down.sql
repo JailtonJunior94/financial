@@ -1,0 +1,2 @@
+DELETE IF EXISTS FROM budget_items;
+DELETE IF EXISTS FROM budgets;

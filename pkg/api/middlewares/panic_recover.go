@@ -28,7 +28,8 @@ func (m *panicRecoverMiddleware) Recover(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		defer func() {
 			if err := recover(); err != nil {
-				_, span := m.o11y.Start(r.Context(), "panic_recover_middleware.recover")
+				ctx := r.Context()
+				_, span := m.o11y.Start(ctx, "panic_recover_middleware.recover")
 				defer span.End()
 
 				err, ok := err.(error)
@@ -36,8 +37,8 @@ func (m *panicRecoverMiddleware) Recover(next http.Handler) http.Handler {
 					err = fmt.Errorf("%v", r)
 				}
 
-				errFormated := fmt.Sprintf("stacktrace from panic: \n" + string(debug.Stack()))
-				span.AddAttributes(r.Context(), o11y.Error, err.Error(),
+				errFormated := fmt.Sprintf("stacktrace from panic: \n %s", string(debug.Stack()))
+				span.AddAttributes(ctx, o11y.Error, err.Error(),
 					o11y.Attributes{Key: "stacktrace", Value: errFormated},
 					o11y.Attributes{Key: "error", Value: err},
 				)

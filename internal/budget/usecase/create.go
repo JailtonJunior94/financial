@@ -18,8 +18,9 @@ type (
 	}
 
 	createBudgetUseCase struct {
-		uow  uow.UnitOfWork
-		o11y o11y.Observability
+		uow              uow.UnitOfWork
+		o11y             o11y.Observability
+		budgetRepository interfaces.BudgetRepository
 	}
 )
 
@@ -34,10 +35,12 @@ var (
 func NewCreateBudgetUseCase(
 	uow uow.UnitOfWork,
 	o11y o11y.Observability,
+	budgetRepository interfaces.BudgetRepository,
 ) CreateBudgetUseCase {
 	return &createBudgetUseCase{
-		uow:  uow,
-		o11y: o11y,
+		uow:              uow,
+		o11y:             o11y,
+		budgetRepository: budgetRepository,
 	}
 }
 
@@ -51,19 +54,13 @@ func (u *createBudgetUseCase) Execute(ctx context.Context, userID string, input 
 		return nil, err
 	}
 
-	err = u.uow.Do(ctx, func(ctx context.Context, tx uow.TX) error {
-		budgetRepository, err := GetBudgetRepository(tx)
-		if err != nil {
-			span.AddAttributes(ctx, o11y.Error, "error get order repository", o11y.Attributes{Key: "error", Value: err})
-			return err
-		}
-
-		if err := budgetRepository.Insert(ctx, newBudget); err != nil {
+	err = u.uow.Do(ctx, func(ctx context.Context) error {
+		if err := u.budgetRepository.Insert(ctx, newBudget); err != nil {
 			span.AddAttributes(ctx, o11y.Error, "error insert order", o11y.Attributes{Key: "error", Value: err})
 			return err
 		}
 
-		if err := budgetRepository.InsertItems(ctx, newBudget.Items); err != nil {
+		if err := u.budgetRepository.InsertItems(ctx, newBudget.Items); err != nil {
 			span.AddAttributes(ctx, o11y.Error, "error insert items", o11y.Attributes{Key: "error", Value: err})
 			return err
 		}
@@ -82,17 +79,4 @@ func (u *createBudgetUseCase) Execute(ctx context.Context, userID string, input 
 		Percentage: newBudget.PercentageUsed.Percentage(),
 		CreatedAt:  newBudget.CreatedAt,
 	}, nil
-}
-
-func GetBudgetRepository(tx uow.TX) (interfaces.BudgetRepository, error) {
-	repository, err := tx.Get(BudgetRepository)
-	if err != nil {
-		return nil, err
-	}
-
-	budgetRepository, ok := repository.(interfaces.BudgetRepository)
-	if !ok {
-		return nil, ErrInvalidRepositoryType
-	}
-	return budgetRepository, nil
 }

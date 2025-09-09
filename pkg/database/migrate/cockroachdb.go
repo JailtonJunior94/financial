@@ -4,6 +4,7 @@ import (
 	"database/sql"
 
 	"github.com/JailtonJunior94/devkit-go/pkg/logger"
+
 	"github.com/golang-migrate/migrate/v4"
 	cockroachdbMigrate "github.com/golang-migrate/migrate/v4/database/cockroachdb"
 
