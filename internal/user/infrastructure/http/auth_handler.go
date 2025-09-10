@@ -13,29 +13,29 @@ import (
 	"go.opentelemetry.io/otel/metric"
 )
 
-type AuthHandler struct {
-	metrics      authMetrics
-	o11y         o11y.Observability
-	tokenUseCase usecase.TokenUseCase
-}
+type (
+	AuthHandler struct {
+		metrics      authMetrics
+		o11y         o11y.Observability
+		tokenUseCase usecase.TokenUseCase
+	}
 
-type authMetrics struct {
-	requestCounter  metric.Int64Counter
-	requestDuration metric.Float64Histogram
-}
+	authMetrics struct {
+		requestCounter  metric.Int64Counter
+		requestDuration metric.Float64Histogram
+	}
+)
 
 func NewAuthHandler(
 	o11y o11y.Observability,
 	tokenUseCase usecase.TokenUseCase,
 ) *AuthHandler {
-	meter := o11y.MeterProvider().Meter("financial")
-
-	counter, err := meter.Int64Counter("auth.request.counter", metric.WithDescription("HTTP Requests Counter (Authentication)"))
+	counter, err := o11y.Meter().Int64Counter("auth.request.counter", metric.WithDescription("HTTP Requests Counter (Authentication)"))
 	if err != nil {
 		return nil
 	}
 
-	duration, err := meter.Float64Histogram("auth.request.duration", metric.WithDescription("HTTP Request Duration Histogram (Authentication)"))
+	duration, err := o11y.Meter().Float64Histogram("auth.request.duration", metric.WithDescription("HTTP Request Duration Histogram (Authentication)"))
 	if err != nil {
 		return nil
 	}

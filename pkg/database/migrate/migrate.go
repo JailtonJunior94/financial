@@ -3,8 +3,6 @@ package migrate
 import (
 	"errors"
 
-	"github.com/JailtonJunior94/devkit-go/pkg/logger"
-
 	"github.com/golang-migrate/migrate/v4"
 )
 
@@ -20,7 +18,6 @@ type (
 	}
 
 	migration struct {
-		logger  logger.Logger
 		migrate *migrate.Migrate
 	}
 )
@@ -28,19 +25,16 @@ type (
 func (m *migration) Execute() error {
 	version, _, err := m.migrate.Version()
 	if err != nil && !errors.Is(err, migrate.ErrNilVersion) {
-		m.logger.Info(err.Error())
 		return ErrMigrateVersion
 	}
 
 	err = m.migrate.Up()
 	if err != nil {
 		if errors.Is(err, migrate.ErrNoChange) {
-			m.logger.Info(err.Error())
 			return nil
 		}
 
 		if forceErr := m.migrate.Force(int(version)); forceErr != nil {
-			m.logger.Info(err.Error())
 			return forceErr
 		}
 	}

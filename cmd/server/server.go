@@ -81,7 +81,7 @@ func Run() {
 	}()
 
 	<-interrupt
-	if err := shutdown(context.Background()); err != nil {
+	if err := shutdown(ctx); err != nil {
 		log.Fatalf("error on server shutdown: %v", err)
 	}
 }

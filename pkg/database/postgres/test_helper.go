@@ -8,8 +8,6 @@ import (
 
 	migration "github.com/jailtonjunior94/financial/pkg/database/migrate"
 
-	"github.com/JailtonJunior94/devkit-go/pkg/logger"
-
 	"github.com/testcontainers/testcontainers-go"
 	"github.com/testcontainers/testcontainers-go/modules/postgres"
 	"github.com/testcontainers/testcontainers-go/wait"
@@ -39,8 +37,8 @@ func NewPostgresContainer(ctx context.Context) *PostgresContainer {
 	return &PostgresContainer{Container: postgres}
 }
 
-func (s *PostgresContainer) ExecuteMigration(logger logger.Logger, db *sql.DB, dbName, migratePath string) {
-	migrate, err := migration.NewMigratePostgres(logger, db, migratePath, dbName)
+func (s *PostgresContainer) ExecuteMigration(db *sql.DB, dbName, migratePath string) {
+	migrate, err := migration.NewMigratePostgres(db, migratePath, dbName)
 	if err != nil {
 		log.Fatalf("could not start migrate: %s", err)
 	}

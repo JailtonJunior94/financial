@@ -3,14 +3,13 @@ package migrate
 import (
 	"database/sql"
 
-	"github.com/JailtonJunior94/devkit-go/pkg/logger"
 	"github.com/golang-migrate/migrate/v4"
 	postgresMigrate "github.com/golang-migrate/migrate/v4/database/postgres"
 
 	_ "github.com/golang-migrate/migrate/v4/source/file"
 )
 
-func NewMigratePostgres(logger logger.Logger, db *sql.DB, migratePath, dbName string) (Migrate, error) {
+func NewMigratePostgres(db *sql.DB, migratePath, dbName string) (Migrate, error) {
 	if db == nil {
 		return nil, ErrDatabaseConnection
 	}
@@ -24,5 +23,5 @@ func NewMigratePostgres(logger logger.Logger, db *sql.DB, migratePath, dbName st
 	if err != nil {
 		return nil, err
 	}
-	return &migration{logger: logger, migrate: migrateInstance}, nil
+	return &migration{migrate: migrateInstance}, nil
 }

@@ -23,7 +23,6 @@ func main() {
 		Run: func(cmd *cobra.Command, args []string) {
 			container := bundle.NewContainer(context.Background())
 			migrate, err := migration.NewMigrateCockroachDB(
-				container.Logger,
 				container.DB,
 				container.Config.DBConfig.MigratePath,
 				container.Config.DBConfig.Name,

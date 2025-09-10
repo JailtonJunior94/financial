@@ -3,14 +3,13 @@ package migrate
 import (
 	"database/sql"
 
-	"github.com/JailtonJunior94/devkit-go/pkg/logger"
 	"github.com/golang-migrate/migrate/v4"
 	mysqlMigrate "github.com/golang-migrate/migrate/v4/database/mysql"
 
 	_ "github.com/golang-migrate/migrate/v4/source/file"
 )
 
-func NewMigrateMySql(logger logger.Logger, db *sql.DB, migratePath, dbName string) (Migrate, error) {
+func NewMigrateMySql(db *sql.DB, migratePath, dbName string) (Migrate, error) {
 	if db == nil {
 		return nil, ErrDatabaseConnection
 	}
@@ -24,5 +23,5 @@ func NewMigrateMySql(logger logger.Logger, db *sql.DB, migratePath, dbName strin
 	if err != nil {
 		return nil, err
 	}
-	return &migration{logger: logger, migrate: migrateInstance}, nil
+	return &migration{migrate: migrateInstance}, nil
 }
