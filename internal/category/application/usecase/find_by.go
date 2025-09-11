@@ -57,15 +57,15 @@ func (u *findCategoryByUseCase) Execute(ctx context.Context, userID, id string) 
 
 	return &dtos.CategoryOutput{
 		ID:        category.ID.String(),
-		Name:      category.Name,
-		Sequence:  category.Sequence,
-		CreatedAt: category.CreatedAt,
+		Name:      category.Name.String(),
+		Sequence:  category.Sequence.Value(),
+		CreatedAt: category.CreatedAt.Value(),
 		Children: linq.Map(category.Children, func(child entities.Category) dtos.CategoryOutput {
 			return dtos.CategoryOutput{
 				ID:        child.ID.String(),
-				Name:      child.Name,
-				Sequence:  child.Sequence,
-				CreatedAt: child.CreatedAt,
+				Name:      child.Name.String(),
+				Sequence:  child.Sequence.Value(),
+				CreatedAt: child.CreatedAt.Value(),
 			}
 		}),
 	}, nil

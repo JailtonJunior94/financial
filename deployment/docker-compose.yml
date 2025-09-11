@@ -55,7 +55,7 @@ services:
       - DB_PASSWORD=financial@password
       - DB_NAME=financial
       - DB_MAX_IDLE_CONNS=10
-      - MIGRATE_PATH=file://../database/migrations
+      - MIGRATE_PATH=file://database/migrations
     depends_on:
       - cockroachdb
 

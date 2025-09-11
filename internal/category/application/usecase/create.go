@@ -53,8 +53,8 @@ func (u *createCategoryUseCase) Execute(ctx context.Context, userID string, inpu
 
 	return &dtos.CategoryOutput{
 		ID:        category.ID.String(),
-		Name:      category.Name,
-		Sequence:  category.Sequence,
-		CreatedAt: category.CreatedAt,
+		Name:      category.Name.String(),
+		Sequence:  category.Sequence.Value(),
+		CreatedAt: category.CreatedAt.Value(),
 	}, nil
 }

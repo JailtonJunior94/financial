@@ -48,7 +48,11 @@ func (r *categoryRepository) Find(ctx context.Context, userID vos.UUID) ([]*enti
 		span.AddAttributes(ctx, o11y.Error, "error finding categories", o11y.Attributes{Key: "user_id", Value: userID.String()})
 		return nil, err
 	}
-	defer rows.Close()
+	defer func() {
+		if err := rows.Close(); err != nil {
+			span.AddAttributes(ctx, o11y.Error, "error closing rows", o11y.Attributes{Key: "user_id", Value: userID.String()})
+		}
+	}()
 
 	var categories []*entities.Category
 	for rows.Next() {
@@ -56,9 +60,9 @@ func (r *categoryRepository) Find(ctx context.Context, userID vos.UUID) ([]*enti
 		err := rows.Scan(
 			&category.ID.Value,
 			&category.UserID.Value,
-			&category.Name,
-			&category.Sequence,
-			&category.CreatedAt,
+			&category.Name.Value,
+			&category.Sequence.Sequence,
+			&category.CreatedAt.Time,
 			&category.UpdatedAt.Time,
 			&category.DeletedAt.Time,
 		)
@@ -106,27 +110,33 @@ func (r *categoryRepository) FindByID(ctx context.Context, userID, id vos.UUID) 
 		span.AddAttributes(ctx, o11y.Error, "error finding category", o11y.Attributes{Key: "user_id", Value: userID.String()})
 		return nil, err
 	}
-	defer rows.Close()
+	defer func() {
+		if err := rows.Close(); err != nil {
+			span.AddAttributes(ctx, o11y.Error, "error closing rows", o11y.Attributes{Key: "user_id", Value: userID.String()})
+		}
+	}()
 
 	var category entities.Category
 	var subCategory entities.Category
 	var subCategories = make(map[vos.UUID][]entities.Category)
 
+	hasRows := false
 	for rows.Next() {
+		hasRows = true
 		err := rows.Scan(
 			&category.ID.Value,
 			&category.UserID.Value,
 			&category.ParentID,
-			&category.Name,
-			&category.Sequence,
-			&category.CreatedAt,
+			&category.Name.Value,
+			&category.Sequence.Sequence,
+			&category.CreatedAt.Time,
 			&category.UpdatedAt.Time,
 			&category.DeletedAt.Time,
 			&subCategory.ID.Value,
 			&subCategory.UserID.Value,
-			&subCategory.Name,
-			&subCategory.Sequence,
-			&subCategory.CreatedAt,
+			&subCategory.Name.Value,
+			&subCategory.Sequence.Sequence,
+			&subCategory.CreatedAt.Time,
 			&subCategory.UpdatedAt.Time,
 			&subCategory.DeletedAt.Time,
 		)
@@ -136,11 +146,19 @@ func (r *categoryRepository) FindByID(ctx context.Context, userID, id vos.UUID) 
 			return nil, err
 		}
 
+		if subCategory.ID.IsEmpty() {
+			continue
+		}
+
 		if _, ok := subCategories[category.ID]; !ok {
 			subCategories[category.ID] = []entities.Category{subCategory}
 			continue
 		}
 		subCategories[category.ID] = append(subCategories[category.ID], subCategory)
+	}
+
+	if !hasRows {
+		return nil, nil
 	}
 
 	category.AddChildrens(subCategories[category.ID])
@@ -180,9 +198,9 @@ func (r *categoryRepository) Insert(ctx context.Context, category *entities.Cate
 		category.ID.Value,
 		category.UserID.Value,
 		category.ParentID.SafeUUID(),
-		category.Name,
-		category.Sequence,
-		category.CreatedAt,
+		category.Name.Value,
+		category.Sequence.Sequence,
+		category.CreatedAt.Time,
 		category.UpdatedAt.Time,
 		category.DeletedAt.Time,
 	)

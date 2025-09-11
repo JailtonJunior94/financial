@@ -2,6 +2,7 @@ package migrate
 
 import (
 	"errors"
+	"fmt"
 
 	"github.com/golang-migrate/migrate/v4"
 )
@@ -23,20 +24,13 @@ type (
 )
 
 func (m *migration) Execute() error {
-	version, _, err := m.migrate.Version()
+	_, _, err := m.migrate.Version()
 	if err != nil && !errors.Is(err, migrate.ErrNilVersion) {
 		return ErrMigrateVersion
 	}
 
-	err = m.migrate.Up()
-	if err != nil {
-		if errors.Is(err, migrate.ErrNoChange) {
-			return nil
-		}
-
-		if forceErr := m.migrate.Force(int(version)); forceErr != nil {
-			return forceErr
-		}
+	if err := m.migrate.Up(); err != nil && err != migrate.ErrNoChange {
+		return fmt.Errorf("migrate: %v: %v", ErrMigrateVersion, err)
 	}
 	return nil
 }
