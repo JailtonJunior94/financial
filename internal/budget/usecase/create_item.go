@@ -31,9 +31,5 @@ func NewCreateBudgetItemUseCase(
 }
 
 func (u *createBudgetItemUseCase) Execute(ctx context.Context, userID string, budgetID, input *dtos.BudgetItem) (*dtos.BudgetOutput, error) {
-	ctx, span := u.o11y.Start(ctx, "create_budget_item_usecase.execute")
-	defer span.End()
-
-	// u.budgetRepository.
 	return nil, nil
 }

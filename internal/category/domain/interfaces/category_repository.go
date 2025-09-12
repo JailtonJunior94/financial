@@ -9,8 +9,8 @@ import (
 )
 
 type CategoryRepository interface {
-	Find(ctx context.Context, userID vos.UUID) ([]*entities.Category, error)
+	List(ctx context.Context, userID vos.UUID) ([]*entities.Category, error)
 	FindByID(ctx context.Context, userID, id vos.UUID) (*entities.Category, error)
-	Insert(ctx context.Context, category *entities.Category) (*entities.Category, error)
-	Update(ctx context.Context, category *entities.Category) (*entities.Category, error)
+	Save(ctx context.Context, category *entities.Category) error
+	Update(ctx context.Context, category *entities.Category) error
 }

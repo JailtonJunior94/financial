@@ -5,7 +5,7 @@ import (
 )
 
 type (
-	CreateCategoryInput struct {
+	CategoryInput struct {
 		ParentID string `json:"parent_id"`
 		Name     string `json:"name"`
 		Sequence uint   `json:"sequence"`

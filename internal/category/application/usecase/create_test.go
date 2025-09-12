@@ -62,12 +62,12 @@ func (s *CreateSuite) TearDownSuite() {
 func (s *CreateSuite) TestExecute() {
 	type args struct {
 		userID string
-		input  *dtos.CreateCategoryInput
+		input  *dtos.CategoryInput
 	}
 
 	userID := "123e4567-e89b-12d3-a456-426614174000"
-	newCategory := &dtos.CreateCategoryInput{Name: "Test Category", Sequence: 1}
-	newSubcategory := &dtos.CreateCategoryInput{ParentID: "223e4567-e89b-12d3-a456-426614174000", Name: "Subcategory", Sequence: 2}
+	newCategory := &dtos.CategoryInput{Name: "Test Category", Sequence: 1}
+	newSubcategory := &dtos.CategoryInput{ParentID: "223e4567-e89b-12d3-a456-426614174000", Name: "Subcategory", Sequence: 2}
 
 	scenarios := []struct {
 		name     string

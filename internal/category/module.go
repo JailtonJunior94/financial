@@ -14,12 +14,14 @@ func RegisterCategoryModule(ioc *bundle.Container) []httpserver.Route {
 	findCategoryUsecase := usecase.NewFindCategoryUseCase(ioc.Observability, categoryRepository)
 	findCategoryByUsecase := usecase.NewFindCategoryByUseCase(ioc.Observability, categoryRepository)
 	createCategoryUsecase := usecase.NewCreateCategoryUseCase(ioc.Observability, categoryRepository)
+	updateCategoryUsecase := usecase.NewUpdateCategoryUseCase(ioc.Observability, categoryRepository)
 
 	categoryHandler := http.NewCategoryHandler(
 		ioc.Observability,
 		createCategoryUsecase,
 		findCategoryUsecase,
 		findCategoryByUsecase,
+		updateCategoryUsecase,
 	)
 
 	categoryRoutes := http.NewCategoryRoutes()
@@ -44,6 +46,14 @@ func RegisterCategoryModule(ioc *bundle.Container) []httpserver.Route {
 			"POST",
 			"/api/v1/categories",
 			categoryHandler.Create,
+			ioc.MiddlewareAuth.Authorization,
+		),
+	)
+	categoryRoutes.Register(
+		httpserver.NewRoute(
+			"PUT",
+			"/api/v1/categories/{id}",
+			categoryHandler.Update,
 			ioc.MiddlewareAuth.Authorization,
 		),
 	)

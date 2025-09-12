@@ -23,8 +23,8 @@ func NewCategoryRepository(db *sql.DB, o11y o11y.Observability) interfaces.Categ
 	}
 }
 
-func (r *categoryRepository) Find(ctx context.Context, userID vos.UUID) ([]*entities.Category, error) {
-	ctx, span := r.o11y.Start(ctx, "category_repository.find_by_id")
+func (r *categoryRepository) List(ctx context.Context, userID vos.UUID) ([]*entities.Category, error) {
+	ctx, span := r.o11y.Start(ctx, "category_repository.list")
 	defer span.End()
 
 	query := `select
@@ -40,6 +40,7 @@ func (r *categoryRepository) Find(ctx context.Context, userID vos.UUID) ([]*enti
 			where
 				user_id = $1
 				and deleted_at is null
+				and parent_id is null
 			order by
 				sequence;`
 
@@ -165,8 +166,8 @@ func (r *categoryRepository) FindByID(ctx context.Context, userID, id vos.UUID) 
 	return &category, nil
 }
 
-func (r *categoryRepository) Insert(ctx context.Context, category *entities.Category) (*entities.Category, error) {
-	ctx, span := r.o11y.Start(ctx, "category_repository.insert")
+func (r *categoryRepository) Save(ctx context.Context, category *entities.Category) error {
+	ctx, span := r.o11y.Start(ctx, "category_repository.save")
 	defer span.End()
 
 	query := `insert into
@@ -190,7 +191,7 @@ func (r *categoryRepository) Insert(ctx context.Context, category *entities.Cate
 			o11y.Attributes{Key: "user_id", Value: category.UserID},
 			o11y.Attributes{Key: "error", Value: err},
 		)
-		return nil, err
+		return err
 	}
 
 	_, err = stmt.ExecContext(
@@ -210,11 +211,53 @@ func (r *categoryRepository) Insert(ctx context.Context, category *entities.Cate
 			o11y.Attributes{Key: "user_id", Value: category.UserID},
 			o11y.Attributes{Key: "error", Value: err},
 		)
-		return nil, err
+		return err
 	}
-	return category, nil
+	return nil
 }
 
-func (r *categoryRepository) Update(ctx context.Context, category *entities.Category) (*entities.Category, error) {
-	return nil, nil
+func (r *categoryRepository) Update(ctx context.Context, category *entities.Category) error {
+	ctx, span := r.o11y.Start(ctx, "category_repository.update")
+	defer span.End()
+
+	query := `update
+				categories
+			set
+				name = $1,
+				sequence = $2,
+				updated_at = $3,
+				parent_id = $4
+			where
+				id = $5
+				and user_id = $6`
+
+	stmt, err := r.db.PrepareContext(ctx, query)
+	if err != nil {
+		span.AddAttributes(
+			ctx, o11y.Error, "error preparing update category",
+			o11y.Attributes{Key: "user_id", Value: category.UserID},
+			o11y.Attributes{Key: "error", Value: err},
+		)
+		return err
+	}
+
+	_, err = stmt.ExecContext(
+		ctx,
+		category.Name.Value,
+		category.Sequence.Sequence,
+		category.UpdatedAt.Time,
+		category.ParentID.SafeUUID(),
+		category.ID.Value,
+		category.UserID.Value,
+	)
+	if err != nil {
+		span.AddAttributes(
+			ctx, o11y.Error, "error updating category",
+			o11y.Attributes{Key: "user_id", Value: category.UserID},
+			o11y.Attributes{Key: "error", Value: err},
+		)
+		return err
+	}
+
+	return nil
 }

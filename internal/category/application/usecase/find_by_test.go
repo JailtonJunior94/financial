@@ -34,7 +34,7 @@ func TestFindCategoryBySuite(t *testing.T) {
 func (s *FindCategoryBySuite) SetupSuite() {
 	s.ctx = context.Background()
 	s.cockroachDBContainer = database.SetupCockroachDB(s.ctx, s.T())
-	s.o11y = o11y.NewDevelopmentObservability("test", "1.0.0")
+	s.o11y = o11y.NewTestObservability("test", "1.0.0")
 	s.db, _ = sql.Open("postgres", s.cockroachDBContainer.DSN(s.ctx, s.T()))
 	s.cockroachDBContainer.Migrate(s.T(), s.db, "file://../../../../database/migrations", "financial")
 

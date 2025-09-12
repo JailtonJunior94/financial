@@ -33,3 +33,11 @@ func NewCategory(userID sharedVos.UUID, parentID *sharedVos.UUID, name vos.Categ
 func (c *Category) AddChildrens(childrens []Category) {
 	c.Children = childrens
 }
+
+func (c *Category) Update(name string, sequence uint) *Category {
+	c.Name = vos.NewCategoryName(name)
+	c.Sequence = vos.NewCategorySequence(sequence)
+	c.UpdatedAt = sharedVos.NewNullableTime(time.Now())
+
+	return c
+}

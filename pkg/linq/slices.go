@@ -27,10 +27,10 @@ func Find[T any](items []T, fn RemoveFunc[T]) T {
 type RemoveFunc[T any] func(T) bool
 
 func Remove[T any](items []T, fn RemoveFunc[T]) []T {
-	newSlice := make([]T, len(items))
-	for index, item := range items {
-		if fn(item) {
-			newSlice = append(items[:index], items[index+1:]...)
+	newSlice := make([]T, 0, len(items))
+	for _, item := range items {
+		if !fn(item) {
+			newSlice = append(newSlice, item)
 		}
 	}
 	return newSlice

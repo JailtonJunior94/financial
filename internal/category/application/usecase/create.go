@@ -12,7 +12,7 @@ import (
 
 type (
 	CreateCategoryUseCase interface {
-		Execute(ctx context.Context, userID string, input *dtos.CreateCategoryInput) (*dtos.CategoryOutput, error)
+		Execute(ctx context.Context, userID string, input *dtos.CategoryInput) (*dtos.CategoryOutput, error)
 	}
 
 	createCategoryUseCase struct {
@@ -31,18 +31,17 @@ func NewCreateCategoryUseCase(
 	}
 }
 
-func (u *createCategoryUseCase) Execute(ctx context.Context, userID string, input *dtos.CreateCategoryInput) (*dtos.CategoryOutput, error) {
+func (u *createCategoryUseCase) Execute(ctx context.Context, userID string, input *dtos.CategoryInput) (*dtos.CategoryOutput, error) {
 	ctx, span := u.o11y.Start(ctx, "create_category_usecase.execute")
 	defer span.End()
 
-	newCategory, err := factories.CreateCategory(userID, input.ParentID, input.Name, input.Sequence)
+	category, err := factories.CreateCategory(userID, input.ParentID, input.Name, input.Sequence)
 	if err != nil {
 		span.AddAttributes(ctx, o11y.Error, err.Error(), o11y.Attributes{Key: "error", Value: err})
 		return nil, err
 	}
 
-	category, err := u.repository.Insert(ctx, newCategory)
-	if err != nil {
+	if err := u.repository.Save(ctx, category); err != nil {
 		span.AddAttributes(
 			ctx, o11y.Error, "error creating category",
 			o11y.Attributes{Key: "user_id", Value: userID},

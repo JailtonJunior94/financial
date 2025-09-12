@@ -26,7 +26,7 @@ type (
 func NewFindCategoryUseCase(
 	o11y o11y.Observability,
 	repository interfaces.CategoryRepository,
-) FindCategoryUseCase {
+) *findCategoryUseCase {
 	return &findCategoryUseCase{
 		o11y:       o11y,
 		repository: repository,
@@ -43,7 +43,7 @@ func (u *findCategoryUseCase) Execute(ctx context.Context, userID string) ([]*dt
 		return nil, err
 	}
 
-	categories, err := u.repository.Find(ctx, user)
+	categories, err := u.repository.List(ctx, user)
 	if err != nil {
 		span.AddAttributes(ctx, o11y.Error, err.Error(), o11y.Attributes{Key: "error", Value: err})
 		return nil, err
