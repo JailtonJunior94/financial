@@ -9,7 +9,9 @@ type categoryRoutes struct {
 }
 
 func NewCategoryRoutes() *categoryRoutes {
-	return &categoryRoutes{}
+	return &categoryRoutes{
+		routes: make([]httpserver.Route, 0),
+	}
 }
 
 func (u *categoryRoutes) Register(route httpserver.Route) {

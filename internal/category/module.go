@@ -15,13 +15,15 @@ func RegisterCategoryModule(ioc *bundle.Container) []httpserver.Route {
 	findCategoryByUsecase := usecase.NewFindCategoryByUseCase(ioc.Observability, categoryRepository)
 	createCategoryUsecase := usecase.NewCreateCategoryUseCase(ioc.Observability, categoryRepository)
 	updateCategoryUsecase := usecase.NewUpdateCategoryUseCase(ioc.Observability, categoryRepository)
+	removeCategoryUsecase := usecase.NewRemoveCategoryUseCase(ioc.Observability, categoryRepository)
 
 	categoryHandler := http.NewCategoryHandler(
 		ioc.Observability,
-		createCategoryUsecase,
 		findCategoryUsecase,
+		createCategoryUsecase,
 		findCategoryByUsecase,
 		updateCategoryUsecase,
+		removeCategoryUsecase,
 	)
 
 	categoryRoutes := http.NewCategoryRoutes()
@@ -33,6 +35,7 @@ func RegisterCategoryModule(ioc *bundle.Container) []httpserver.Route {
 			ioc.MiddlewareAuth.Authorization,
 		),
 	)
+
 	categoryRoutes.Register(
 		httpserver.NewRoute(
 			"GET",
@@ -41,6 +44,7 @@ func RegisterCategoryModule(ioc *bundle.Container) []httpserver.Route {
 			ioc.MiddlewareAuth.Authorization,
 		),
 	)
+
 	categoryRoutes.Register(
 		httpserver.NewRoute(
 			"POST",
@@ -49,11 +53,21 @@ func RegisterCategoryModule(ioc *bundle.Container) []httpserver.Route {
 			ioc.MiddlewareAuth.Authorization,
 		),
 	)
+
 	categoryRoutes.Register(
 		httpserver.NewRoute(
 			"PUT",
 			"/api/v1/categories/{id}",
 			categoryHandler.Update,
+			ioc.MiddlewareAuth.Authorization,
+		),
+	)
+
+	categoryRoutes.Register(
+		httpserver.NewRoute(
+			"DELETE",
+			"/api/v1/categories/{id}",
+			categoryHandler.Delete,
 			ioc.MiddlewareAuth.Authorization,
 		),
 	)

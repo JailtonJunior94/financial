@@ -21,9 +21,9 @@ type Category struct {
 
 func NewCategory(userID sharedVos.UUID, parentID *sharedVos.UUID, name vos.CategoryName, sequence vos.CategorySequence) (*Category, error) {
 	category := &Category{
+		Name:      name,
 		UserID:    userID,
 		ParentID:  parentID,
-		Name:      name,
 		Sequence:  sequence,
 		CreatedAt: sharedVos.NewNullableTime(time.Now()),
 	}
@@ -39,5 +39,10 @@ func (c *Category) Update(name string, sequence uint) *Category {
 	c.Sequence = vos.NewCategorySequence(sequence)
 	c.UpdatedAt = sharedVos.NewNullableTime(time.Now())
 
+	return c
+}
+
+func (c *Category) Delete() *Category {
+	c.DeletedAt = sharedVos.NewNullableTime(time.Now())
 	return c
 }

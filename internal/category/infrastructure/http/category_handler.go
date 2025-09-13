@@ -16,18 +16,20 @@ import (
 
 type CategoryHandler struct {
 	o11y                  o11y.Observability
-	createCategoryUseCase usecase.CreateCategoryUseCase
 	findCategoryUseCase   usecase.FindCategoryUseCase
+	createCategoryUseCase usecase.CreateCategoryUseCase
 	findCategoryByUseCase usecase.FindCategoryByUseCase
 	updateCategoryUseCase usecase.UpdateCategoryUseCase
+	removeCategoryUseCase usecase.RemoveCategoryUseCase
 }
 
 func NewCategoryHandler(
 	o11y o11y.Observability,
-	createCategoryUseCase usecase.CreateCategoryUseCase,
 	findCategoryUseCase usecase.FindCategoryUseCase,
+	createCategoryUseCase usecase.CreateCategoryUseCase,
 	findCategoryByUseCase usecase.FindCategoryByUseCase,
 	updateCategoryUseCase usecase.UpdateCategoryUseCase,
+	removeCategoryUseCase usecase.RemoveCategoryUseCase,
 ) *CategoryHandler {
 	return &CategoryHandler{
 		o11y:                  o11y,
@@ -35,6 +37,7 @@ func NewCategoryHandler(
 		createCategoryUseCase: createCategoryUseCase,
 		updateCategoryUseCase: updateCategoryUseCase,
 		findCategoryByUseCase: findCategoryByUseCase,
+		removeCategoryUseCase: removeCategoryUseCase,
 	}
 }
 
@@ -112,5 +115,18 @@ func (h *CategoryHandler) Update(w http.ResponseWriter, r *http.Request) error {
 
 	responses.JSON(w, http.StatusOK, output)
 	return nil
+}
 
+func (h *CategoryHandler) Delete(w http.ResponseWriter, r *http.Request) error {
+	ctx, span := h.o11y.Start(r.Context(), "category_handler.delete")
+	defer span.End()
+
+	user := middlewares.GetUserFromContext(ctx)
+	if err := h.removeCategoryUseCase.Execute(ctx, user.ID, chi.URLParam(r, "id")); err != nil {
+		span.RecordError(err)
+		return err
+	}
+
+	responses.JSON(w, http.StatusNoContent, nil)
+	return nil
 }
