@@ -2,12 +2,13 @@ package usecase
 
 import (
 	"context"
+	"fmt"
 
 	"github.com/jailtonjunior94/financial/configs"
 	"github.com/jailtonjunior94/financial/internal/user/application/dtos"
 	"github.com/jailtonjunior94/financial/internal/user/domain/interfaces"
 	"github.com/jailtonjunior94/financial/pkg/auth"
-	financialErrors "github.com/jailtonjunior94/financial/pkg/error"
+	customErrors "github.com/jailtonjunior94/financial/pkg/custom_errors"
 
 	"github.com/JailtonJunior94/devkit-go/pkg/encrypt"
 	"github.com/JailtonJunior94/devkit-go/pkg/o11y"
@@ -66,7 +67,7 @@ func (u *tokenUseCase) Execute(ctx context.Context, input *dtos.AuthInput) (*dto
 			o11y.Attributes{Key: EmailKey, Value: input.Email},
 			o11y.Attributes{Key: "error", Value: err},
 		)
-		return nil, financialErrors.ErrUserNotFound
+		return nil, customErrors.New("user or password invalid", fmt.Errorf("token_usecase: %v", err))
 	}
 
 	if !u.hash.CheckHash(user.Password, input.Password) {
@@ -75,7 +76,7 @@ func (u *tokenUseCase) Execute(ctx context.Context, input *dtos.AuthInput) (*dto
 			o11y.Attributes{Key: EmailKey, Value: input.Email},
 			o11y.Attributes{Key: "error", Value: err},
 		)
-		return nil, financialErrors.ErrCheckHash
+		return nil, customErrors.New("user or password invalid", fmt.Errorf("token_usecase: %v", err))
 	}
 
 	token, err := u.jwt.GenerateToken(ctx, user.ID.String(), user.Email.String())

@@ -10,8 +10,9 @@ import (
 
 	"github.com/jailtonjunior94/financial/internal/category"
 	"github.com/jailtonjunior94/financial/internal/user"
-	"github.com/jailtonjunior94/financial/pkg/api/middlewares"
+
 	"github.com/jailtonjunior94/financial/pkg/bundle"
+	customErrors "github.com/jailtonjunior94/financial/pkg/custom_errors"
 
 	"github.com/JailtonJunior94/devkit-go/pkg/httpserver"
 	"github.com/JailtonJunior94/devkit-go/pkg/responses"
@@ -63,10 +64,20 @@ func Run() {
 	server := httpserver.New(
 		httpserver.WithPort(ioc.Config.HTTPConfig.Port),
 		httpserver.WithRoutes(routes...),
-		httpserver.WithErrorHandler(middlewares.ErrorHandler),
 		httpserver.WithMiddlewares(
 			httpserver.RequestID,
 		),
+		httpserver.WithErrorHandler(func(ctx context.Context, w http.ResponseWriter, err error) {
+			if customErrors, ok := err.(*customErrors.CustomError); ok {
+				if customErrors.Details != nil {
+					responses.ErrorWithDetails(w, http.StatusBadRequest, customErrors.Message, customErrors.Details)
+					return
+				}
+				responses.Error(w, http.StatusBadRequest, customErrors.Message)
+				return
+			}
+			responses.Error(w, http.StatusInternalServerError, "oops, something went wrong")
+		}),
 	)
 
 	shutdown := server.Run()

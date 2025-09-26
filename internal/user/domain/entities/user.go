@@ -4,7 +4,7 @@ import (
 	"time"
 
 	"github.com/jailtonjunior94/financial/internal/user/domain/vos"
-	financialErrors "github.com/jailtonjunior94/financial/pkg/error"
+	financialErrors "github.com/jailtonjunior94/financial/pkg/custom_errors"
 
 	"github.com/JailtonJunior94/devkit-go/pkg/entity"
 )

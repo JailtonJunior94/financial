@@ -3,7 +3,7 @@ package httperrors
 import (
 	"net/http"
 
-	financialErrors "github.com/jailtonjunior94/financial/pkg/error"
+	financialErrors "github.com/jailtonjunior94/financial/pkg/custom_errors"
 )
 
 var responseErrors = map[error]*ResponseError{

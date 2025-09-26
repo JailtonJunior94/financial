@@ -2,10 +2,12 @@ package usecase
 
 import (
 	"context"
+	"fmt"
 
 	"github.com/jailtonjunior94/financial/internal/user/application/dtos"
 	"github.com/jailtonjunior94/financial/internal/user/domain/factories"
 	"github.com/jailtonjunior94/financial/internal/user/domain/interfaces"
+	customErrors "github.com/jailtonjunior94/financial/pkg/custom_errors"
 
 	"github.com/JailtonJunior94/devkit-go/pkg/encrypt"
 	"github.com/JailtonJunior94/devkit-go/pkg/o11y"
@@ -41,8 +43,8 @@ func (u *createUserUseCase) Execute(ctx context.Context, input *dtos.CreateUserI
 
 	user, err := factories.CreateUser(input.Name, input.Email)
 	if err != nil {
-		span.AddAttributes(ctx, o11y.Error, err.Error(), o11y.Attributes{Key: "error", Value: err})
-		return nil, err
+		span.AddAttributes(ctx, o11y.Error, "error creating user", o11y.Attributes{Key: "error", Value: err})
+		return nil, customErrors.New("error creating user", fmt.Errorf("create_user_usecase: %v", err))
 	}
 
 	hash, err := u.hash.GenerateHash(input.Password)

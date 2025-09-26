@@ -1,4 +1,4 @@
-package error
+package customerrors
 
 import "errors"
 

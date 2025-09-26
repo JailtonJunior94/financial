@@ -4,7 +4,7 @@ import (
 	"net/mail"
 	"strings"
 
-	financialError "github.com/jailtonjunior94/financial/pkg/error"
+	financialError "github.com/jailtonjunior94/financial/pkg/custom_errors"
 )
 
 type Email struct {
