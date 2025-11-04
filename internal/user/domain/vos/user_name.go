@@ -6,8 +6,6 @@ import (
 	financialError "github.com/jailtonjunior94/financial/pkg/custom_errors"
 )
 
-var ()
-
 type UserName struct {
 	Value string
 }

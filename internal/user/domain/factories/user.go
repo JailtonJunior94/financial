@@ -3,10 +3,10 @@ package factories
 import (
 	"time"
 
-	sharedVos "github.com/JailtonJunior94/devkit-go/pkg/vos"
-
 	"github.com/jailtonjunior94/financial/internal/user/domain/entities"
 	"github.com/jailtonjunior94/financial/internal/user/domain/vos"
+
+	sharedVos "github.com/JailtonJunior94/devkit-go/pkg/vos"
 )
 
 func CreateUser(name string, email string) (*entities.User, error) {
