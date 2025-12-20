@@ -28,12 +28,12 @@ type tokenUseCase struct {
 	config     *configs.Config
 	hash       encrypt.HashAdapter
 	repository interfaces.UserRepository
-	o11y       o11y.Observability
+	o11y       o11y.Telemetry
 }
 
 func NewTokenUseCase(
 	config *configs.Config,
-	o11y o11y.Observability,
+	o11y o11y.Telemetry,
 	hash encrypt.HashAdapter,
 	jwt auth.JwtAdapter,
 	repository interfaces.UserRepository,
@@ -48,44 +48,48 @@ func NewTokenUseCase(
 }
 
 func (u *tokenUseCase) Execute(ctx context.Context, input *dtos.AuthInput) (*dtos.AuthOutput, error) {
-	ctx, span := u.o11y.Start(ctx, "create_user_usecase.execute")
+	ctx, span := u.o11y.Tracer().Start(ctx, "create_user_usecase.execute")
 	defer span.End()
 
 	user, err := u.repository.FindByEmail(ctx, input.Email)
 	if err != nil {
-		span.AddAttributes(
-			ctx, o11y.Error, "error find user by e-mail",
-			o11y.Attributes{Key: EmailKey, Value: input.Email},
-			o11y.Attributes{Key: "error", Value: err},
+		span.AddEvent(
+			"error finding user by e-mail",
+			o11y.Attribute{Key: "e-mail", Value: input.Email},
+			o11y.Attribute{Key: "error", Value: err},
 		)
+		u.o11y.Logger().Error(ctx, err, "error finding user by e-mail", o11y.Field{Key: "e-mail", Value: input.Email})
 		return nil, err
 	}
 
 	if user == nil {
-		span.AddAttributes(
-			ctx, o11y.Error, "user not found",
-			o11y.Attributes{Key: EmailKey, Value: input.Email},
-			o11y.Attributes{Key: "error", Value: err},
+		span.AddEvent(
+			"user not found",
+			o11y.Attribute{Key: EmailKey, Value: input.Email},
+			o11y.Attribute{Key: "error", Value: err},
 		)
+		u.o11y.Logger().Error(ctx, err, "user not found", o11y.Field{Key: EmailKey, Value: input.Email})
 		return nil, customErrors.New("user or password invalid", fmt.Errorf("token_usecase: %v", err))
 	}
 
 	if !u.hash.CheckHash(user.Password, input.Password) {
-		span.AddAttributes(
-			ctx, o11y.Error, "error checking hash",
-			o11y.Attributes{Key: EmailKey, Value: input.Email},
-			o11y.Attributes{Key: "error", Value: err},
+		span.AddEvent(
+			"error checking hash",
+			o11y.Attribute{Key: EmailKey, Value: input.Email},
+			o11y.Attribute{Key: "error", Value: err},
 		)
+		u.o11y.Logger().Error(ctx, err, "error checking hash", o11y.Field{Key: EmailKey, Value: input.Email})
 		return nil, customErrors.New("user or password invalid", fmt.Errorf("token_usecase: %v", err))
 	}
 
 	token, err := u.jwt.GenerateToken(ctx, user.ID.String(), user.Email.String())
 	if err != nil {
-		span.AddAttributes(
-			ctx, o11y.Error, "error generate token",
-			o11y.Attributes{Key: EmailKey, Value: input.Email},
-			o11y.Attributes{Key: "error", Value: err},
+		span.AddEvent(
+			"error generate token",
+			o11y.Attribute{Key: EmailKey, Value: input.Email},
+			o11y.Attribute{Key: "error", Value: err},
 		)
+		u.o11y.Logger().Error(ctx, err, "error generate token", o11y.Field{Key: EmailKey, Value: input.Email})
 		return nil, err
 	}
 	return dtos.NewAuthOutput(token, u.config.AuthConfig.AuthTokenDuration), nil

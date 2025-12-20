@@ -3,19 +3,21 @@ package repositories
 import (
 	"context"
 	"database/sql"
+	"time"
 
 	"github.com/jailtonjunior94/financial/internal/user/domain/entities"
 	"github.com/jailtonjunior94/financial/internal/user/domain/interfaces"
+	customErrors "github.com/jailtonjunior94/financial/pkg/custom_errors"
 
 	"github.com/JailtonJunior94/devkit-go/pkg/o11y"
 )
 
 type userRepository struct {
 	db   *sql.DB
-	o11y o11y.Observability
+	o11y o11y.Telemetry
 }
 
-func NewUserRepository(db *sql.DB, o11y o11y.Observability) interfaces.UserRepository {
+func NewUserRepository(db *sql.DB, o11y o11y.Telemetry) interfaces.UserRepository {
 	return &userRepository{
 		db:   db,
 		o11y: o11y,
@@ -23,8 +25,22 @@ func NewUserRepository(db *sql.DB, o11y o11y.Observability) interfaces.UserRepos
 }
 
 func (r *userRepository) Insert(ctx context.Context, user *entities.User) (*entities.User, error) {
-	ctx, span := r.o11y.Start(ctx, "user_repository.insert")
+	ctx, cancel := context.WithTimeout(ctx, 5*time.Second)
+	defer cancel()
+
+	ctx, span := r.o11y.Tracer().Start(ctx, "user_repository.insert")
 	defer span.End()
+
+	// Verificar se email já existe
+	existing, err := r.FindByEmail(ctx, user.Email.String())
+	if err != nil {
+		return nil, err
+	}
+	if existing != nil {
+		span.AddEvent("email already exists", o11y.Attribute{Key: "email", Value: user.Email})
+		r.o11y.Logger().Error(ctx, customErrors.ErrEmailAlreadyExists, "email already exists")
+		return nil, customErrors.ErrEmailAlreadyExists
+	}
 
 	query := `insert into
 				users (
@@ -41,11 +57,12 @@ func (r *userRepository) Insert(ctx context.Context, user *entities.User) (*enti
 
 	stmt, err := r.db.PrepareContext(ctx, query)
 	if err != nil {
-		span.AddAttributes(
-			ctx, o11y.Error, "error prepare query insert user",
-			o11y.Attributes{Key: "email", Value: user.Email},
-			o11y.Attributes{Key: "error", Value: err},
+		span.AddEvent(
+			"error preparing insert user query",
+			o11y.Attribute{Key: "email", Value: user.Email},
+			o11y.Attribute{Key: "error", Value: err},
 		)
+		r.o11y.Logger().Error(ctx, err, "error preparing insert user query", o11y.Field{Key: "email", Value: user.Email})
 		return nil, err
 	}
 
@@ -60,18 +77,22 @@ func (r *userRepository) Insert(ctx context.Context, user *entities.User) (*enti
 		user.DeletedAt.Time,
 	)
 	if err != nil {
-		span.AddAttributes(
-			ctx, o11y.Error, "error insert user",
-			o11y.Attributes{Key: "email", Value: user.Email},
-			o11y.Attributes{Key: "error", Value: err},
+		span.AddEvent(
+			"error inserting user",
+			o11y.Attribute{Key: "email", Value: user.Email},
+			o11y.Attribute{Key: "error", Value: err},
 		)
+		r.o11y.Logger().Error(ctx, err, "error inserting user", o11y.Field{Key: "email", Value: user.Email})
 		return nil, err
 	}
 	return user, nil
 }
 
 func (r *userRepository) FindByEmail(ctx context.Context, email string) (*entities.User, error) {
-	ctx, span := r.o11y.Start(ctx, "user_repository.find_by_email")
+	ctx, cancel := context.WithTimeout(ctx, 5*time.Second)
+	defer cancel()
+
+	ctx, span := r.o11y.Tracer().Start(ctx, "user_repository.find_by_email")
 	defer span.End()
 
 	query := `select
@@ -101,10 +122,10 @@ func (r *userRepository) FindByEmail(ctx context.Context, email string) (*entiti
 
 	if err != nil {
 		if err == sql.ErrNoRows {
-			span.AddAttributes(ctx, o11y.Ok, "user not found", o11y.Attributes{Key: "e-mail", Value: email})
 			return nil, nil
 		}
-		span.AddAttributes(ctx, o11y.Error, "error finding user", o11y.Attributes{Key: "e-mail", Value: email})
+		span.AddEvent("error finding user", o11y.Attribute{Key: "e-mail", Value: email}, o11y.Attribute{Key: "error", Value: err})
+		r.o11y.Logger().Error(ctx, err, "error finding user", o11y.Field{Key: "e-mail", Value: email})
 		return nil, err
 	}
 	return &user, nil

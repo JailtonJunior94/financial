@@ -13,9 +13,9 @@ import (
 func RegisterBudgetModule(ioc *bundle.Container, router *chi.Mux) {
 	uow := unitOfWork.NewUnitOfWork(ioc.DB)
 
-	budgetRepository := repositories.NewBudgetRepository(uow.Executor(), ioc.Observability)
-	createBudgetUseCase := usecase.NewCreateBudgetUseCase(uow, ioc.Observability, budgetRepository)
-	budgetHandler := http.NewBudgetHandler(ioc.Observability, createBudgetUseCase)
+	budgetRepository := repositories.NewBudgetRepository(uow.Executor(), ioc.Telemetry)
+	createBudgetUseCase := usecase.NewCreateBudgetUseCase(uow, ioc.Telemetry, budgetRepository)
+	budgetHandler := http.NewBudgetHandler(ioc.Telemetry, createBudgetUseCase)
 
 	http.NewBudgetRoutes(
 		router,

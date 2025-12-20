@@ -10,7 +10,7 @@ import (
 
 	"github.com/jailtonjunior94/financial/internal/category"
 	"github.com/jailtonjunior94/financial/internal/user"
-
+	"github.com/jailtonjunior94/financial/pkg/api/httperrors"
 	"github.com/jailtonjunior94/financial/pkg/bundle"
 	customErrors "github.com/jailtonjunior94/financial/pkg/custom_errors"
 
@@ -19,21 +19,15 @@ import (
 )
 
 func Run() {
-	ctx := context.Background()
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+
 	ioc := bundle.NewContainer(ctx)
 
 	/* Observability */
-	tracerProvider := ioc.Observability.TracerProvider()
 	defer func() {
-		if err := tracerProvider.Shutdown(ctx); err != nil {
-			log.Printf("erro ao fechar tracer provider: %v", err)
-		}
-	}()
-
-	meterProvider := ioc.Observability.MeterProvider()
-	defer func() {
-		if err := meterProvider.Shutdown(ctx); err != nil {
-			log.Printf("erro ao fechar meter provider: %v", err)
+		if err := ioc.Telemetry.Shutdown(ctx); err != nil {
+			log.Printf("erro ao finalizar a telemetria: %v", err)
 		}
 	}()
 
@@ -68,15 +62,29 @@ func Run() {
 			httpserver.RequestID,
 		),
 		httpserver.WithErrorHandler(func(ctx context.Context, w http.ResponseWriter, err error) {
-			if customErrors, ok := err.(*customErrors.CustomError); ok {
-				if customErrors.Details != nil {
-					responses.ErrorWithDetails(w, http.StatusBadRequest, customErrors.Message, customErrors.Details)
+			// Se for CustomError, extrair o erro original
+			if customErr, ok := err.(*customErrors.CustomError); ok {
+				// Usar o erro original para buscar o código HTTP correto
+				responseErr := httperrors.GetResponseError(customErr.Err)
+
+				// Se tiver detalhes, incluir na resposta
+				if customErr.Details != nil {
+					responses.ErrorWithDetails(w, responseErr.Code, customErr.Message, customErr.Details)
 					return
 				}
-				responses.Error(w, http.StatusBadRequest, customErrors.Message)
+
+				// Usar a mensagem do CustomError (mais específica) ou do mapping
+				message := customErr.Message
+				if message == "" {
+					message = responseErr.Message
+				}
+				responses.Error(w, responseErr.Code, message)
 				return
 			}
-			responses.Error(w, http.StatusInternalServerError, "oops, something went wrong")
+
+			// Para erros não customizados, tentar mapear diretamente
+			responseErr := httperrors.GetResponseError(err)
+			responses.Error(w, responseErr.Code, responseErr.Message)
 		}),
 	)
 
@@ -92,6 +100,8 @@ func Run() {
 	}()
 
 	<-interrupt
+	cancel() // Cancel context to propagate shutdown signal
+
 	if err := shutdown(ctx); err != nil {
 		log.Printf("erro ao finalizar o servidor: %v", err)
 	}

@@ -6,6 +6,7 @@ import (
 
 	"github.com/jailtonjunior94/financial/configs"
 	"github.com/jailtonjunior94/financial/pkg/auth"
+	customerrors "github.com/jailtonjunior94/financial/pkg/custom_errors"
 )
 
 type (
@@ -41,7 +42,10 @@ func (a *authorization) Authorization(next http.Handler) http.Handler {
 	})
 }
 
-func GetUserFromContext(ctx context.Context) *auth.User {
-	raw, _ := ctx.Value(userCtxKey).(*auth.User)
-	return raw
+func GetUserFromContext(ctx context.Context) (*auth.User, error) {
+	raw, ok := ctx.Value(userCtxKey).(*auth.User)
+	if !ok || raw == nil {
+		return nil, customerrors.ErrUnauthorized
+	}
+	return raw, nil
 }

@@ -18,15 +18,15 @@ type (
 	}
 
 	findCategoryUseCase struct {
-		o11y       o11y.Observability
+		o11y       o11y.Telemetry
 		repository interfaces.CategoryRepository
 	}
 )
 
 func NewFindCategoryUseCase(
-	o11y o11y.Observability,
+	o11y o11y.Telemetry,
 	repository interfaces.CategoryRepository,
-) *findCategoryUseCase {
+) FindCategoryUseCase {
 	return &findCategoryUseCase{
 		o11y:       o11y,
 		repository: repository,
@@ -34,18 +34,28 @@ func NewFindCategoryUseCase(
 }
 
 func (u *findCategoryUseCase) Execute(ctx context.Context, userID string) ([]*dtos.CategoryOutput, error) {
-	ctx, span := u.o11y.Start(ctx, "find_category_usecase.execute")
+	ctx, span := u.o11y.Tracer().Start(ctx, "find_category_usecase.execute")
 	defer span.End()
 
 	user, err := vos.NewUUIDFromString(userID)
 	if err != nil {
-		span.AddAttributes(ctx, o11y.Error, err.Error(), o11y.Attributes{Key: "error", Value: err})
+		span.AddEvent(
+			"error parsing user id",
+			o11y.Attribute{Key: "user_id", Value: userID},
+			o11y.Attribute{Key: "error", Value: err},
+		)
+		u.o11y.Logger().Error(ctx, err, "error parsing user id", o11y.Field{Key: "user_id", Value: userID})
 		return nil, err
 	}
 
 	categories, err := u.repository.List(ctx, user)
 	if err != nil {
-		span.AddAttributes(ctx, o11y.Error, err.Error(), o11y.Attributes{Key: "error", Value: err})
+		span.AddEvent(
+			"error listing categories from repository",
+			o11y.Attribute{Key: "user_id", Value: userID},
+			o11y.Attribute{Key: "error", Value: err},
+		)
+		u.o11y.Logger().Error(ctx, err, "error listing categories from repository", o11y.Field{Key: "user_id", Value: userID})
 		return nil, err
 	}
 

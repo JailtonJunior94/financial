@@ -2,9 +2,11 @@ package factories
 
 import (
 	"fmt"
+	"math"
 
 	"github.com/jailtonjunior94/financial/internal/budget/domain/dtos"
 	"github.com/jailtonjunior94/financial/internal/budget/domain/entities"
+	customErrors "github.com/jailtonjunior94/financial/pkg/custom_errors"
 
 	"github.com/JailtonJunior94/devkit-go/pkg/vos"
 )
@@ -22,6 +24,18 @@ func CreateBudget(userID string, input *dtos.BugetInput) (*entities.Budget, erro
 
 	budget := entities.NewBudget(user, vos.NewMoney(input.AmountGoal), input.Date)
 	budget.SetID(budgetID)
+
+	// Validate that the sum of percentage_goal equals 100%
+	var totalPercentage float64
+	for _, item := range input.Items {
+		totalPercentage += item.PercentageGoal
+	}
+
+	// Use a small epsilon for floating-point comparison
+	const epsilon = 0.01
+	if math.Abs(totalPercentage-100.0) > epsilon {
+		return nil, customErrors.ErrBudgetInvalidTotal
+	}
 
 	for _, item := range input.Items {
 		category, err := vos.NewUUIDFromString(item.CategoryID)

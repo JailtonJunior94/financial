@@ -15,7 +15,7 @@ import (
 )
 
 type CategoryHandler struct {
-	o11y                  o11y.Observability
+	o11y                  o11y.Telemetry
 	findCategoryUseCase   usecase.FindCategoryUseCase
 	createCategoryUseCase usecase.CreateCategoryUseCase
 	findCategoryByUseCase usecase.FindCategoryByUseCase
@@ -24,7 +24,7 @@ type CategoryHandler struct {
 }
 
 func NewCategoryHandler(
-	o11y o11y.Observability,
+	o11y o11y.Telemetry,
 	findCategoryUseCase usecase.FindCategoryUseCase,
 	createCategoryUseCase usecase.CreateCategoryUseCase,
 	findCategoryByUseCase usecase.FindCategoryByUseCase,
@@ -42,21 +42,21 @@ func NewCategoryHandler(
 }
 
 func (h *CategoryHandler) Create(w http.ResponseWriter, r *http.Request) error {
-	ctx, span := h.o11y.Start(r.Context(), "category_handler.create")
+	ctx, span := h.o11y.Tracer().Start(r.Context(), "category_handler.create")
 	defer span.End()
 
-	user := middlewares.GetUserFromContext(ctx)
+	user, err := middlewares.GetUserFromContext(ctx)
+	if err != nil {
+		return err
+	}
 
 	var input *dtos.CategoryInput
-	err := json.NewDecoder(r.Body).Decode(&input)
-	if err != nil {
-		span.RecordError(err)
+	if err = json.NewDecoder(r.Body).Decode(&input); err != nil {
 		return err
 	}
 
 	output, err := h.createCategoryUseCase.Execute(ctx, user.ID, input)
 	if err != nil {
-		span.RecordError(err)
 		return err
 	}
 
@@ -65,13 +65,16 @@ func (h *CategoryHandler) Create(w http.ResponseWriter, r *http.Request) error {
 }
 
 func (h *CategoryHandler) Find(w http.ResponseWriter, r *http.Request) error {
-	ctx, span := h.o11y.Start(r.Context(), "category_handler.find")
+	ctx, span := h.o11y.Tracer().Start(r.Context(), "category_handler.find")
 	defer span.End()
 
-	user := middlewares.GetUserFromContext(ctx)
+	user, err := middlewares.GetUserFromContext(ctx)
+	if err != nil {
+		return err
+	}
+
 	output, err := h.findCategoryUseCase.Execute(ctx, user.ID)
 	if err != nil {
-		span.RecordError(err)
 		return err
 	}
 
@@ -80,13 +83,16 @@ func (h *CategoryHandler) Find(w http.ResponseWriter, r *http.Request) error {
 }
 
 func (h *CategoryHandler) FindBy(w http.ResponseWriter, r *http.Request) error {
-	ctx, span := h.o11y.Start(r.Context(), "category_handler.find")
+	ctx, span := h.o11y.Tracer().Start(r.Context(), "category_handler.find_by")
 	defer span.End()
 
-	user := middlewares.GetUserFromContext(ctx)
+	user, err := middlewares.GetUserFromContext(ctx)
+	if err != nil {
+		return err
+	}
+
 	output, err := h.findCategoryByUseCase.Execute(ctx, user.ID, chi.URLParam(r, "id"))
 	if err != nil {
-		span.RecordError(err)
 		return err
 	}
 
@@ -95,21 +101,21 @@ func (h *CategoryHandler) FindBy(w http.ResponseWriter, r *http.Request) error {
 }
 
 func (h *CategoryHandler) Update(w http.ResponseWriter, r *http.Request) error {
-	ctx, span := h.o11y.Start(r.Context(), "category_handler.update")
+	ctx, span := h.o11y.Tracer().Start(r.Context(), "category_handler.update")
 	defer span.End()
 
-	user := middlewares.GetUserFromContext(ctx)
+	user, err := middlewares.GetUserFromContext(ctx)
+	if err != nil {
+		return err
+	}
 
 	var input *dtos.CategoryInput
-	err := json.NewDecoder(r.Body).Decode(&input)
-	if err != nil {
-		span.RecordError(err)
+	if err = json.NewDecoder(r.Body).Decode(&input); err != nil {
 		return err
 	}
 
 	output, err := h.updateCategoryUseCase.Execute(ctx, user.ID, chi.URLParam(r, "id"), input)
 	if err != nil {
-		span.RecordError(err)
 		return err
 	}
 
@@ -118,12 +124,15 @@ func (h *CategoryHandler) Update(w http.ResponseWriter, r *http.Request) error {
 }
 
 func (h *CategoryHandler) Delete(w http.ResponseWriter, r *http.Request) error {
-	ctx, span := h.o11y.Start(r.Context(), "category_handler.delete")
+	ctx, span := h.o11y.Tracer().Start(r.Context(), "category_handler.delete")
 	defer span.End()
 
-	user := middlewares.GetUserFromContext(ctx)
+	user, err := middlewares.GetUserFromContext(ctx)
+	if err != nil {
+		return err
+	}
+
 	if err := h.removeCategoryUseCase.Execute(ctx, user.ID, chi.URLParam(r, "id")); err != nil {
-		span.RecordError(err)
 		return err
 	}
 

@@ -10,9 +10,9 @@ import (
 )
 
 func RegisterAuthModule(ioc *bundle.Container) []httpserver.Route {
-	userRepository := repositories.NewUserRepository(ioc.DB, ioc.Observability)
-	authUseCase := usecase.NewTokenUseCase(ioc.Config, ioc.Observability, ioc.Hash, ioc.Jwt, userRepository)
-	authHandler := http.NewAuthHandler(ioc.Observability, authUseCase)
+	userRepository := repositories.NewUserRepository(ioc.DB, ioc.Telemetry)
+	authUseCase := usecase.NewTokenUseCase(ioc.Config, ioc.Telemetry, ioc.Hash, ioc.Jwt, userRepository)
+	authHandler := http.NewAuthHandler(ioc.Telemetry, authUseCase)
 
 	authRoutes := http.NewUserRoutes()
 	authRoutes.Register(
@@ -26,9 +26,9 @@ func RegisterAuthModule(ioc *bundle.Container) []httpserver.Route {
 }
 
 func RegisterUserModule(ioc *bundle.Container) []httpserver.Route {
-	userRepository := repositories.NewUserRepository(ioc.DB, ioc.Observability)
-	createUserUseCase := usecase.NewCreateUserUseCase(ioc.Observability, ioc.Hash, userRepository)
-	userHandler := http.NewUserHandler(ioc.Observability, createUserUseCase)
+	userRepository := repositories.NewUserRepository(ioc.DB, ioc.Telemetry)
+	createUserUseCase := usecase.NewCreateUserUseCase(ioc.Telemetry, ioc.Hash, userRepository)
+	userHandler := http.NewUserHandler(ioc.Telemetry, createUserUseCase)
 
 	userRoutes := http.NewUserRoutes()
 	userRoutes.Register(

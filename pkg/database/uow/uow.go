@@ -58,7 +58,7 @@ func (u *unitOfWork) CommitOrRollback() error {
 }
 
 func (u *unitOfWork) Rollback() error {
-	if u.tx != nil {
+	if u.tx == nil {
 		return errors.New("no transaction to rollback")
 	}
 

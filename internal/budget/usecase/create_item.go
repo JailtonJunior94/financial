@@ -15,13 +15,13 @@ type (
 	}
 
 	createBudgetItemUseCase struct {
-		o11y             o11y.Observability
+		o11y             o11y.Telemetry
 		budgetRepository interfaces.BudgetRepository
 	}
 )
 
 func NewCreateBudgetItemUseCase(
-	o11y o11y.Observability,
+	o11y o11y.Telemetry,
 	budgetRepository interfaces.BudgetRepository,
 ) CreateBudgetItemUseCase {
 	return &createBudgetItemUseCase{

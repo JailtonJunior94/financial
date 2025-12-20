@@ -12,12 +12,12 @@ import (
 )
 
 type UserHandler struct {
-	o11y              o11y.Observability
+	o11y              o11y.Telemetry
 	createUserUseCase usecase.CreateUserUseCase
 }
 
 func NewUserHandler(
-	o11y o11y.Observability,
+	o11y o11y.Telemetry,
 	createUserUseCase usecase.CreateUserUseCase,
 ) *UserHandler {
 	return &UserHandler{
@@ -27,19 +27,17 @@ func NewUserHandler(
 }
 
 func (h *UserHandler) Create(w http.ResponseWriter, r *http.Request) error {
-	ctx, span := h.o11y.Start(r.Context(), "user_handler.create")
+	ctx, span := h.o11y.Tracer().Start(r.Context(), "user_handler.create")
 	defer span.End()
 
 	var input *dtos.CreateUserInput
 	err := json.NewDecoder(r.Body).Decode(&input)
 	if err != nil {
-		span.RecordError(err)
 		return err
 	}
 
 	output, err := h.createUserUseCase.Execute(ctx, input)
 	if err != nil {
-		span.RecordError(err)
 		return err
 	}
 

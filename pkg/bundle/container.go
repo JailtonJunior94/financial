@@ -11,17 +11,15 @@ import (
 	"github.com/jailtonjunior94/financial/pkg/database/postgres"
 
 	"github.com/JailtonJunior94/devkit-go/pkg/encrypt"
-	"github.com/JailtonJunior94/devkit-go/pkg/logger"
 	"github.com/JailtonJunior94/devkit-go/pkg/o11y"
 )
 
 type Container struct {
 	DB                     *sql.DB
-	Logger                 logger.Logger
 	Config                 *configs.Config
 	Jwt                    auth.JwtAdapter
 	Hash                   encrypt.HashAdapter
-	Observability          o11y.Observability
+	Telemetry              o11y.Telemetry
 	MiddlewareAuth         middlewares.Authorization
 	PanicRecoverMiddleware middlewares.PanicRecoverMiddleware
 }
@@ -37,29 +35,58 @@ func NewContainer(ctx context.Context) *Container {
 		log.Fatalf("error connecting to database: %v", err)
 	}
 
-	observability := o11y.NewObservability(
-		o11y.WithServiceName(config.O11yConfig.ServiceName),
-		o11y.WithServiceVersion(config.O11yConfig.ServiceVersion),
-		o11y.WithResource(),
-		o11y.WithTracerProvider(ctx, config.O11yConfig.ExporterEndpoint),
-		o11y.WithMeterProvider(ctx, config.O11yConfig.ExporterEndpoint),
-		o11y.WithLoggerProvider(ctx, config.O11yConfig.ExporterEndpointHTTP),
-	)
+	resource, err := o11y.NewServiceResource(ctx, config.O11yConfig.ServiceName, config.O11yConfig.ServiceVersion, "development")
+	if err != nil {
+		log.Fatalf("failed to create resource: %v", err)
+	}
 
-	logger := logger.NewLogger()
+	tracer, tracerShutdown, err := o11y.NewTracerWithOptions(ctx,
+		o11y.WithTracerEndpoint(config.O11yConfig.ExporterEndpoint),
+		o11y.WithTracerServiceName(config.O11yConfig.ServiceName),
+		o11y.WithTracerResource(resource),
+		o11y.WithTracerInsecure(),
+	)
+	if err != nil {
+		log.Fatalf("failed to create tracer: %v", err)
+	}
+
+	metrics, metricsShutdown, err := o11y.NewMetricsWithOptions(ctx,
+		o11y.WithMetricsEndpoint(config.O11yConfig.ExporterEndpoint),
+		o11y.WithMetricsServiceName(config.O11yConfig.ServiceName),
+		o11y.WithMetricsResource(resource),
+		o11y.WithMetricsInsecure(),
+	)
+	if err != nil {
+		log.Fatalf("failed to create metrics: %v", err)
+	}
+
+	logger, loggerShutdown, err := o11y.NewLoggerWithOptions(ctx,
+		o11y.WithLoggerEndpoint(config.O11yConfig.ExporterEndpointHTTP),
+		o11y.WithLoggerServiceName(config.O11yConfig.ServiceName),
+		o11y.WithLoggerResource(resource),
+		o11y.WithLoggerInsecure(),
+	)
+	if err != nil {
+		log.Fatalf("failed to create logger: %v", err)
+	}
+
+	telemetry, err := o11y.NewTelemetry(tracer, metrics, logger, tracerShutdown, metricsShutdown, loggerShutdown)
+	if err != nil {
+		log.Fatalf("failed to create telemetry: %v", err)
+	}
+
 	hash := encrypt.NewHashAdapter()
-	jwt := auth.NewJwtAdapter(config, observability)
+	jwt := auth.NewJwtAdapter(config, telemetry)
 	middlewareAuth := middlewares.NewAuthorization(config, jwt)
-	panicRecoverMiddleware := middlewares.NewPanicRecoverMiddleware(observability)
+	panicRecoverMiddleware := middlewares.NewPanicRecoverMiddleware(telemetry)
 
 	return &Container{
 		DB:                     db,
 		Jwt:                    jwt,
 		Hash:                   hash,
-		Logger:                 logger,
 		Config:                 config,
 		MiddlewareAuth:         middlewareAuth,
-		Observability:          observability,
+		Telemetry:              telemetry,
 		PanicRecoverMiddleware: panicRecoverMiddleware,
 	}
 }

@@ -19,7 +19,7 @@ type (
 
 	createBudgetUseCase struct {
 		uow              uow.UnitOfWork
-		o11y             o11y.Observability
+		o11y             o11y.Telemetry
 		budgetRepository interfaces.BudgetRepository
 	}
 )
@@ -34,7 +34,7 @@ var (
 
 func NewCreateBudgetUseCase(
 	uow uow.UnitOfWork,
-	o11y o11y.Observability,
+	o11y o11y.Telemetry,
 	budgetRepository interfaces.BudgetRepository,
 ) CreateBudgetUseCase {
 	return &createBudgetUseCase{
@@ -45,30 +45,34 @@ func NewCreateBudgetUseCase(
 }
 
 func (u *createBudgetUseCase) Execute(ctx context.Context, userID string, input *dtos.BugetInput) (*dtos.BudgetOutput, error) {
-	ctx, span := u.o11y.Start(ctx, "create_budget_usecase.execute")
+	ctx, span := u.o11y.Tracer().Start(ctx, "create_budget_usecase.execute")
 	defer span.End()
 
 	newBudget, err := factories.CreateBudget(userID, input)
 	if err != nil {
-		span.AddAttributes(ctx, o11y.Error, err.Error(), o11y.Attributes{Key: "error", Value: err})
+		span.AddEvent("error creating budget entity", o11y.Attribute{Key: "user_id", Value: userID}, o11y.Attribute{Key: "error", Value: err})
+		u.o11y.Logger().Error(ctx, err, "error creating budget entity", o11y.Field{Key: "user_id", Value: userID})
 		return nil, err
 	}
 
 	err = u.uow.Do(ctx, func(ctx context.Context) error {
 		if err := u.budgetRepository.Insert(ctx, newBudget); err != nil {
-			span.AddAttributes(ctx, o11y.Error, "error insert order", o11y.Attributes{Key: "error", Value: err})
+			span.AddEvent("error inserting budget", o11y.Attribute{Key: "user_id", Value: userID}, o11y.Attribute{Key: "error", Value: err})
+			u.o11y.Logger().Error(ctx, err, "error inserting budget", o11y.Field{Key: "user_id", Value: userID})
 			return err
 		}
 
 		if err := u.budgetRepository.InsertItems(ctx, newBudget.Items); err != nil {
-			span.AddAttributes(ctx, o11y.Error, "error insert items", o11y.Attributes{Key: "error", Value: err})
+			span.AddEvent("error inserting budget items", o11y.Attribute{Key: "user_id", Value: userID}, o11y.Attribute{Key: "error", Value: err})
+			u.o11y.Logger().Error(ctx, err, "error inserting budget items", o11y.Field{Key: "user_id", Value: userID})
 			return err
 		}
 		return nil
 	})
 
 	if err != nil {
-		span.AddAttributes(ctx, o11y.Error, "error insert order", o11y.Attributes{Key: "error", Value: err})
+		span.AddEvent("error in unit of work transaction", o11y.Attribute{Key: "user_id", Value: userID}, o11y.Attribute{Key: "error", Value: err})
+		u.o11y.Logger().Error(ctx, err, "error in unit of work transaction", o11y.Field{Key: "user_id", Value: userID})
 		return nil, err
 	}
 	return &dtos.BudgetOutput{

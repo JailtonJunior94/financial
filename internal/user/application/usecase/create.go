@@ -19,14 +19,14 @@ type (
 	}
 
 	createUserUseCase struct {
-		o11y       o11y.Observability
+		o11y       o11y.Telemetry
 		hash       encrypt.HashAdapter
 		repository interfaces.UserRepository
 	}
 )
 
 func NewCreateUserUseCase(
-	o11y o11y.Observability,
+	o11y o11y.Telemetry,
 	hash encrypt.HashAdapter,
 	repository interfaces.UserRepository,
 ) CreateUserUseCase {
@@ -38,40 +38,45 @@ func NewCreateUserUseCase(
 }
 
 func (u *createUserUseCase) Execute(ctx context.Context, input *dtos.CreateUserInput) (*dtos.CreateUserOutput, error) {
-	ctx, span := u.o11y.Start(ctx, "create_user_usecase.execute")
+	ctx, span := u.o11y.Tracer().Start(ctx, "create_user_usecase.execute")
 	defer span.End()
 
 	user, err := factories.CreateUser(input.Name, input.Email)
 	if err != nil {
-		span.AddAttributes(ctx, o11y.Error, "error creating user", o11y.Attributes{Key: "error", Value: err})
+		span.AddEvent(
+			"error creating user entity",
+			o11y.Attribute{Key: "e-mail", Value: input.Email},
+			o11y.Attribute{Key: "error", Value: err},
+		)
+		u.o11y.Logger().Error(ctx, err, "error creating user entity", o11y.Field{Key: "e-mail", Value: input.Email})
 		return nil, customErrors.New("error creating user", fmt.Errorf("create_user_usecase: %v", err))
 	}
 
 	hash, err := u.hash.GenerateHash(input.Password)
 	if err != nil {
-		span.AddAttributes(
-			ctx, o11y.Error, "error generating hash",
-			o11y.Attributes{Key: "e-mail", Value: input.Email},
-			o11y.Attributes{Key: "error", Value: err},
+		span.AddEvent(
+			"error generating hash",
+			o11y.Attribute{Key: "e-mail", Value: input.Email},
+			o11y.Attribute{Key: "error", Value: err},
 		)
+		u.o11y.Logger().Error(ctx, err, "error generating hash", o11y.Field{Key: "e-mail", Value: input.Email})
 		return nil, err
 	}
 
 	if err := user.SetPassword(hash); err != nil {
-		span.AddAttributes(
-			ctx, o11y.Error, "error setting password",
-			o11y.Attributes{Key: "error", Value: err},
-		)
+		span.AddEvent("error setting password", o11y.Attribute{Key: "error", Value: err})
+		u.o11y.Logger().Error(ctx, err, "error setting password")
 		return nil, err
 	}
 
 	userCreated, err := u.repository.Insert(ctx, user)
 	if err != nil {
-		span.AddAttributes(
-			ctx, o11y.Error, "error created user in database",
-			o11y.Attributes{Key: "e-mail", Value: input.Email},
-			o11y.Attributes{Key: "error", Value: err},
+		span.AddEvent(
+			"error inserting user into repository",
+			o11y.Attribute{Key: "e-mail", Value: input.Email},
+			o11y.Attribute{Key: "error", Value: err},
 		)
+		u.o11y.Logger().Error(ctx, err, "error inserting user into repository", o11y.Field{Key: "e-mail", Value: input.Email})
 		return nil, err
 	}
 

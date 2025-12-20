@@ -14,15 +14,15 @@ type (
 	}
 
 	removeCategoryUseCase struct {
-		o11y       o11y.Observability
+		o11y       o11y.Telemetry
 		repository interfaces.CategoryRepository
 	}
 )
 
 func NewRemoveCategoryUseCase(
-	o11y o11y.Observability,
+	o11y o11y.Telemetry,
 	repository interfaces.CategoryRepository,
-) *removeCategoryUseCase {
+) RemoveCategoryUseCase {
 	return &removeCategoryUseCase{
 		o11y:       o11y,
 		repository: repository,
@@ -30,33 +30,55 @@ func NewRemoveCategoryUseCase(
 }
 
 func (u *removeCategoryUseCase) Execute(ctx context.Context, userID, id string) error {
-	ctx, span := u.o11y.Start(ctx, "remove_category_usecase.execute")
+	ctx, span := u.o11y.Tracer().Start(ctx, "remove_category_usecase.execute")
 	defer span.End()
 
 	user, err := vos.NewUUIDFromString(userID)
 	if err != nil {
-		span.AddAttributes(ctx, o11y.Error, err.Error(), o11y.Attributes{Key: "error", Value: err})
+		span.AddEvent(
+			"error parsing user id",
+			o11y.Attribute{Key: "user_id", Value: userID},
+			o11y.Attribute{Key: "error", Value: err},
+		)
+		u.o11y.Logger().Error(ctx, err, "error parsing user id", o11y.Field{Key: "user_id", Value: userID})
 		return err
 	}
 
 	categoryID, err := vos.NewUUIDFromString(id)
 	if err != nil {
-		span.AddAttributes(ctx, o11y.Error, err.Error(), o11y.Attributes{Key: "error", Value: err})
+		span.AddEvent(
+			"error parsing category id",
+			o11y.Attribute{Key: "category_id", Value: id},
+			o11y.Attribute{Key: "error", Value: err},
+		)
+		u.o11y.Logger().Error(ctx, err, "error parsing category id", o11y.Field{Key: "category_id", Value: id})
 		return err
 	}
 
 	category, err := u.repository.FindByID(ctx, user, categoryID)
 	if err != nil {
-		span.AddAttributes(ctx, o11y.Error, err.Error(), o11y.Attributes{Key: "error", Value: err})
+		span.AddEvent(
+			"error finding category by id",
+			o11y.Attribute{Key: "user_id", Value: userID},
+			o11y.Attribute{Key: "category_id", Value: id},
+			o11y.Attribute{Key: "error", Value: err},
+		)
+		u.o11y.Logger().Error(ctx, err, "error finding category by id",
+			o11y.Field{Key: "user_id", Value: userID},
+			o11y.Field{Key: "category_id", Value: id})
 		return err
 	}
 
 	if err := u.repository.Update(ctx, category.Delete()); err != nil {
-		span.AddAttributes(
-			ctx, o11y.Error, "error updating category",
-			o11y.Attributes{Key: "user_id", Value: userID},
-			o11y.Attributes{Key: "error", Value: err},
+		span.AddEvent(
+			"error deleting category in repository",
+			o11y.Attribute{Key: "user_id", Value: userID},
+			o11y.Attribute{Key: "category_id", Value: id},
+			o11y.Attribute{Key: "error", Value: err},
 		)
+		u.o11y.Logger().Error(ctx, err, "error deleting category in repository",
+			o11y.Field{Key: "user_id", Value: userID},
+			o11y.Field{Key: "category_id", Value: id})
 		return err
 	}
 

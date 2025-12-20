@@ -7,6 +7,10 @@ import (
 )
 
 var responseErrors = map[error]*ResponseError{
+	financialErrors.ErrUnauthorized: {
+		Code:    http.StatusUnauthorized,
+		Message: "Unauthorized",
+	},
 	financialErrors.ErrBudgetNotFound: {
 		Code:    http.StatusNotFound,
 		Message: "Budget not found",
@@ -22,6 +26,10 @@ var responseErrors = map[error]*ResponseError{
 	financialErrors.ErrInvalidEmail: {
 		Code:    http.StatusBadRequest,
 		Message: "Invalid email format",
+	},
+	financialErrors.ErrEmailAlreadyExists: {
+		Code:    http.StatusConflict,
+		Message: "Email already exists",
 	},
 	financialErrors.ErrTooLong: {
 		Code:    http.StatusBadRequest,
@@ -50,6 +58,14 @@ var responseErrors = map[error]*ResponseError{
 	financialErrors.ErrSequenceIsRequired: {
 		Code:    http.StatusBadRequest,
 		Message: "Sequence is required",
+	},
+	financialErrors.ErrCategoryCycle: {
+		Code:    http.StatusBadRequest,
+		Message: "Category cannot be its own parent or create a cycle",
+	},
+	financialErrors.ErrBudgetInvalidTotal: {
+		Code:    http.StatusBadRequest,
+		Message: "Sum of budget item percentages must equal 100%",
 	},
 }
 

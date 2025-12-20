@@ -13,12 +13,12 @@ import (
 )
 
 type CategoryHandler struct {
-	o11y                o11y.Observability
+	o11y                o11y.Telemetry
 	createBudgetUseCase usecase.CreateBudgetUseCase
 }
 
 func NewBudgetHandler(
-	o11y o11y.Observability,
+	o11y o11y.Telemetry,
 	createBudgetUseCase usecase.CreateBudgetUseCase,
 ) *CategoryHandler {
 	return &CategoryHandler{
@@ -28,22 +28,23 @@ func NewBudgetHandler(
 }
 
 func (h *CategoryHandler) Create(w http.ResponseWriter, r *http.Request) {
-	ctx, span := h.o11y.Start(r.Context(), "budget_handler.create")
+	ctx, span := h.o11y.Tracer().Start(r.Context(), "budget_handler.create")
 	defer span.End()
 
-	user := middlewares.GetUserFromContext(ctx)
+	user, err := middlewares.GetUserFromContext(ctx)
+	if err != nil {
+		responses.Error(w, http.StatusUnauthorized, "unauthorized")
+		return
+	}
 
 	var input *dtos.BugetInput
-	err := json.NewDecoder(r.Body).Decode(&input)
-	if err != nil {
-		span.RecordError(err)
+	if err = json.NewDecoder(r.Body).Decode(&input); err != nil {
 		responses.Error(w, http.StatusUnprocessableEntity, "unprocessable entity")
 		return
 	}
 
 	output, err := h.createBudgetUseCase.Execute(ctx, user.ID, input)
 	if err != nil {
-		span.RecordError(err)
 		responses.Error(w, http.StatusBadRequest, "error creating budget")
 		return
 	}

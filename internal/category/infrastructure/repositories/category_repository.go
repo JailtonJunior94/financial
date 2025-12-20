@@ -3,6 +3,7 @@ package repositories
 import (
 	"context"
 	"database/sql"
+	"time"
 
 	"github.com/jailtonjunior94/financial/internal/category/domain/entities"
 	"github.com/jailtonjunior94/financial/internal/category/domain/interfaces"
@@ -13,10 +14,10 @@ import (
 
 type categoryRepository struct {
 	db   *sql.DB
-	o11y o11y.Observability
+	o11y o11y.Telemetry
 }
 
-func NewCategoryRepository(db *sql.DB, o11y o11y.Observability) interfaces.CategoryRepository {
+func NewCategoryRepository(db *sql.DB, o11y o11y.Telemetry) interfaces.CategoryRepository {
 	return &categoryRepository{
 		db:   db,
 		o11y: o11y,
@@ -24,7 +25,10 @@ func NewCategoryRepository(db *sql.DB, o11y o11y.Observability) interfaces.Categ
 }
 
 func (r *categoryRepository) List(ctx context.Context, userID vos.UUID) ([]*entities.Category, error) {
-	ctx, span := r.o11y.Start(ctx, "category_repository.list")
+	ctx, cancel := context.WithTimeout(ctx, 5*time.Second)
+	defer cancel()
+
+	ctx, span := r.o11y.Tracer().Start(ctx, "category_repository.list")
 	defer span.End()
 
 	query := `select
@@ -46,12 +50,14 @@ func (r *categoryRepository) List(ctx context.Context, userID vos.UUID) ([]*enti
 
 	rows, err := r.db.QueryContext(ctx, query, userID.String())
 	if err != nil {
-		span.AddAttributes(ctx, o11y.Error, "error finding categories", o11y.Attributes{Key: "user_id", Value: userID.String()})
+		span.AddEvent("error finding categories", o11y.Attribute{Key: "user_id", Value: userID.String()}, o11y.Attribute{Key: "error", Value: err})
+		r.o11y.Logger().Error(ctx, err, "error finding categories", o11y.Field{Key: "user_id", Value: userID.String()})
 		return nil, err
 	}
 	defer func() {
-		if err := rows.Close(); err != nil {
-			span.AddAttributes(ctx, o11y.Error, "error closing rows", o11y.Attributes{Key: "user_id", Value: userID.String()})
+		if closeErr := rows.Close(); closeErr != nil {
+			span.AddEvent("error closing rows", o11y.Attribute{Key: "user_id", Value: userID.String()}, o11y.Attribute{Key: "error", Value: closeErr})
+			r.o11y.Logger().Error(ctx, closeErr, "error closing rows", o11y.Field{Key: "user_id", Value: userID.String()})
 		}
 	}()
 
@@ -68,7 +74,8 @@ func (r *categoryRepository) List(ctx context.Context, userID vos.UUID) ([]*enti
 			&category.DeletedAt.Time,
 		)
 		if err != nil {
-			span.AddAttributes(ctx, o11y.Error, "error scanning categories", o11y.Attributes{Key: "user_id", Value: userID.String()})
+			span.AddEvent("error scanning categories", o11y.Attribute{Key: "user_id", Value: userID.String()}, o11y.Attribute{Key: "error", Value: err})
+			r.o11y.Logger().Error(ctx, err, "error scanning categories", o11y.Field{Key: "user_id", Value: userID.String()})
 			return nil, err
 		}
 		categories = append(categories, &category)
@@ -77,7 +84,10 @@ func (r *categoryRepository) List(ctx context.Context, userID vos.UUID) ([]*enti
 }
 
 func (r *categoryRepository) FindByID(ctx context.Context, userID, id vos.UUID) (*entities.Category, error) {
-	ctx, span := r.o11y.Start(ctx, "category_repository.find_by_id")
+	ctx, cancel := context.WithTimeout(ctx, 5*time.Second)
+	defer cancel()
+
+	ctx, span := r.o11y.Tracer().Start(ctx, "category_repository.find_by_id")
 	defer span.End()
 
 	query := `select
@@ -108,12 +118,14 @@ func (r *categoryRepository) FindByID(ctx context.Context, userID, id vos.UUID) 
 
 	rows, err := r.db.QueryContext(ctx, query, userID.String(), id.String())
 	if err != nil {
-		span.AddAttributes(ctx, o11y.Error, "error finding category", o11y.Attributes{Key: "user_id", Value: userID.String()})
+		span.AddEvent("error finding category", o11y.Attribute{Key: "user_id", Value: userID.String()}, o11y.Attribute{Key: "error", Value: err})
+		r.o11y.Logger().Error(ctx, err, "error finding category", o11y.Field{Key: "user_id", Value: userID.String()})
 		return nil, err
 	}
 	defer func() {
-		if err := rows.Close(); err != nil {
-			span.AddAttributes(ctx, o11y.Error, "error closing rows", o11y.Attributes{Key: "user_id", Value: userID.String()})
+		if closeErr := rows.Close(); closeErr != nil {
+			span.AddEvent("error closing rows", o11y.Attribute{Key: "user_id", Value: userID.String()}, o11y.Attribute{Key: "error", Value: closeErr})
+			r.o11y.Logger().Error(ctx, closeErr, "error closing rows", o11y.Field{Key: "user_id", Value: userID.String()})
 		}
 	}()
 
@@ -143,7 +155,8 @@ func (r *categoryRepository) FindByID(ctx context.Context, userID, id vos.UUID) 
 		)
 
 		if err != nil {
-			span.AddAttributes(ctx, o11y.Error, "error scanning category", o11y.Attributes{Key: "user_id", Value: userID.String()})
+			span.AddEvent("error scanning category", o11y.Attribute{Key: "user_id", Value: userID.String()}, o11y.Attribute{Key: "error", Value: err})
+			r.o11y.Logger().Error(ctx, err, "error scanning category", o11y.Field{Key: "user_id", Value: userID.String()})
 			return nil, err
 		}
 
@@ -167,7 +180,10 @@ func (r *categoryRepository) FindByID(ctx context.Context, userID, id vos.UUID) 
 }
 
 func (r *categoryRepository) Save(ctx context.Context, category *entities.Category) error {
-	ctx, span := r.o11y.Start(ctx, "category_repository.save")
+	ctx, cancel := context.WithTimeout(ctx, 5*time.Second)
+	defer cancel()
+
+	ctx, span := r.o11y.Tracer().Start(ctx, "category_repository.save")
 	defer span.End()
 
 	query := `insert into
@@ -186,11 +202,12 @@ func (r *categoryRepository) Save(ctx context.Context, category *entities.Catego
 
 	stmt, err := r.db.PrepareContext(ctx, query)
 	if err != nil {
-		span.AddAttributes(
-			ctx, o11y.Error, "error creating category",
-			o11y.Attributes{Key: "user_id", Value: category.UserID},
-			o11y.Attributes{Key: "error", Value: err},
+		span.AddEvent(
+			"error preparing insert category",
+			o11y.Attribute{Key: "user_id", Value: category.UserID},
+			o11y.Attribute{Key: "error", Value: err},
 		)
+		r.o11y.Logger().Error(ctx, err, "error preparing insert category", o11y.Field{Key: "user_id", Value: category.UserID})
 		return err
 	}
 
@@ -206,18 +223,22 @@ func (r *categoryRepository) Save(ctx context.Context, category *entities.Catego
 		category.DeletedAt.Time,
 	)
 	if err != nil {
-		span.AddAttributes(
-			ctx, o11y.Error, "error creating category",
-			o11y.Attributes{Key: "user_id", Value: category.UserID},
-			o11y.Attributes{Key: "error", Value: err},
+		span.AddEvent(
+			"error inserting category",
+			o11y.Attribute{Key: "user_id", Value: category.UserID},
+			o11y.Attribute{Key: "error", Value: err},
 		)
+		r.o11y.Logger().Error(ctx, err, "error inserting category", o11y.Field{Key: "user_id", Value: category.UserID})
 		return err
 	}
 	return nil
 }
 
 func (r *categoryRepository) Update(ctx context.Context, category *entities.Category) error {
-	ctx, span := r.o11y.Start(ctx, "category_repository.update")
+	ctx, cancel := context.WithTimeout(ctx, 5*time.Second)
+	defer cancel()
+
+	ctx, span := r.o11y.Tracer().Start(ctx, "category_repository.update")
 	defer span.End()
 
 	query := `update
@@ -233,11 +254,12 @@ func (r *categoryRepository) Update(ctx context.Context, category *entities.Cate
 
 	stmt, err := r.db.PrepareContext(ctx, query)
 	if err != nil {
-		span.AddAttributes(
-			ctx, o11y.Error, "error preparing update category",
-			o11y.Attributes{Key: "user_id", Value: category.UserID},
-			o11y.Attributes{Key: "error", Value: err},
+		span.AddEvent(
+			"error preparing update category",
+			o11y.Attribute{Key: "user_id", Value: category.UserID},
+			o11y.Attribute{Key: "error", Value: err},
 		)
+		r.o11y.Logger().Error(ctx, err, "error preparing update category", o11y.Field{Key: "user_id", Value: category.UserID})
 		return err
 	}
 
@@ -251,11 +273,12 @@ func (r *categoryRepository) Update(ctx context.Context, category *entities.Cate
 		category.UserID.Value,
 	)
 	if err != nil {
-		span.AddAttributes(
-			ctx, o11y.Error, "error updating category",
-			o11y.Attributes{Key: "user_id", Value: category.UserID},
-			o11y.Attributes{Key: "error", Value: err},
+		span.AddEvent(
+			"error updating category",
+			o11y.Attribute{Key: "user_id", Value: category.UserID},
+			o11y.Attribute{Key: "error", Value: err},
 		)
+		r.o11y.Logger().Error(ctx, err, "error updating category", o11y.Field{Key: "user_id", Value: category.UserID})
 		return err
 	}
 

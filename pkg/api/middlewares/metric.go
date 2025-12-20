@@ -5,9 +5,6 @@ import (
 	"time"
 
 	"github.com/JailtonJunior94/devkit-go/pkg/o11y"
-
-	"go.opentelemetry.io/otel/attribute"
-	"go.opentelemetry.io/otel/metric"
 )
 
 type (
@@ -16,8 +13,7 @@ type (
 	}
 
 	httpMetricsMiddleware struct {
-		requestCounter  metric.Int64Counter
-		requestDuration metric.Float64Histogram
+		o11y o11y.Telemetry
 	}
 
 	responseWriter struct {
@@ -26,20 +22,10 @@ type (
 	}
 )
 
-func NewHTTPMetricsMiddleware(o11y o11y.Observability) (HTTPMetricsMiddleware, error) {
-	counter, err := o11y.Meter().Int64Counter("http.requests", metric.WithDescription("HTTP Requests Counter"))
-	if err != nil {
-		return nil, err
-	}
-
-	duration, err := o11y.Meter().Float64Histogram("http.request.duration", metric.WithDescription("HTTP Request Duration"))
-	if err != nil {
-		return nil, err
-	}
+func NewHTTPMetricsMiddleware(o11y o11y.Telemetry) (HTTPMetricsMiddleware, error) {
 
 	return &httpMetricsMiddleware{
-		requestCounter:  counter,
-		requestDuration: duration,
+		o11y: o11y,
 	}, nil
 }
 
@@ -51,24 +37,33 @@ func (m *httpMetricsMiddleware) Metrics(next http.Handler) http.Handler {
 
 		next.ServeHTTP(rw, r.WithContext(ctx))
 
-		m.requestDuration.Record(
-			ctx,
-			float64(time.Since(start).Nanoseconds()),
-			metric.WithAttributes(
-				attribute.String("method", r.Method),
-				attribute.String("uri", r.RequestURI),
-				attribute.Int("statusCode", rw.statusCode),
-			),
-		)
+		m.o11y.Metrics().AddCounter(ctx, "http.requests", 1, o11y.Attribute{
+			Key:   "method",
+			Value: r.Method,
+		}, o11y.Attribute{
+			Key:   "uri",
+			Value: r.RequestURI,
+		}, o11y.Attribute{
+			Key:   "statusCode",
+			Value: rw.statusCode,
+		})
 
-		m.requestCounter.Add(
+		m.o11y.Metrics().RecordHistogram(
 			ctx,
-			1,
-			metric.WithAttributes(
-				attribute.String("method", r.Method),
-				attribute.String("uri", r.RequestURI),
-				attribute.Int("statusCode", rw.statusCode),
-			),
+			"http.request.duration",
+			float64(time.Since(start).Nanoseconds()),
+			o11y.Attribute{
+				Key:   "method",
+				Value: r.Method,
+			},
+			o11y.Attribute{
+				Key:   "uri",
+				Value: r.RequestURI,
+			},
+			o11y.Attribute{
+				Key:   "statusCode",
+				Value: rw.statusCode,
+			},
 		)
 	})
 }

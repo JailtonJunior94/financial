@@ -15,10 +15,10 @@ type TracingMiddleware interface {
 }
 
 type tracingMiddleware struct {
-	o11y o11y.Observability
+	o11y o11y.Telemetry
 }
 
-func NewTracingMiddleware(o11y o11y.Observability) TracingMiddleware {
+func NewTracingMiddleware(o11y o11y.Telemetry) TracingMiddleware {
 	return &tracingMiddleware{o11y: o11y}
 }
 

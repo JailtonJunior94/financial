@@ -42,20 +42,33 @@ services:
           cpus: "0.50"
           memory: 512M
 
+  # ============================================================================
+  # Observability stack
+  # ============================================================================
+  otel-lgtm:
+    # Pinned to specific version for reproducible deployments
+    # Version 0.7.5 - Update this version across all environments together
+    image: grafana/otel-lgtm:0.7.5
+    restart: always
+    environment:
+      GF_SECURITY_ADMIN_USER: ${OTEL_LGTM_ADMIN_USER}
+      GF_SECURITY_ADMIN_PASSWORD: ${OTEL_LGTM_ADMIN_PASSWORD}
+    ports:
+      - ${OTEL_LGTM_EXTERNAL_PORT}:${OTEL_LGTM_INTERNAL_PORT}
+      - ${OTEL_LGTM_RECEIVER_GRPC_PORT}:${OTEL_LGTM_RECEIVER_GRPC_PORT}
+      - ${OTEL_LGTM_RECEIVER_HTTP_PORT}:${OTEL_LGTM_RECEIVER_HTTP_PORT}
+    volumes:
+      - ./telemetry/grafana/otelcol-config.yaml:/otel-lgtm/otelcol-config.yaml:ro
+      - ./telemetry/grafana/run-grafana.sh:/otel-lgtm/run-grafana.sh
+      - grafana-data:/otel-lgtm/grafana/data
+
   financial_migration:
     build:
       context: ..
       dockerfile: deployment/Dockerfile
     command: migrate
-    environment:
-      - DB_DRIVER=postgres
-      - DB_HOST=cockroachdb
-      - DB_PORT=26257
-      - DB_USER=root
-      - DB_PASSWORD=financial@password
-      - DB_NAME=financial
-      - DB_MAX_IDLE_CONNS=10
-      - MIGRATE_PATH=file://database/migrations
+    env_file:
+      - .env
     depends_on:
       - cockroachdb
 
@@ -85,3 +98,4 @@ services:
 volumes:
   rabbitmq_data:
   cockroachdb_data:
+  grafana-data:

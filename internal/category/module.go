@@ -10,15 +10,15 @@ import (
 )
 
 func RegisterCategoryModule(ioc *bundle.Container) []httpserver.Route {
-	categoryRepository := repositories.NewCategoryRepository(ioc.DB, ioc.Observability)
-	findCategoryUsecase := usecase.NewFindCategoryUseCase(ioc.Observability, categoryRepository)
-	findCategoryByUsecase := usecase.NewFindCategoryByUseCase(ioc.Observability, categoryRepository)
-	createCategoryUsecase := usecase.NewCreateCategoryUseCase(ioc.Observability, categoryRepository)
-	updateCategoryUsecase := usecase.NewUpdateCategoryUseCase(ioc.Observability, categoryRepository)
-	removeCategoryUsecase := usecase.NewRemoveCategoryUseCase(ioc.Observability, categoryRepository)
+	categoryRepository := repositories.NewCategoryRepository(ioc.DB, ioc.Telemetry)
+	findCategoryUsecase := usecase.NewFindCategoryUseCase(ioc.Telemetry, categoryRepository)
+	findCategoryByUsecase := usecase.NewFindCategoryByUseCase(ioc.Telemetry, categoryRepository)
+	createCategoryUsecase := usecase.NewCreateCategoryUseCase(ioc.Telemetry, categoryRepository)
+	updateCategoryUsecase := usecase.NewUpdateCategoryUseCase(ioc.Telemetry, categoryRepository)
+	removeCategoryUsecase := usecase.NewRemoveCategoryUseCase(ioc.Telemetry, categoryRepository)
 
 	categoryHandler := http.NewCategoryHandler(
-		ioc.Observability,
+		ioc.Telemetry,
 		findCategoryUsecase,
 		createCategoryUsecase,
 		findCategoryByUsecase,

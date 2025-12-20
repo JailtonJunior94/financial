@@ -27,7 +27,7 @@ type (
 
 	jwtAdapter struct {
 		config *configs.Config
-		o11y   o11y.Observability
+		o11y   o11y.Telemetry
 	}
 
 	User struct {
@@ -40,12 +40,12 @@ func NewUser(id, email string) *User {
 	return &User{ID: id, Email: email}
 }
 
-func NewJwtAdapter(config *configs.Config, o11y o11y.Observability) JwtAdapter {
+func NewJwtAdapter(config *configs.Config, o11y o11y.Telemetry) JwtAdapter {
 	return &jwtAdapter{config: config, o11y: o11y}
 }
 
 func (j *jwtAdapter) GenerateToken(ctx context.Context, id, email string) (string, error) {
-	_, span := j.o11y.Start(ctx, "jwt_adapter.generate_token")
+	_, span := j.o11y.Tracer().Start(ctx, "jwt_adapter.generate_token")
 	defer span.End()
 
 	claims := jwt.MapClaims{
@@ -57,17 +57,19 @@ func (j *jwtAdapter) GenerateToken(ctx context.Context, id, email string) (strin
 	token := jwt.NewWithClaims(jwt.SigningMethodHS256, claims)
 	tokenSigned, err := token.SignedString([]byte(j.config.AuthConfig.AuthSecretKey))
 	if err != nil {
-		span.AddAttributes(ctx, o11y.Error, "error trying to generate token",
-			o11y.Attributes{Key: "e-mail", Value: email},
-			o11y.Attributes{Key: "error", Value: err.Error()},
+		span.AddEvent(
+			"error trying to generate token",
+			o11y.Attribute{Key: "e-mail", Value: email},
+			o11y.Attribute{Key: "error", Value: err.Error()},
 		)
+		j.o11y.Logger().Error(ctx, err, "error trying to generate token", o11y.Field{Key: "e-mail", Value: email})
 		return "", ErrGenerateToken
 	}
 	return tokenSigned, nil
 }
 
 func (j *jwtAdapter) ValidateToken(ctx context.Context, tokenRequest string) (*User, error) {
-	_, span := j.o11y.Start(ctx, "jwt_adapter.validate_token")
+	_, span := j.o11y.Tracer().Start(ctx, "jwt_adapter.validate_token")
 	defer span.End()
 
 	tokenString := j.removeBearerPrefix(tokenRequest)
@@ -78,7 +80,11 @@ func (j *jwtAdapter) ValidateToken(ctx context.Context, tokenRequest string) (*U
 	secret := []byte(j.config.AuthConfig.AuthSecretKey)
 	token, err := jwt.Parse(tokenString, func(token *jwt.Token) (interface{}, error) {
 		if _, ok := token.Method.(*jwt.SigningMethodHMAC); !ok {
-			span.AddAttributes(ctx, o11y.Error, fmt.Sprintf("unexpected signing method: %v", token.Header["alg"]))
+			span.AddEvent(
+				"invalid token signing method",
+				o11y.Attribute{Key: "method", Value: fmt.Sprintf("%v", token.Header["alg"])},
+			)
+			j.o11y.Logger().Error(ctx, ErrInvalidToken, "invalid token signing method", o11y.Field{Key: "method", Value: fmt.Sprintf("%v", token.Header["alg"])})
 			return nil, ErrInvalidToken
 		}
 		return secret, nil
@@ -93,13 +99,28 @@ func (j *jwtAdapter) ValidateToken(ctx context.Context, tokenRequest string) (*U
 		return nil, ErrInvalidToken
 	}
 
-	user := NewUser(claims["sub"].(string), claims["email"].(string))
+	sub, ok := claims["sub"].(string)
+	if !ok || sub == "" {
+		span.AddEvent("invalid sub claim", o11y.Attribute{Key: "sub", Value: claims["sub"]})
+		j.o11y.Logger().Error(ctx, ErrInvalidToken, "invalid sub claim")
+		return nil, ErrInvalidToken
+	}
+
+	email, ok := claims["email"].(string)
+	if !ok || email == "" {
+		span.AddEvent("invalid email claim", o11y.Attribute{Key: "email", Value: claims["email"]})
+		j.o11y.Logger().Error(ctx, ErrInvalidToken, "invalid email claim")
+		return nil, ErrInvalidToken
+	}
+
+	user := NewUser(sub, email)
 	return user, nil
 }
 
 func (j *jwtAdapter) removeBearerPrefix(tokenString string) string {
-	if len(tokenString) > 7 && strings.ToUpper(tokenString[0:6]) == "BEARER" {
-		return tokenString[7:]
+	const bearerPrefix = "BEARER "
+	if len(tokenString) > len(bearerPrefix) && strings.ToUpper(tokenString[:len(bearerPrefix)]) == bearerPrefix {
+		return tokenString[len(bearerPrefix):]
 	}
-	return ""
+	return tokenString
 }

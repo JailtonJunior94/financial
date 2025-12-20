@@ -16,31 +16,32 @@ type (
 	}
 
 	panicRecoverMiddleware struct {
-		o11y o11y.Observability
+		o11y o11y.Telemetry
 	}
 )
 
-func NewPanicRecoverMiddleware(o11y o11y.Observability) PanicRecoverMiddleware {
+func NewPanicRecoverMiddleware(o11y o11y.Telemetry) PanicRecoverMiddleware {
 	return &panicRecoverMiddleware{o11y: o11y}
 }
 
 func (m *panicRecoverMiddleware) Recover(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		defer func() {
-			if err := recover(); err != nil {
+			if panicErr := recover(); panicErr != nil {
 				ctx := r.Context()
-				_, span := m.o11y.Start(ctx, "panic_recover_middleware.recover")
+				_, span := m.o11y.Tracer().Start(ctx, "panic_recover_middleware.recover")
 				defer span.End()
 
-				err, ok := err.(error)
+				err, ok := panicErr.(error)
 				if !ok {
-					err = fmt.Errorf("%v", r)
+					err = fmt.Errorf("panic: %v", panicErr)
 				}
 
 				errFormated := fmt.Sprintf("stacktrace from panic: \n %s", string(debug.Stack()))
-				span.AddAttributes(ctx, o11y.Error, err.Error(),
-					o11y.Attributes{Key: "stacktrace", Value: errFormated},
-					o11y.Attributes{Key: "error", Value: err},
+				m.o11y.Logger().Error(
+					ctx, err,
+					"panic recovered in middleware",
+					o11y.Field{Key: "stacktrace", Value: errFormated},
 				)
 				responses.Error(w, http.StatusInternalServerError, "internal server error")
 			}

@@ -32,7 +32,7 @@ cover:
 	go tool cover -html=coverage.out
 
 start_minimal:
-	docker compose -f deployment/docker-compose.yml up --build -d financial_migration cockroachdb rabbitmq
+	docker compose -f deployment/docker-compose.yml up --build -d financial_migration cockroachdb rabbitmq otel-lgtm
 	
 start_docker:
 	docker compose -f deployment/docker-compose.yml up --build -d

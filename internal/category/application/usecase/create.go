@@ -16,13 +16,13 @@ type (
 	}
 
 	createCategoryUseCase struct {
-		o11y       o11y.Observability
+		o11y       o11y.Telemetry
 		repository interfaces.CategoryRepository
 	}
 )
 
 func NewCreateCategoryUseCase(
-	o11y o11y.Observability,
+	o11y o11y.Telemetry,
 	repository interfaces.CategoryRepository,
 ) CreateCategoryUseCase {
 	return &createCategoryUseCase{
@@ -32,21 +32,27 @@ func NewCreateCategoryUseCase(
 }
 
 func (u *createCategoryUseCase) Execute(ctx context.Context, userID string, input *dtos.CategoryInput) (*dtos.CategoryOutput, error) {
-	ctx, span := u.o11y.Start(ctx, "create_category_usecase.execute")
+	ctx, span := u.o11y.Tracer().Start(ctx, "create_category_usecase.execute")
 	defer span.End()
 
 	category, err := factories.CreateCategory(userID, input.ParentID, input.Name, input.Sequence)
 	if err != nil {
-		span.AddAttributes(ctx, o11y.Error, err.Error(), o11y.Attributes{Key: "error", Value: err})
+		span.AddEvent(
+			"error creating category entity",
+			o11y.Attribute{Key: "user_id", Value: userID},
+			o11y.Attribute{Key: "error", Value: err},
+		)
+		u.o11y.Logger().Error(ctx, err, "error creating category entity", o11y.Field{Key: "user_id", Value: userID})
 		return nil, err
 	}
 
 	if err := u.repository.Save(ctx, category); err != nil {
-		span.AddAttributes(
-			ctx, o11y.Error, "error creating category",
-			o11y.Attributes{Key: "user_id", Value: userID},
-			o11y.Attributes{Key: "error", Value: err},
+		span.AddEvent(
+			"error saving category to repository",
+			o11y.Attribute{Key: "user_id", Value: userID},
+			o11y.Attribute{Key: "error", Value: err},
 		)
+		u.o11y.Logger().Error(ctx, err, "error saving category to repository", o11y.Field{Key: "user_id", Value: userID})
 		return nil, err
 	}
 
