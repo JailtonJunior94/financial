@@ -13,4 +13,5 @@ type CategoryRepository interface {
 	FindByID(ctx context.Context, userID, id vos.UUID) (*entities.Category, error)
 	Save(ctx context.Context, category *entities.Category) error
 	Update(ctx context.Context, category *entities.Category) error
+	CheckCycleExists(ctx context.Context, userID, categoryID, parentID vos.UUID) (bool, error)
 }

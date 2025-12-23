@@ -108,7 +108,7 @@ func (r *categoryRepository) FindByID(ctx context.Context, userID, id vos.UUID) 
 					c2.deleted_at
 				from
 					categories c
-					left join categories c2 on c.id = c2.parent_id
+					left join categories c2 on c.id = c2.parent_id AND c2.deleted_at IS NULL
 				where
 					c.user_id = $1
 					and c.deleted_at is null
@@ -285,4 +285,48 @@ func (r *categoryRepository) Update(ctx context.Context, category *entities.Cate
 	}
 
 	return nil
+}
+
+func (r *categoryRepository) CheckCycleExists(ctx context.Context, userID, categoryID, parentID vos.UUID) (bool, error) {
+	ctx, cancel := context.WithTimeout(ctx, 3*time.Second)
+	defer cancel()
+
+	ctx, span := r.o11y.Tracer().Start(ctx, "category_repository.check_cycle_exists")
+	defer span.End()
+
+	query := `
+		WITH RECURSIVE category_path AS (
+			-- Caso base: começar do parent proposto
+			SELECT id, parent_id, 1 as depth
+			FROM categories
+			WHERE id = $1 AND user_id = $2 AND deleted_at IS NULL
+
+			UNION ALL
+
+			-- Caso recursivo: seguir cadeia de parents
+			SELECT c.id, c.parent_id, cp.depth + 1
+			FROM categories c
+			INNER JOIN category_path cp ON c.id = cp.parent_id
+			WHERE c.user_id = $2 AND c.deleted_at IS NULL AND cp.depth < 10
+		)
+		SELECT EXISTS(SELECT 1 FROM category_path WHERE id = $3) as cycle_exists`
+
+	var cycleExists bool
+	err := r.db.QueryRowContext(ctx, query, parentID.String(), userID.String(), categoryID.String()).Scan(&cycleExists)
+	if err != nil {
+		span.AddEvent(
+			"error checking category cycle",
+			o11y.Attribute{Key: "user_id", Value: userID.String()},
+			o11y.Attribute{Key: "category_id", Value: categoryID.String()},
+			o11y.Attribute{Key: "parent_id", Value: parentID.String()},
+			o11y.Attribute{Key: "error", Value: err},
+		)
+		r.o11y.Logger().Error(ctx, err, "error checking category cycle",
+			o11y.Field{Key: "user_id", Value: userID.String()},
+			o11y.Field{Key: "category_id", Value: categoryID.String()},
+			o11y.Field{Key: "parent_id", Value: parentID.String()})
+		return false, err
+	}
+
+	return cycleExists, nil
 }

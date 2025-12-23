@@ -39,47 +39,47 @@ func (_m *CategoryRepository) EXPECT() *CategoryRepository_Expecter {
 	return &CategoryRepository_Expecter{mock: &_m.Mock}
 }
 
-// Find provides a mock function for the type CategoryRepository
-func (_mock *CategoryRepository) Find(ctx context.Context, userID vos.UUID) ([]*entities.Category, error) {
-	ret := _mock.Called(ctx, userID)
+// CheckCycleExists provides a mock function for the type CategoryRepository
+func (_mock *CategoryRepository) CheckCycleExists(ctx context.Context, userID vos.UUID, categoryID vos.UUID, parentID vos.UUID) (bool, error) {
+	ret := _mock.Called(ctx, userID, categoryID, parentID)
 
 	if len(ret) == 0 {
-		panic("no return value specified for Find")
+		panic("no return value specified for CheckCycleExists")
 	}
 
-	var r0 []*entities.Category
+	var r0 bool
 	var r1 error
-	if returnFunc, ok := ret.Get(0).(func(context.Context, vos.UUID) ([]*entities.Category, error)); ok {
-		return returnFunc(ctx, userID)
+	if returnFunc, ok := ret.Get(0).(func(context.Context, vos.UUID, vos.UUID, vos.UUID) (bool, error)); ok {
+		return returnFunc(ctx, userID, categoryID, parentID)
 	}
-	if returnFunc, ok := ret.Get(0).(func(context.Context, vos.UUID) []*entities.Category); ok {
-		r0 = returnFunc(ctx, userID)
+	if returnFunc, ok := ret.Get(0).(func(context.Context, vos.UUID, vos.UUID, vos.UUID) bool); ok {
+		r0 = returnFunc(ctx, userID, categoryID, parentID)
 	} else {
-		if ret.Get(0) != nil {
-			r0 = ret.Get(0).([]*entities.Category)
-		}
+		r0 = ret.Get(0).(bool)
 	}
-	if returnFunc, ok := ret.Get(1).(func(context.Context, vos.UUID) error); ok {
-		r1 = returnFunc(ctx, userID)
+	if returnFunc, ok := ret.Get(1).(func(context.Context, vos.UUID, vos.UUID, vos.UUID) error); ok {
+		r1 = returnFunc(ctx, userID, categoryID, parentID)
 	} else {
 		r1 = ret.Error(1)
 	}
 	return r0, r1
 }
 
-// CategoryRepository_Find_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'Find'
-type CategoryRepository_Find_Call struct {
+// CategoryRepository_CheckCycleExists_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'CheckCycleExists'
+type CategoryRepository_CheckCycleExists_Call struct {
 	*mock.Call
 }
 
-// Find is a helper method to define mock.On call
+// CheckCycleExists is a helper method to define mock.On call
 //   - ctx context.Context
 //   - userID vos.UUID
-func (_e *CategoryRepository_Expecter) Find(ctx interface{}, userID interface{}) *CategoryRepository_Find_Call {
-	return &CategoryRepository_Find_Call{Call: _e.mock.On("Find", ctx, userID)}
+//   - categoryID vos.UUID
+//   - parentID vos.UUID
+func (_e *CategoryRepository_Expecter) CheckCycleExists(ctx interface{}, userID interface{}, categoryID interface{}, parentID interface{}) *CategoryRepository_CheckCycleExists_Call {
+	return &CategoryRepository_CheckCycleExists_Call{Call: _e.mock.On("CheckCycleExists", ctx, userID, categoryID, parentID)}
 }
 
-func (_c *CategoryRepository_Find_Call) Run(run func(ctx context.Context, userID vos.UUID)) *CategoryRepository_Find_Call {
+func (_c *CategoryRepository_CheckCycleExists_Call) Run(run func(ctx context.Context, userID vos.UUID, categoryID vos.UUID, parentID vos.UUID)) *CategoryRepository_CheckCycleExists_Call {
 	_c.Call.Run(func(args mock.Arguments) {
 		var arg0 context.Context
 		if args[0] != nil {
@@ -89,20 +89,30 @@ func (_c *CategoryRepository_Find_Call) Run(run func(ctx context.Context, userID
 		if args[1] != nil {
 			arg1 = args[1].(vos.UUID)
 		}
+		var arg2 vos.UUID
+		if args[2] != nil {
+			arg2 = args[2].(vos.UUID)
+		}
+		var arg3 vos.UUID
+		if args[3] != nil {
+			arg3 = args[3].(vos.UUID)
+		}
 		run(
 			arg0,
 			arg1,
+			arg2,
+			arg3,
 		)
 	})
 	return _c
 }
 
-func (_c *CategoryRepository_Find_Call) Return(categorys []*entities.Category, err error) *CategoryRepository_Find_Call {
-	_c.Call.Return(categorys, err)
+func (_c *CategoryRepository_CheckCycleExists_Call) Return(b bool, err error) *CategoryRepository_CheckCycleExists_Call {
+	_c.Call.Return(b, err)
 	return _c
 }
 
-func (_c *CategoryRepository_Find_Call) RunAndReturn(run func(ctx context.Context, userID vos.UUID) ([]*entities.Category, error)) *CategoryRepository_Find_Call {
+func (_c *CategoryRepository_CheckCycleExists_Call) RunAndReturn(run func(ctx context.Context, userID vos.UUID, categoryID vos.UUID, parentID vos.UUID) (bool, error)) *CategoryRepository_CheckCycleExists_Call {
 	_c.Call.Return(run)
 	return _c
 }
@@ -181,47 +191,104 @@ func (_c *CategoryRepository_FindByID_Call) RunAndReturn(run func(ctx context.Co
 	return _c
 }
 
-// Insert provides a mock function for the type CategoryRepository
-func (_mock *CategoryRepository) Insert(ctx context.Context, category *entities.Category) (*entities.Category, error) {
-	ret := _mock.Called(ctx, category)
+// List provides a mock function for the type CategoryRepository
+func (_mock *CategoryRepository) List(ctx context.Context, userID vos.UUID) ([]*entities.Category, error) {
+	ret := _mock.Called(ctx, userID)
 
 	if len(ret) == 0 {
-		panic("no return value specified for Insert")
+		panic("no return value specified for List")
 	}
 
-	var r0 *entities.Category
+	var r0 []*entities.Category
 	var r1 error
-	if returnFunc, ok := ret.Get(0).(func(context.Context, *entities.Category) (*entities.Category, error)); ok {
-		return returnFunc(ctx, category)
+	if returnFunc, ok := ret.Get(0).(func(context.Context, vos.UUID) ([]*entities.Category, error)); ok {
+		return returnFunc(ctx, userID)
 	}
-	if returnFunc, ok := ret.Get(0).(func(context.Context, *entities.Category) *entities.Category); ok {
-		r0 = returnFunc(ctx, category)
+	if returnFunc, ok := ret.Get(0).(func(context.Context, vos.UUID) []*entities.Category); ok {
+		r0 = returnFunc(ctx, userID)
 	} else {
 		if ret.Get(0) != nil {
-			r0 = ret.Get(0).(*entities.Category)
+			r0 = ret.Get(0).([]*entities.Category)
 		}
 	}
-	if returnFunc, ok := ret.Get(1).(func(context.Context, *entities.Category) error); ok {
-		r1 = returnFunc(ctx, category)
+	if returnFunc, ok := ret.Get(1).(func(context.Context, vos.UUID) error); ok {
+		r1 = returnFunc(ctx, userID)
 	} else {
 		r1 = ret.Error(1)
 	}
 	return r0, r1
 }
 
-// CategoryRepository_Insert_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'Insert'
-type CategoryRepository_Insert_Call struct {
+// CategoryRepository_List_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'List'
+type CategoryRepository_List_Call struct {
 	*mock.Call
 }
 
-// Insert is a helper method to define mock.On call
+// List is a helper method to define mock.On call
 //   - ctx context.Context
-//   - category *entities.Category
-func (_e *CategoryRepository_Expecter) Insert(ctx interface{}, category interface{}) *CategoryRepository_Insert_Call {
-	return &CategoryRepository_Insert_Call{Call: _e.mock.On("Insert", ctx, category)}
+//   - userID vos.UUID
+func (_e *CategoryRepository_Expecter) List(ctx interface{}, userID interface{}) *CategoryRepository_List_Call {
+	return &CategoryRepository_List_Call{Call: _e.mock.On("List", ctx, userID)}
 }
 
-func (_c *CategoryRepository_Insert_Call) Run(run func(ctx context.Context, category *entities.Category)) *CategoryRepository_Insert_Call {
+func (_c *CategoryRepository_List_Call) Run(run func(ctx context.Context, userID vos.UUID)) *CategoryRepository_List_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		var arg0 context.Context
+		if args[0] != nil {
+			arg0 = args[0].(context.Context)
+		}
+		var arg1 vos.UUID
+		if args[1] != nil {
+			arg1 = args[1].(vos.UUID)
+		}
+		run(
+			arg0,
+			arg1,
+		)
+	})
+	return _c
+}
+
+func (_c *CategoryRepository_List_Call) Return(categorys []*entities.Category, err error) *CategoryRepository_List_Call {
+	_c.Call.Return(categorys, err)
+	return _c
+}
+
+func (_c *CategoryRepository_List_Call) RunAndReturn(run func(ctx context.Context, userID vos.UUID) ([]*entities.Category, error)) *CategoryRepository_List_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
+// Save provides a mock function for the type CategoryRepository
+func (_mock *CategoryRepository) Save(ctx context.Context, category *entities.Category) error {
+	ret := _mock.Called(ctx, category)
+
+	if len(ret) == 0 {
+		panic("no return value specified for Save")
+	}
+
+	var r0 error
+	if returnFunc, ok := ret.Get(0).(func(context.Context, *entities.Category) error); ok {
+		r0 = returnFunc(ctx, category)
+	} else {
+		r0 = ret.Error(0)
+	}
+	return r0
+}
+
+// CategoryRepository_Save_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'Save'
+type CategoryRepository_Save_Call struct {
+	*mock.Call
+}
+
+// Save is a helper method to define mock.On call
+//   - ctx context.Context
+//   - category *entities.Category
+func (_e *CategoryRepository_Expecter) Save(ctx interface{}, category interface{}) *CategoryRepository_Save_Call {
+	return &CategoryRepository_Save_Call{Call: _e.mock.On("Save", ctx, category)}
+}
+
+func (_c *CategoryRepository_Save_Call) Run(run func(ctx context.Context, category *entities.Category)) *CategoryRepository_Save_Call {
 	_c.Call.Run(func(args mock.Arguments) {
 		var arg0 context.Context
 		if args[0] != nil {
@@ -239,42 +306,31 @@ func (_c *CategoryRepository_Insert_Call) Run(run func(ctx context.Context, cate
 	return _c
 }
 
-func (_c *CategoryRepository_Insert_Call) Return(category1 *entities.Category, err error) *CategoryRepository_Insert_Call {
-	_c.Call.Return(category1, err)
+func (_c *CategoryRepository_Save_Call) Return(err error) *CategoryRepository_Save_Call {
+	_c.Call.Return(err)
 	return _c
 }
 
-func (_c *CategoryRepository_Insert_Call) RunAndReturn(run func(ctx context.Context, category *entities.Category) (*entities.Category, error)) *CategoryRepository_Insert_Call {
+func (_c *CategoryRepository_Save_Call) RunAndReturn(run func(ctx context.Context, category *entities.Category) error) *CategoryRepository_Save_Call {
 	_c.Call.Return(run)
 	return _c
 }
 
 // Update provides a mock function for the type CategoryRepository
-func (_mock *CategoryRepository) Update(ctx context.Context, category *entities.Category) (*entities.Category, error) {
+func (_mock *CategoryRepository) Update(ctx context.Context, category *entities.Category) error {
 	ret := _mock.Called(ctx, category)
 
 	if len(ret) == 0 {
 		panic("no return value specified for Update")
 	}
 
-	var r0 *entities.Category
-	var r1 error
-	if returnFunc, ok := ret.Get(0).(func(context.Context, *entities.Category) (*entities.Category, error)); ok {
-		return returnFunc(ctx, category)
-	}
-	if returnFunc, ok := ret.Get(0).(func(context.Context, *entities.Category) *entities.Category); ok {
+	var r0 error
+	if returnFunc, ok := ret.Get(0).(func(context.Context, *entities.Category) error); ok {
 		r0 = returnFunc(ctx, category)
 	} else {
-		if ret.Get(0) != nil {
-			r0 = ret.Get(0).(*entities.Category)
-		}
+		r0 = ret.Error(0)
 	}
-	if returnFunc, ok := ret.Get(1).(func(context.Context, *entities.Category) error); ok {
-		r1 = returnFunc(ctx, category)
-	} else {
-		r1 = ret.Error(1)
-	}
-	return r0, r1
+	return r0
 }
 
 // CategoryRepository_Update_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'Update'
@@ -307,12 +363,12 @@ func (_c *CategoryRepository_Update_Call) Run(run func(ctx context.Context, cate
 	return _c
 }
 
-func (_c *CategoryRepository_Update_Call) Return(category1 *entities.Category, err error) *CategoryRepository_Update_Call {
-	_c.Call.Return(category1, err)
+func (_c *CategoryRepository_Update_Call) Return(err error) *CategoryRepository_Update_Call {
+	_c.Call.Return(err)
 	return _c
 }
 
-func (_c *CategoryRepository_Update_Call) RunAndReturn(run func(ctx context.Context, category *entities.Category) (*entities.Category, error)) *CategoryRepository_Update_Call {
+func (_c *CategoryRepository_Update_Call) RunAndReturn(run func(ctx context.Context, category *entities.Category) error) *CategoryRepository_Update_Call {
 	_c.Call.Return(run)
 	return _c
 }

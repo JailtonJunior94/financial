@@ -34,13 +34,23 @@ func (c *Category) AddChildrens(childrens []Category) {
 	c.Children = childrens
 }
 
-func (c *Category) Update(name string, sequence uint, parentID *sharedVos.UUID) *Category {
-	c.Name = vos.NewCategoryName(name)
-	c.Sequence = vos.NewCategorySequence(sequence)
+func (c *Category) Update(name string, sequence uint, parentID *sharedVos.UUID) error {
+	categoryName, err := vos.NewCategoryName(name)
+	if err != nil {
+		return err
+	}
+
+	categorySequence, err := vos.NewCategorySequence(sequence)
+	if err != nil {
+		return err
+	}
+
+	c.Name = categoryName
+	c.Sequence = categorySequence
 	c.ParentID = parentID
 	c.UpdatedAt = sharedVos.NewNullableTime(time.Now())
 
-	return c
+	return nil
 }
 
 func (c *Category) Delete() *Category {

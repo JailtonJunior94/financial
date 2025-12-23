@@ -2,6 +2,7 @@ package usecase
 
 import (
 	"context"
+	"fmt"
 
 	"github.com/jailtonjunior94/financial/internal/category/application/dtos"
 	"github.com/jailtonjunior94/financial/internal/category/domain/interfaces"
@@ -128,7 +129,20 @@ func (u *updateCategoryUseCase) Execute(ctx context.Context, userID, id string, 
 		parentID = &parsedParentID
 	}
 
-	if err := u.repository.Update(ctx, category.Update(input.Name, input.Sequence, parentID)); err != nil {
+	if err := category.Update(input.Name, input.Sequence, parentID); err != nil {
+		span.AddEvent(
+			"error validating category update",
+			o11y.Attribute{Key: "user_id", Value: userID},
+			o11y.Attribute{Key: "category_id", Value: id},
+			o11y.Attribute{Key: "error", Value: err},
+		)
+		u.o11y.Logger().Error(ctx, err, "error validating category update",
+			o11y.Field{Key: "user_id", Value: userID},
+			o11y.Field{Key: "category_id", Value: id})
+		return nil, err
+	}
+
+	if err := u.repository.Update(ctx, category); err != nil {
 		span.AddEvent(
 			"error updating category in repository",
 			o11y.Attribute{Key: "user_id", Value: userID},
@@ -149,38 +163,14 @@ func (u *updateCategoryUseCase) Execute(ctx context.Context, userID, id string, 
 }
 
 // validateNoCycle checks if setting parentID as parent would create a cycle
-// by traversing the parent chain and ensuring we don't encounter categoryID
+// Uses a recursive CTE query for efficient cycle detection in a single database round-trip
 func (u *updateCategoryUseCase) validateNoCycle(ctx context.Context, userID, parentID, categoryID vos.UUID) error {
-	currentID := parentID
-	visited := make(map[string]bool)
-
-	// Traverse the parent chain upwards
-	for {
-		// Check if we've seen this ID before (cycle detection)
-		if visited[currentID.String()] {
-			return customErrors.ErrCategoryCycle
-		}
-		visited[currentID.String()] = true
-
-		// Check if we've reached the category being updated (cycle!)
-		if currentID.String() == categoryID.String() {
-			return customErrors.ErrCategoryCycle
-		}
-
-		// Fetch the current category to get its parent
-		parent, err := u.repository.FindByID(ctx, userID, currentID)
-		if err != nil {
-			return err
-		}
-
-		// If no parent found or parent has no parent_id, we've reached the top
-		if parent == nil || parent.ParentID == nil {
-			break
-		}
-
-		// Move to the next parent in the chain
-		currentID = *parent.ParentID
+	cycleExists, err := u.repository.CheckCycleExists(ctx, userID, categoryID, parentID)
+	if err != nil {
+		return fmt.Errorf("error checking for cycle: %w", err)
 	}
-
+	if cycleExists {
+		return customErrors.ErrCategoryCycle
+	}
 	return nil
 }

@@ -29,19 +29,19 @@ func CreateCategory(userID, parentID, name string, sequence uint) (*entities.Cat
 		p = &parent
 	}
 
-	categoryName := vos.NewCategoryName(name)
-	if !categoryName.Valid {
-		return nil, fmt.Errorf("invalid category name: %s", name)
+	categoryName, err := vos.NewCategoryName(name)
+	if err != nil {
+		return nil, err
 	}
 
-	sequenceVO := vos.NewCategorySequence(sequence)
-	if !sequenceVO.Valid {
-		return nil, fmt.Errorf("invalid category sequence: %d", sequence)
+	sequenceVO, err := vos.NewCategorySequence(sequence)
+	if err != nil {
+		return nil, err
 	}
 
 	category, err := entities.NewCategory(user, p, categoryName, sequenceVO)
 	if err != nil {
-		return nil, fmt.Errorf("error creating category: %v", err)
+		return nil, fmt.Errorf("error creating category: %w", err)
 	}
 
 	category.ID = id
