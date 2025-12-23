@@ -1,6 +1,7 @@
 package httperrors
 
 import (
+	"errors"
 	"net/http"
 
 	financialErrors "github.com/jailtonjunior94/financial/pkg/custom_errors"
@@ -70,9 +71,18 @@ var responseErrors = map[error]*ResponseError{
 }
 
 func GetResponseError(err error) *ResponseError {
+	// Try direct match first
 	if responseError, ok := responseErrors[err]; ok {
 		return responseError
 	}
+
+	// Try using errors.Is for wrapped errors
+	for knownErr, responseError := range responseErrors {
+		if errors.Is(err, knownErr) {
+			return responseError
+		}
+	}
+
 	return NewResponseError(http.StatusInternalServerError, "Internal Server Error")
 }
 

@@ -103,7 +103,12 @@ func TestAddAmountUsed(t *testing.T) {
 				assert.NotNil(t, budgetItem)
 				assert.True(t, budgetItem.AmountUsed.Equals(vos.NewMoney(1_323.80)))
 				assert.True(t, budgetItem.AmountGoal.Equals(vos.NewMoney(432000)))
-				assert.True(t, budgetItem.PercentageUsed.Equals(vos.NewPercentage(30.00)))
+				// PercentageUsed = (AmountUsed / Budget.AmountGoal) * 100
+				// (1323.80 / 14400.00) * 100 = 9.19%
+				expectedPercentage := vos.NewPercentage(9.19)
+				assert.True(t, budgetItem.PercentageUsed.Percentage() >= expectedPercentage.Percentage()-0.01 &&
+					budgetItem.PercentageUsed.Percentage() <= expectedPercentage.Percentage()+0.01,
+					"Expected percentage around %v, got %v", expectedPercentage.Percentage(), budgetItem.PercentageUsed.Percentage())
 			},
 		},
 	}
@@ -116,7 +121,7 @@ func TestAddAmountUsed(t *testing.T) {
 				scenario.args.percentageGoal,
 			)
 
-			budgetItem.AddAmountUsed(scenario.args.amountUsed)
+			err := budgetItem.AddAmountUsed(scenario.args.amountUsed)
 			scenario.expected(budgetItem, err)
 		})
 	}

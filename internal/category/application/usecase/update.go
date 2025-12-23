@@ -72,6 +72,18 @@ func (u *updateCategoryUseCase) Execute(ctx context.Context, userID, id string, 
 		return nil, err
 	}
 
+	if category == nil {
+		span.AddEvent(
+			"category not found",
+			o11y.Attribute{Key: "user_id", Value: userID},
+			o11y.Attribute{Key: "category_id", Value: id},
+		)
+		u.o11y.Logger().Error(ctx, customErrors.ErrCategoryNotFound, "category not found",
+			o11y.Field{Key: "user_id", Value: userID},
+			o11y.Field{Key: "category_id", Value: id})
+		return nil, customErrors.ErrCategoryNotFound
+	}
+
 	// Parse and validate parent_id if provided
 	var parentID *vos.UUID
 	if input.ParentID != "" {

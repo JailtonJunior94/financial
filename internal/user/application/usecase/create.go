@@ -41,6 +41,13 @@ func (u *createUserUseCase) Execute(ctx context.Context, input *dtos.CreateUserI
 	ctx, span := u.o11y.Tracer().Start(ctx, "create_user_usecase.execute")
 	defer span.End()
 
+	// Validate input
+	if input.Password == "" {
+		span.AddEvent("password is required", o11y.Attribute{Key: "error", Value: customErrors.ErrPasswordIsRequired})
+		u.o11y.Logger().Error(ctx, customErrors.ErrPasswordIsRequired, "password is required")
+		return nil, customErrors.ErrPasswordIsRequired
+	}
+
 	user, err := factories.CreateUser(input.Name, input.Email)
 	if err != nil {
 		span.AddEvent(

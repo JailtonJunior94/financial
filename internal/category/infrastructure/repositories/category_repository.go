@@ -2,22 +2,22 @@ package repositories
 
 import (
 	"context"
-	"database/sql"
 	"time"
 
 	"github.com/jailtonjunior94/financial/internal/category/domain/entities"
 	"github.com/jailtonjunior94/financial/internal/category/domain/interfaces"
+	"github.com/jailtonjunior94/financial/pkg/database"
 
 	"github.com/JailtonJunior94/devkit-go/pkg/o11y"
 	"github.com/JailtonJunior94/devkit-go/pkg/vos"
 )
 
 type categoryRepository struct {
-	db   *sql.DB
+	db   database.DBExecutor
 	o11y o11y.Telemetry
 }
 
-func NewCategoryRepository(db *sql.DB, o11y o11y.Telemetry) interfaces.CategoryRepository {
+func NewCategoryRepository(db database.DBExecutor, o11y o11y.Telemetry) interfaces.CategoryRepository {
 	return &categoryRepository{
 		db:   db,
 		o11y: o11y,
@@ -210,6 +210,7 @@ func (r *categoryRepository) Save(ctx context.Context, category *entities.Catego
 		r.o11y.Logger().Error(ctx, err, "error preparing insert category", o11y.Field{Key: "user_id", Value: category.UserID})
 		return err
 	}
+	defer stmt.Close()
 
 	_, err = stmt.ExecContext(
 		ctx,
@@ -262,6 +263,7 @@ func (r *categoryRepository) Update(ctx context.Context, category *entities.Cate
 		r.o11y.Logger().Error(ctx, err, "error preparing update category", o11y.Field{Key: "user_id", Value: category.UserID})
 		return err
 	}
+	defer stmt.Close()
 
 	_, err = stmt.ExecContext(
 		ctx,

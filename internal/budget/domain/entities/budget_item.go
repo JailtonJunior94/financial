@@ -45,10 +45,29 @@ func (b *BudgetItem) CalculateAmountGoal() {
 	b.AmountGoal = b.Budget.AmountGoal.Mul(b.PercentageGoal.Percentage())
 }
 
-func (b *BudgetItem) AddAmountUsed(amount vos.Money) {
+func (b *BudgetItem) AddAmountUsed(amount vos.Money) error {
 	b.AmountUsed = b.AmountUsed.Add(amount)
-	b.PercentageUsed = b.PercentageUsed.Add(b.PercentageGoal)
 
-	total, _ := b.AmountUsed.Div(b.Budget.AmountGoal.Money())
-	b.PercentageTotal = vos.NewPercentage(total.Mul(100).Money())
+	// Prevent division by zero
+	if b.Budget.AmountGoal.Money() == 0 {
+		b.PercentageUsed = vos.NewPercentage(0)
+		b.PercentageTotal = vos.NewPercentage(0)
+		return nil
+	}
+
+	// Calculate percentage used based on actual amount used
+	percentageUsed, err := b.AmountUsed.Div(b.Budget.AmountGoal.Money())
+	if err != nil {
+		return err
+	}
+	b.PercentageUsed = vos.NewPercentage(percentageUsed.Mul(100).Money())
+
+	// Calculate percentage of this item relative to total budget
+	percentageTotal, err := b.AmountUsed.Div(b.Budget.AmountGoal.Money())
+	if err != nil {
+		return err
+	}
+	b.PercentageTotal = vos.NewPercentage(percentageTotal.Mul(100).Money())
+
+	return nil
 }

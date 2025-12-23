@@ -7,6 +7,9 @@ import (
 	"github.com/jailtonjunior94/financial/configs"
 	"github.com/jailtonjunior94/financial/pkg/auth"
 	customerrors "github.com/jailtonjunior94/financial/pkg/custom_errors"
+
+	"github.com/JailtonJunior94/devkit-go/pkg/o11y"
+	"github.com/JailtonJunior94/devkit-go/pkg/responses"
 )
 
 type (
@@ -17,6 +20,7 @@ type (
 	authorization struct {
 		jwt    auth.JwtAdapter
 		config *configs.Config
+		o11y   o11y.Telemetry
 	}
 
 	contextKey struct {
@@ -32,12 +36,18 @@ func NewAuthorization(config *configs.Config, jwt auth.JwtAdapter) Authorization
 
 func (a *authorization) Authorization(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		user, err := a.jwt.ValidateToken(r.Context(), r.Header.Get("Authorization"))
+		ctx := r.Context()
+
+		user, err := a.jwt.ValidateToken(ctx, r.Header.Get("Authorization"))
 		if err != nil {
-			w.WriteHeader(http.StatusUnauthorized)
+			if a.o11y != nil {
+				a.o11y.Logger().Error(ctx, err, "unauthorized: invalid or missing token")
+			}
+			responses.Error(w, http.StatusUnauthorized, "Unauthorized")
 			return
 		}
-		ctx := context.WithValue(r.Context(), userCtxKey, user)
+
+		ctx = context.WithValue(ctx, userCtxKey, user)
 		next.ServeHTTP(w, r.WithContext(ctx))
 	})
 }

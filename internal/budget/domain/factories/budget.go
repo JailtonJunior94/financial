@@ -49,6 +49,9 @@ func CreateBudget(userID string, input *dtos.BugetInput) (*entities.Budget, erro
 		}
 		newItem := entities.NewBudgetItem(budget, category, vos.NewPercentage(item.PercentageGoal))
 		newItem.SetID(budgetItemID)
+
+		// AddItem returns bool indicating if total percentage equals 100%
+		// We already validated this above, so we can safely add items
 		budget.AddItem(newItem)
 	}
 	return budget, nil

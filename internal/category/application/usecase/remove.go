@@ -6,6 +6,7 @@ import (
 	"github.com/JailtonJunior94/devkit-go/pkg/o11y"
 	"github.com/JailtonJunior94/devkit-go/pkg/vos"
 	"github.com/jailtonjunior94/financial/internal/category/domain/interfaces"
+	customErrors "github.com/jailtonjunior94/financial/pkg/custom_errors"
 )
 
 type (
@@ -67,6 +68,18 @@ func (u *removeCategoryUseCase) Execute(ctx context.Context, userID, id string) 
 			o11y.Field{Key: "user_id", Value: userID},
 			o11y.Field{Key: "category_id", Value: id})
 		return err
+	}
+
+	if category == nil {
+		span.AddEvent(
+			"category not found",
+			o11y.Attribute{Key: "user_id", Value: userID},
+			o11y.Attribute{Key: "category_id", Value: id},
+		)
+		u.o11y.Logger().Error(ctx, customErrors.ErrCategoryNotFound, "category not found",
+			o11y.Field{Key: "user_id", Value: userID},
+			o11y.Field{Key: "category_id", Value: id})
+		return customErrors.ErrCategoryNotFound
 	}
 
 	if err := u.repository.Update(ctx, category.Delete()); err != nil {

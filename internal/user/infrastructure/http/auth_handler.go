@@ -1,6 +1,7 @@
 package http
 
 import (
+	"encoding/json"
 	"net/http"
 
 	"github.com/jailtonjunior94/financial/internal/user/application/dtos"
@@ -29,9 +30,9 @@ func (h *AuthHandler) Token(w http.ResponseWriter, r *http.Request) error {
 	ctx, span := h.o11y.Tracer().Start(r.Context(), "auth_handler.token")
 	defer span.End()
 
-	input := &dtos.AuthInput{
-		Email:    r.FormValue("email"),
-		Password: r.FormValue("password"),
+	var input *dtos.AuthInput
+	if err := json.NewDecoder(r.Body).Decode(&input); err != nil {
+		return err
 	}
 
 	output, err := h.tokenUseCase.Execute(ctx, input)

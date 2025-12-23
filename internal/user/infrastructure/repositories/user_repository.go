@@ -8,16 +8,17 @@ import (
 	"github.com/jailtonjunior94/financial/internal/user/domain/entities"
 	"github.com/jailtonjunior94/financial/internal/user/domain/interfaces"
 	customErrors "github.com/jailtonjunior94/financial/pkg/custom_errors"
+	"github.com/jailtonjunior94/financial/pkg/database"
 
 	"github.com/JailtonJunior94/devkit-go/pkg/o11y"
 )
 
 type userRepository struct {
-	db   *sql.DB
+	db   database.DBExecutor
 	o11y o11y.Telemetry
 }
 
-func NewUserRepository(db *sql.DB, o11y o11y.Telemetry) interfaces.UserRepository {
+func NewUserRepository(db database.DBExecutor, o11y o11y.Telemetry) interfaces.UserRepository {
 	return &userRepository{
 		db:   db,
 		o11y: o11y,
@@ -65,6 +66,7 @@ func (r *userRepository) Insert(ctx context.Context, user *entities.User) (*enti
 		r.o11y.Logger().Error(ctx, err, "error preparing insert user query", o11y.Field{Key: "email", Value: user.Email})
 		return nil, err
 	}
+	defer stmt.Close()
 
 	_, err = stmt.ExecContext(
 		ctx,

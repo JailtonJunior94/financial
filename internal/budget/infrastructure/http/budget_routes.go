@@ -12,7 +12,7 @@ type (
 	Routes      func(budgetRoute *budgetRoute)
 	budgetRoute struct {
 		Authorization       middlewares.Authorization
-		CreateBudgetHandler func(w http.ResponseWriter, r *http.Request)
+		CreateBudgetHandler func(w http.ResponseWriter, r *http.Request) error
 	}
 )
 
@@ -28,11 +28,16 @@ func NewBudgetRoutes(router *chi.Mux, middleware middlewares.Authorization, budg
 func (u *budgetRoute) Register(middleware middlewares.Authorization, router *chi.Mux) {
 	router.Route("/api/v1/budgets", func(r chi.Router) {
 		r.Use(middleware.Authorization)
-		r.Post("/", u.CreateBudgetHandler)
+		r.Post("/", func(w http.ResponseWriter, r *http.Request) {
+			if err := u.CreateBudgetHandler(w, r); err != nil {
+				// Error is already handled by the error handler middleware
+				return
+			}
+		})
 	})
 }
 
-func WithCreateBudgetHandler(handler func(w http.ResponseWriter, r *http.Request)) Routes {
+func WithCreateBudgetHandler(handler func(w http.ResponseWriter, r *http.Request) error) Routes {
 	return func(categoryRouter *budgetRoute) {
 		categoryRouter.CreateBudgetHandler = handler
 	}

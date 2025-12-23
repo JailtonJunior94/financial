@@ -82,12 +82,12 @@ func (r *budgetRepository) InsertItems(ctx context.Context, items []*entities.Bu
 	// Build batch insert query with multiple VALUES clauses
 	const numColumns = 11
 	valueStrings := make([]string, 0, len(items))
-	valueArgs := make([]interface{}, 0, len(items)*numColumns)
+	valueArgs := make([]any, 0, len(items)*numColumns)
 
 	for i, item := range items {
 		placeholderStart := i*numColumns + 1
 		placeholders := make([]string, numColumns)
-		for j := 0; j < numColumns; j++ {
+		for j := range numColumns {
 			placeholders[j] = fmt.Sprintf("$%d", placeholderStart+j)
 		}
 		valueStrings = append(valueStrings, fmt.Sprintf("(%s)", strings.Join(placeholders, ", ")))

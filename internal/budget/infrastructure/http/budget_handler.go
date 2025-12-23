@@ -12,7 +12,7 @@ import (
 	"github.com/JailtonJunior94/devkit-go/pkg/responses"
 )
 
-type CategoryHandler struct {
+type BudgetHandler struct {
 	o11y                o11y.Telemetry
 	createBudgetUseCase usecase.CreateBudgetUseCase
 }
@@ -20,33 +20,32 @@ type CategoryHandler struct {
 func NewBudgetHandler(
 	o11y o11y.Telemetry,
 	createBudgetUseCase usecase.CreateBudgetUseCase,
-) *CategoryHandler {
-	return &CategoryHandler{
+) *BudgetHandler {
+	return &BudgetHandler{
 		o11y:                o11y,
 		createBudgetUseCase: createBudgetUseCase,
 	}
 }
 
-func (h *CategoryHandler) Create(w http.ResponseWriter, r *http.Request) {
+func (h *BudgetHandler) Create(w http.ResponseWriter, r *http.Request) error {
 	ctx, span := h.o11y.Tracer().Start(r.Context(), "budget_handler.create")
 	defer span.End()
 
 	user, err := middlewares.GetUserFromContext(ctx)
 	if err != nil {
-		responses.Error(w, http.StatusUnauthorized, "unauthorized")
-		return
+		return err
 	}
 
 	var input *dtos.BugetInput
 	if err = json.NewDecoder(r.Body).Decode(&input); err != nil {
-		responses.Error(w, http.StatusUnprocessableEntity, "unprocessable entity")
-		return
+		return err
 	}
 
 	output, err := h.createBudgetUseCase.Execute(ctx, user.ID, input)
 	if err != nil {
-		responses.Error(w, http.StatusBadRequest, "error creating budget")
-		return
+		return err
 	}
+
 	responses.JSON(w, http.StatusCreated, output)
+	return nil
 }

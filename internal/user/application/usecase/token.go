@@ -2,7 +2,6 @@ package usecase
 
 import (
 	"context"
-	"fmt"
 
 	"github.com/jailtonjunior94/financial/configs"
 	"github.com/jailtonjunior94/financial/internal/user/application/dtos"
@@ -48,8 +47,16 @@ func NewTokenUseCase(
 }
 
 func (u *tokenUseCase) Execute(ctx context.Context, input *dtos.AuthInput) (*dtos.AuthOutput, error) {
-	ctx, span := u.o11y.Tracer().Start(ctx, "create_user_usecase.execute")
+	ctx, span := u.o11y.Tracer().Start(ctx, "token_usecase.execute")
 	defer span.End()
+
+	// Validate input
+	if input.Email == "" || input.Password == "" {
+		validationErr := customErrors.New("email and password are required", customErrors.ErrPasswordIsRequired)
+		span.AddEvent("invalid credentials", o11y.Attribute{Key: "error", Value: validationErr})
+		u.o11y.Logger().Error(ctx, validationErr, "email and password are required")
+		return nil, validationErr
+	}
 
 	user, err := u.repository.FindByEmail(ctx, input.Email)
 	if err != nil {
@@ -63,23 +70,25 @@ func (u *tokenUseCase) Execute(ctx context.Context, input *dtos.AuthInput) (*dto
 	}
 
 	if user == nil {
+		userNotFoundErr := customErrors.ErrUserNotFound
 		span.AddEvent(
 			"user not found",
 			o11y.Attribute{Key: EmailKey, Value: input.Email},
-			o11y.Attribute{Key: "error", Value: err},
+			o11y.Attribute{Key: "error", Value: userNotFoundErr},
 		)
-		u.o11y.Logger().Error(ctx, err, "user not found", o11y.Field{Key: EmailKey, Value: input.Email})
-		return nil, customErrors.New("user or password invalid", fmt.Errorf("token_usecase: %v", err))
+		u.o11y.Logger().Error(ctx, userNotFoundErr, "user not found", o11y.Field{Key: EmailKey, Value: input.Email})
+		return nil, customErrors.New("user or password invalid", userNotFoundErr)
 	}
 
 	if !u.hash.CheckHash(user.Password, input.Password) {
+		invalidPasswordErr := customErrors.ErrCheckHash
 		span.AddEvent(
-			"error checking hash",
+			"invalid password",
 			o11y.Attribute{Key: EmailKey, Value: input.Email},
-			o11y.Attribute{Key: "error", Value: err},
+			o11y.Attribute{Key: "error", Value: invalidPasswordErr},
 		)
-		u.o11y.Logger().Error(ctx, err, "error checking hash", o11y.Field{Key: EmailKey, Value: input.Email})
-		return nil, customErrors.New("user or password invalid", fmt.Errorf("token_usecase: %v", err))
+		u.o11y.Logger().Error(ctx, invalidPasswordErr, "invalid password", o11y.Field{Key: EmailKey, Value: input.Email})
+		return nil, customErrors.New("user or password invalid", invalidPasswordErr)
 	}
 
 	token, err := u.jwt.GenerateToken(ctx, user.ID.String(), user.Email.String())
