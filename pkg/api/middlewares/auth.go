@@ -59,3 +59,8 @@ func GetUserFromContext(ctx context.Context) (*auth.User, error) {
 	}
 	return raw, nil
 }
+
+// AddUserToContext adiciona um usuário ao contexto (útil para testes)
+func AddUserToContext(ctx context.Context, user *auth.User) context.Context {
+	return context.WithValue(ctx, userCtxKey, user)
+}

@@ -10,6 +10,7 @@ import (
 
 	"github.com/jailtonjunior94/financial/internal/category/application/dtos"
 	mocks "github.com/jailtonjunior94/financial/internal/category/infrastructure/repositories/mocks"
+	"github.com/jailtonjunior94/financial/pkg/test_helpers"
 )
 
 type CreateCategoryUseCaseSuite struct {
@@ -182,7 +183,7 @@ func (s *CreateCategoryUseCaseSuite) TestExecute() {
 	for _, scenario := range scenarios {
 		s.Run(scenario.name, func() {
 			// Act
-			telemetry := newMockTelemetry()
+			telemetry := test_helpers.NewMockTelemetry()
 			uc := NewCreateCategoryUseCase(telemetry, scenario.dependencies.categoryRepository)
 			output, err := uc.Execute(s.ctx, scenario.args.userID, scenario.args.input)
 

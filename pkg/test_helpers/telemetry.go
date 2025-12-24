@@ -1,4 +1,4 @@
-package usecase
+package test_helpers
 
 import (
 	"context"
@@ -6,19 +6,19 @@ import (
 	"github.com/JailtonJunior94/devkit-go/pkg/o11y"
 )
 
-// mockTelemetry é um mock simplificado de telemetry para testes.
-type mockTelemetry struct{}
+// MockTelemetry é um mock simplificado de telemetry para testes.
+type MockTelemetry struct{}
 
-func newMockTelemetry() *mockTelemetry {
-	return &mockTelemetry{}
+func NewMockTelemetry() *MockTelemetry {
+	return &MockTelemetry{}
 }
 
-func (m *mockTelemetry) Tracer() o11y.Tracer                { return &mockTracer{} }
-func (m *mockTelemetry) Logger() o11y.Logger                { return &mockLogger{} }
-func (m *mockTelemetry) Metrics() o11y.Metrics              { return &mockMetrics{} }
-func (m *mockTelemetry) IsClosed() bool                     { return false }
-func (m *mockTelemetry) Close(ctx context.Context) error    { return nil }
-func (m *mockTelemetry) Shutdown(ctx context.Context) error { return nil }
+func (m *MockTelemetry) Tracer() o11y.Tracer                { return &mockTracer{} }
+func (m *MockTelemetry) Logger() o11y.Logger                { return &mockLogger{} }
+func (m *MockTelemetry) Metrics() o11y.Metrics              { return &mockMetrics{} }
+func (m *MockTelemetry) IsClosed() bool                     { return false }
+func (m *MockTelemetry) Close(ctx context.Context) error    { return nil }
+func (m *MockTelemetry) Shutdown(ctx context.Context) error { return nil }
 
 // mockTracer implementa o11y.Tracer.
 type mockTracer struct{}

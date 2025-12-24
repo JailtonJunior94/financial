@@ -248,10 +248,11 @@ func (r *categoryRepository) Update(ctx context.Context, category *entities.Cate
 				name = $1,
 				sequence = $2,
 				updated_at = $3,
-				parent_id = $4
+				parent_id = $4,
+				deleted_at = $5
 			where
-				id = $5
-				and user_id = $6`
+				id = $6
+				and user_id = $7`
 
 	stmt, err := r.db.PrepareContext(ctx, query)
 	if err != nil {
@@ -271,6 +272,7 @@ func (r *categoryRepository) Update(ctx context.Context, category *entities.Cate
 		category.Sequence.Sequence,
 		category.UpdatedAt.Time,
 		category.ParentID.SafeUUID(),
+		category.DeletedAt.Time,
 		category.ID.Value,
 		category.UserID.Value,
 	)
