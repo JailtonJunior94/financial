@@ -27,7 +27,7 @@ type UnitOfWork interface {
 }
 
 type unitOfWork struct {
-	db              *sql.DB
+	db               *sql.DB
 	defaultIsolation sql.IsolationLevel
 	defaultTimeout   time.Duration
 }
@@ -36,16 +36,16 @@ type unitOfWork struct {
 // para prevenir lost updates, write skew e phantom reads
 func NewUnitOfWork(db *sql.DB) UnitOfWork {
 	return &unitOfWork{
-		db:              db,
+		db:               db,
 		defaultIsolation: sql.LevelSerializable, // Mais seguro para prevenir anomalias
-		defaultTimeout:   30 * time.Second,       // Timeout padrão para evitar transações longas
+		defaultTimeout:   30 * time.Second,      // Timeout padrão para evitar transações longas
 	}
 }
 
 // NewUnitOfWorkWithOptions cria um Unit of Work com configurações customizadas
 func NewUnitOfWorkWithOptions(db *sql.DB, isolation sql.IsolationLevel, timeout time.Duration) UnitOfWork {
 	return &unitOfWork{
-		db:              db,
+		db:               db,
 		defaultIsolation: isolation,
 		defaultTimeout:   timeout,
 	}
