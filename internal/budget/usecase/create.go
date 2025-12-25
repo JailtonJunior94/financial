@@ -2,11 +2,11 @@ package usecase
 
 import (
 	"context"
-	"errors"
 
 	"github.com/jailtonjunior94/financial/internal/budget/domain/dtos"
 	"github.com/jailtonjunior94/financial/internal/budget/domain/factories"
-	"github.com/jailtonjunior94/financial/internal/budget/domain/interfaces"
+	"github.com/jailtonjunior94/financial/internal/budget/infrastructure/repositories"
+	"github.com/jailtonjunior94/financial/pkg/database"
 	"github.com/jailtonjunior94/financial/pkg/database/uow"
 
 	"github.com/JailtonJunior94/devkit-go/pkg/o11y"
@@ -18,29 +18,18 @@ type (
 	}
 
 	createBudgetUseCase struct {
-		uow              uow.UnitOfWork
-		o11y             o11y.Telemetry
-		budgetRepository interfaces.BudgetRepository
+		uow  uow.UnitOfWork
+		o11y o11y.Telemetry
 	}
-)
-
-const (
-	BudgetRepository = "BudgetRepository"
-)
-
-var (
-	ErrInvalidRepositoryType = errors.New("invalid repository type")
 )
 
 func NewCreateBudgetUseCase(
 	uow uow.UnitOfWork,
 	o11y o11y.Telemetry,
-	budgetRepository interfaces.BudgetRepository,
 ) CreateBudgetUseCase {
 	return &createBudgetUseCase{
-		uow:              uow,
-		o11y:             o11y,
-		budgetRepository: budgetRepository,
+		uow:  uow,
+		o11y: o11y,
 	}
 }
 
@@ -55,14 +44,17 @@ func (u *createBudgetUseCase) Execute(ctx context.Context, userID string, input 
 		return nil, err
 	}
 
-	err = u.uow.Do(ctx, func(ctx context.Context) error {
-		if err := u.budgetRepository.Insert(ctx, newBudget); err != nil {
+	err = u.uow.Do(ctx, func(ctx context.Context, tx database.DBExecutor) error {
+		// Criar repositório com a transação
+		budgetRepository := repositories.NewBudgetRepository(tx, u.o11y)
+
+		if err := budgetRepository.Insert(ctx, newBudget); err != nil {
 			span.AddEvent("error inserting budget", o11y.Attribute{Key: "user_id", Value: userID}, o11y.Attribute{Key: "error", Value: err})
 			u.o11y.Logger().Error(ctx, err, "error inserting budget", o11y.Field{Key: "user_id", Value: userID})
 			return err
 		}
 
-		if err := u.budgetRepository.InsertItems(ctx, newBudget.Items); err != nil {
+		if err := budgetRepository.InsertItems(ctx, newBudget.Items); err != nil {
 			span.AddEvent("error inserting budget items", o11y.Attribute{Key: "user_id", Value: userID}, o11y.Attribute{Key: "error", Value: err})
 			u.o11y.Logger().Error(ctx, err, "error inserting budget items", o11y.Field{Key: "user_id", Value: userID})
 			return err

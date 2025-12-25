@@ -4,7 +4,6 @@ import (
 	"context"
 	"fmt"
 	"strings"
-	"time"
 
 	"github.com/jailtonjunior94/financial/internal/budget/domain/entities"
 	"github.com/jailtonjunior94/financial/internal/budget/domain/interfaces"
@@ -26,9 +25,6 @@ func NewBudgetRepository(exec database.DBExecutor, o11y o11y.Telemetry) interfac
 }
 
 func (r *budgetRepository) Insert(ctx context.Context, budget *entities.Budget) error {
-	ctx, cancel := context.WithTimeout(ctx, 5*time.Second)
-	defer cancel()
-
 	ctx, span := r.o11y.Tracer().Start(ctx, "budget_repository.insert")
 	defer span.End()
 
@@ -69,9 +65,6 @@ func (r *budgetRepository) Insert(ctx context.Context, budget *entities.Budget) 
 }
 
 func (r *budgetRepository) InsertItems(ctx context.Context, items []*entities.BudgetItem) error {
-	ctx, cancel := context.WithTimeout(ctx, 10*time.Second)
-	defer cancel()
-
 	ctx, span := r.o11y.Tracer().Start(ctx, "budget_repository.insert_items")
 	defer span.End()
 

@@ -2,7 +2,6 @@ package budget
 
 import (
 	"github.com/jailtonjunior94/financial/internal/budget/infrastructure/http"
-	"github.com/jailtonjunior94/financial/internal/budget/infrastructure/repositories"
 	"github.com/jailtonjunior94/financial/internal/budget/usecase"
 	"github.com/jailtonjunior94/financial/pkg/bundle"
 	unitOfWork "github.com/jailtonjunior94/financial/pkg/database/uow"
@@ -13,8 +12,7 @@ import (
 func RegisterBudgetModule(ioc *bundle.Container, router *chi.Mux) {
 	uow := unitOfWork.NewUnitOfWork(ioc.DB)
 
-	budgetRepository := repositories.NewBudgetRepository(uow.Executor(), ioc.Telemetry)
-	createBudgetUseCase := usecase.NewCreateBudgetUseCase(uow, ioc.Telemetry, budgetRepository)
+	createBudgetUseCase := usecase.NewCreateBudgetUseCase(uow, ioc.Telemetry)
 	budgetHandler := http.NewBudgetHandler(ioc.Telemetry, createBudgetUseCase)
 
 	http.NewBudgetRoutes(
