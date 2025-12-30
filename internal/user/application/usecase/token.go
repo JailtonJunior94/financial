@@ -10,7 +10,7 @@ import (
 	customErrors "github.com/jailtonjunior94/financial/pkg/custom_errors"
 
 	"github.com/JailtonJunior94/devkit-go/pkg/encrypt"
-	"github.com/JailtonJunior94/devkit-go/pkg/o11y"
+	"github.com/JailtonJunior94/devkit-go/pkg/observability"
 )
 
 const (
@@ -27,12 +27,12 @@ type tokenUseCase struct {
 	config     *configs.Config
 	hash       encrypt.HashAdapter
 	repository interfaces.UserRepository
-	o11y       o11y.Telemetry
+	o11y       observability.Observability
 }
 
 func NewTokenUseCase(
 	config *configs.Config,
-	o11y o11y.Telemetry,
+	o11y observability.Observability,
 	hash encrypt.HashAdapter,
 	jwt auth.JwtAdapter,
 	repository interfaces.UserRepository,
@@ -53,8 +53,8 @@ func (u *tokenUseCase) Execute(ctx context.Context, input *dtos.AuthInput) (*dto
 	// Validate input
 	if input.Email == "" || input.Password == "" {
 		validationErr := customErrors.New("email and password are required", customErrors.ErrPasswordIsRequired)
-		span.AddEvent("invalid credentials", o11y.Attribute{Key: "error", Value: validationErr})
-		u.o11y.Logger().Error(ctx, validationErr, "email and password are required")
+		span.AddEvent("invalid credentials", observability.Field{Key: "error", Value: validationErr})
+		u.o11y.Logger().Error(ctx, "email and password are required", observability.Error(validationErr))
 		return nil, validationErr
 	}
 
@@ -62,10 +62,10 @@ func (u *tokenUseCase) Execute(ctx context.Context, input *dtos.AuthInput) (*dto
 	if err != nil {
 		span.AddEvent(
 			"error finding user by e-mail",
-			o11y.Attribute{Key: "e-mail", Value: input.Email},
-			o11y.Attribute{Key: "error", Value: err},
+			observability.Field{Key: "e-mail", Value: input.Email},
+			observability.Field{Key: "error", Value: err},
 		)
-		u.o11y.Logger().Error(ctx, err, "error finding user by e-mail", o11y.Field{Key: "e-mail", Value: input.Email})
+		u.o11y.Logger().Error(ctx, "error finding user by e-mail", observability.Error(err), observability.String("e-mail", input.Email))
 		return nil, err
 	}
 
@@ -73,10 +73,10 @@ func (u *tokenUseCase) Execute(ctx context.Context, input *dtos.AuthInput) (*dto
 		userNotFoundErr := customErrors.ErrUserNotFound
 		span.AddEvent(
 			"user not found",
-			o11y.Attribute{Key: EmailKey, Value: input.Email},
-			o11y.Attribute{Key: "error", Value: userNotFoundErr},
+			observability.Field{Key: EmailKey, Value: input.Email},
+			observability.Field{Key: "error", Value: userNotFoundErr},
 		)
-		u.o11y.Logger().Error(ctx, userNotFoundErr, "user not found", o11y.Field{Key: EmailKey, Value: input.Email})
+		u.o11y.Logger().Error(ctx, "user not found", observability.Error(userNotFoundErr), observability.String(EmailKey, input.Email))
 		return nil, customErrors.New("user or password invalid", userNotFoundErr)
 	}
 
@@ -84,10 +84,10 @@ func (u *tokenUseCase) Execute(ctx context.Context, input *dtos.AuthInput) (*dto
 		invalidPasswordErr := customErrors.ErrCheckHash
 		span.AddEvent(
 			"invalid password",
-			o11y.Attribute{Key: EmailKey, Value: input.Email},
-			o11y.Attribute{Key: "error", Value: invalidPasswordErr},
+			observability.Field{Key: EmailKey, Value: input.Email},
+			observability.Field{Key: "error", Value: invalidPasswordErr},
 		)
-		u.o11y.Logger().Error(ctx, invalidPasswordErr, "invalid password", o11y.Field{Key: EmailKey, Value: input.Email})
+		u.o11y.Logger().Error(ctx, "invalid password", observability.Error(invalidPasswordErr), observability.String(EmailKey, input.Email))
 		return nil, customErrors.New("user or password invalid", invalidPasswordErr)
 	}
 
@@ -95,10 +95,10 @@ func (u *tokenUseCase) Execute(ctx context.Context, input *dtos.AuthInput) (*dto
 	if err != nil {
 		span.AddEvent(
 			"error generate token",
-			o11y.Attribute{Key: EmailKey, Value: input.Email},
-			o11y.Attribute{Key: "error", Value: err},
+			observability.Field{Key: EmailKey, Value: input.Email},
+			observability.Field{Key: "error", Value: err},
 		)
-		u.o11y.Logger().Error(ctx, err, "error generate token", o11y.Field{Key: EmailKey, Value: input.Email})
+		u.o11y.Logger().Error(ctx, "error generate token", observability.Error(err), observability.String(EmailKey, input.Email))
 		return nil, err
 	}
 	return dtos.NewAuthOutput(token, u.config.AuthConfig.AuthTokenDuration), nil

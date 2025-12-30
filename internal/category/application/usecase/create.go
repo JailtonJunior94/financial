@@ -2,12 +2,13 @@ package usecase
 
 import (
 	"context"
+	"time"
 
 	"github.com/jailtonjunior94/financial/internal/category/application/dtos"
 	"github.com/jailtonjunior94/financial/internal/category/domain/factories"
 	"github.com/jailtonjunior94/financial/internal/category/domain/interfaces"
 
-	"github.com/JailtonJunior94/devkit-go/pkg/o11y"
+	"github.com/JailtonJunior94/devkit-go/pkg/observability"
 )
 
 type (
@@ -16,13 +17,13 @@ type (
 	}
 
 	createCategoryUseCase struct {
-		o11y       o11y.Telemetry
+		o11y       observability.Observability
 		repository interfaces.CategoryRepository
 	}
 )
 
 func NewCreateCategoryUseCase(
-	o11y o11y.Telemetry,
+	o11y observability.Observability,
 	repository interfaces.CategoryRepository,
 ) CreateCategoryUseCase {
 	return &createCategoryUseCase{
@@ -39,20 +40,20 @@ func (u *createCategoryUseCase) Execute(ctx context.Context, userID string, inpu
 	if err != nil {
 		span.AddEvent(
 			"error creating category entity",
-			o11y.Attribute{Key: "user_id", Value: userID},
-			o11y.Attribute{Key: "error", Value: err},
+			observability.Field{Key: "user_id", Value: userID},
+			observability.Field{Key: "error", Value: err},
 		)
-		u.o11y.Logger().Error(ctx, err, "error creating category entity", o11y.Field{Key: "user_id", Value: userID})
+		u.o11y.Logger().Error(ctx, "error creating category entity", observability.Error(err), observability.String("user_id", userID))
 		return nil, err
 	}
 
 	if err := u.repository.Save(ctx, category); err != nil {
 		span.AddEvent(
 			"error saving category to repository",
-			o11y.Attribute{Key: "user_id", Value: userID},
-			o11y.Attribute{Key: "error", Value: err},
+			observability.Field{Key: "user_id", Value: userID},
+			observability.Field{Key: "error", Value: err},
 		)
-		u.o11y.Logger().Error(ctx, err, "error saving category to repository", o11y.Field{Key: "user_id", Value: userID})
+		u.o11y.Logger().Error(ctx, "error saving category to repository", observability.Error(err), observability.String("user_id", userID))
 		return nil, err
 	}
 
@@ -60,6 +61,6 @@ func (u *createCategoryUseCase) Execute(ctx context.Context, userID string, inpu
 		ID:        category.ID.String(),
 		Name:      category.Name.String(),
 		Sequence:  category.Sequence.Value(),
-		CreatedAt: category.CreatedAt.Value(),
+		CreatedAt: category.CreatedAt.ValueOr(time.Time{}),
 	}, nil
 }

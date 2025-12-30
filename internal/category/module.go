@@ -1,24 +1,28 @@
 package category
 
 import (
+	"database/sql"
+
+	"github.com/JailtonJunior94/devkit-go/pkg/observability"
 	"github.com/jailtonjunior94/financial/internal/category/application/usecase"
 	"github.com/jailtonjunior94/financial/internal/category/infrastructure/http"
 	"github.com/jailtonjunior94/financial/internal/category/infrastructure/repositories"
-	"github.com/jailtonjunior94/financial/pkg/bundle"
-
-	"github.com/JailtonJunior94/devkit-go/pkg/httpserver"
 )
 
-func RegisterCategoryModule(ioc *bundle.Container) []httpserver.Route {
-	categoryRepository := repositories.NewCategoryRepository(ioc.DB, ioc.Telemetry)
-	findCategoryUsecase := usecase.NewFindCategoryUseCase(ioc.Telemetry, categoryRepository)
-	findCategoryByUsecase := usecase.NewFindCategoryByUseCase(ioc.Telemetry, categoryRepository)
-	createCategoryUsecase := usecase.NewCreateCategoryUseCase(ioc.Telemetry, categoryRepository)
-	updateCategoryUsecase := usecase.NewUpdateCategoryUseCase(ioc.Telemetry, categoryRepository)
-	removeCategoryUsecase := usecase.NewRemoveCategoryUseCase(ioc.Telemetry, categoryRepository)
+type CategoryModule struct {
+	CategoryRouter *http.CategoryRouter
+}
+
+func NewCategoryModule(db *sql.DB, o11y observability.Observability) CategoryModule {
+	categoryRepository := repositories.NewCategoryRepository(db, o11y)
+	findCategoryUsecase := usecase.NewFindCategoryUseCase(o11y, categoryRepository)
+	findCategoryByUsecase := usecase.NewFindCategoryByUseCase(o11y, categoryRepository)
+	createCategoryUsecase := usecase.NewCreateCategoryUseCase(o11y, categoryRepository)
+	updateCategoryUsecase := usecase.NewUpdateCategoryUseCase(o11y, categoryRepository)
+	removeCategoryUsecase := usecase.NewRemoveCategoryUseCase(o11y, categoryRepository)
 
 	categoryHandler := http.NewCategoryHandler(
-		ioc.Telemetry,
+		o11y,
 		findCategoryUsecase,
 		createCategoryUsecase,
 		findCategoryByUsecase,
@@ -26,51 +30,9 @@ func RegisterCategoryModule(ioc *bundle.Container) []httpserver.Route {
 		removeCategoryUsecase,
 	)
 
-	categoryRoutes := http.NewCategoryRoutes()
-	categoryRoutes.Register(
-		httpserver.NewRoute(
-			"GET",
-			"/api/v1/categories",
-			categoryHandler.Find,
-			ioc.MiddlewareAuth.Authorization,
-		),
-	)
+	categoryRouter := http.NewCategoryRouter(categoryHandler)
 
-	categoryRoutes.Register(
-		httpserver.NewRoute(
-			"GET",
-			"/api/v1/categories/{id}",
-			categoryHandler.FindBy,
-			ioc.MiddlewareAuth.Authorization,
-		),
-	)
-
-	categoryRoutes.Register(
-		httpserver.NewRoute(
-			"POST",
-			"/api/v1/categories",
-			categoryHandler.Create,
-			ioc.MiddlewareAuth.Authorization,
-		),
-	)
-
-	categoryRoutes.Register(
-		httpserver.NewRoute(
-			"PUT",
-			"/api/v1/categories/{id}",
-			categoryHandler.Update,
-			ioc.MiddlewareAuth.Authorization,
-		),
-	)
-
-	categoryRoutes.Register(
-		httpserver.NewRoute(
-			"DELETE",
-			"/api/v1/categories/{id}",
-			categoryHandler.Delete,
-			ioc.MiddlewareAuth.Authorization,
-		),
-	)
-
-	return categoryRoutes.Routes()
+	return CategoryModule{
+		CategoryRouter: categoryRouter,
+	}
 }

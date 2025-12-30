@@ -44,20 +44,28 @@ func (b *Budget) AddItem(item *BudgetItem) bool {
 
 func (b *Budget) CalculateAmountUsed() {
 	for _, item := range b.Items {
-		b.AmountUsed = b.AmountUsed.Add(item.AmountUsed)
+		if sum, err := b.AmountUsed.Add(item.AmountUsed); err == nil {
+			b.AmountUsed = sum
+		}
 	}
 }
 
 func (b *Budget) CalculatePercentageUsed() {
 	for _, item := range b.Items {
-		b.PercentageUsed = b.PercentageUsed.Add(item.PercentageUsed)
+		if sum, err := b.PercentageUsed.Add(item.PercentageUsed); err == nil {
+			b.PercentageUsed = sum
+		}
 	}
 }
 
 func (b *Budget) CalculatePercentageTotal() bool {
 	var total vos.Percentage
 	for _, item := range b.Items {
-		total = total.Add(item.PercentageGoal)
+		if sum, err := total.Add(item.PercentageGoal); err == nil {
+			total = sum
+		}
 	}
-	return total.Equals(vos.NewPercentage(100))
+	// NewPercentage(100*1000) because scale is 3 decimal places (100.000%)
+	hundredPercent, _ := vos.NewPercentage(100000)
+	return total.Equals(hundredPercent)
 }

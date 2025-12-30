@@ -6,7 +6,7 @@ import (
 	"github.com/jailtonjunior94/financial/internal/budget/domain/dtos"
 	"github.com/jailtonjunior94/financial/internal/budget/domain/interfaces"
 
-	"github.com/JailtonJunior94/devkit-go/pkg/o11y"
+	"github.com/JailtonJunior94/devkit-go/pkg/observability"
 )
 
 type (
@@ -15,13 +15,13 @@ type (
 	}
 
 	createBudgetItemUseCase struct {
-		o11y             o11y.Telemetry
+		o11y             observability.Observability
 		budgetRepository interfaces.BudgetRepository
 	}
 )
 
 func NewCreateBudgetItemUseCase(
-	o11y o11y.Telemetry,
+	o11y observability.Observability,
 	budgetRepository interfaces.BudgetRepository,
 ) CreateBudgetItemUseCase {
 	return &createBudgetItemUseCase{

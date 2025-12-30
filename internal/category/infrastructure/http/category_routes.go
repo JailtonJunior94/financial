@@ -1,23 +1,21 @@
 package http
 
 import (
-	"github.com/JailtonJunior94/devkit-go/pkg/httpserver"
+	"github.com/go-chi/chi/v5"
 )
 
-type categoryRoutes struct {
-	routes []httpserver.Route
+type CategoryRouter struct {
+	handlers *CategoryHandler
 }
 
-func NewCategoryRoutes() *categoryRoutes {
-	return &categoryRoutes{
-		routes: make([]httpserver.Route, 0),
-	}
+func NewCategoryRouter(handlers *CategoryHandler) *CategoryRouter {
+	return &CategoryRouter{handlers: handlers}
 }
 
-func (u *categoryRoutes) Register(route httpserver.Route) {
-	u.routes = append(u.routes, route)
-}
-
-func (u *categoryRoutes) Routes() []httpserver.Route {
-	return u.routes
+func (r CategoryRouter) Register(router chi.Router) {
+	router.Get("/categories", r.handlers.Find)
+	router.Get("/categories/{id}", r.handlers.FindBy)
+	router.Post("/categories", r.handlers.Create)
+	router.Put("/categories/{id}", r.handlers.Update)
+	router.Delete("/categories/{id}", r.handlers.Delete)
 }

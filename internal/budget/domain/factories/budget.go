@@ -22,7 +22,14 @@ func CreateBudget(userID string, input *dtos.BugetInput) (*entities.Budget, erro
 		return nil, fmt.Errorf("create_budget: %v", err)
 	}
 
-	budget := entities.NewBudget(user, vos.NewMoney(input.AmountGoal), input.Date)
+	// Convert amount from float to cents (int64)
+	amountCents := int64(input.AmountGoal * 100)
+	amountGoal, err := vos.NewMoney(amountCents, vos.CurrencyBRL) // Using BRL as default currency
+	if err != nil {
+		return nil, fmt.Errorf("create_budget: %v", err)
+	}
+
+	budget := entities.NewBudget(user, amountGoal, input.Date)
 	budget.SetID(budgetID)
 
 	// Validate that the sum of percentage_goal equals 100%
@@ -47,7 +54,15 @@ func CreateBudget(userID string, input *dtos.BugetInput) (*entities.Budget, erro
 		if err != nil {
 			return nil, fmt.Errorf("create_budget: %v", err)
 		}
-		newItem := entities.NewBudgetItem(budget, category, vos.NewPercentage(item.PercentageGoal))
+
+		// Convert percentage from float to int64 with scale 3 (12.5% → 12500)
+		percentageInt := int64(item.PercentageGoal * 1000)
+		percentage, err := vos.NewPercentage(percentageInt)
+		if err != nil {
+			return nil, fmt.Errorf("create_budget: %v", err)
+		}
+
+		newItem := entities.NewBudgetItem(budget, category, percentage)
 		newItem.SetID(budgetItemID)
 
 		// AddItem returns bool indicating if total percentage equals 100%

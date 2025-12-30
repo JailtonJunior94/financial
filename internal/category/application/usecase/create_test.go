@@ -10,13 +10,16 @@ import (
 
 	"github.com/jailtonjunior94/financial/internal/category/application/dtos"
 	mocks "github.com/jailtonjunior94/financial/internal/category/infrastructure/repositories/mocks"
-	"github.com/jailtonjunior94/financial/pkg/test_helpers"
+	"github.com/JailtonJunior94/devkit-go/pkg/observability"
+
+	"github.com/JailtonJunior94/devkit-go/pkg/observability/fake"
 )
 
 type CreateCategoryUseCaseSuite struct {
 	suite.Suite
 
 	ctx                context.Context
+	obs                observability.Observability
 	categoryRepository *mocks.CategoryRepository
 }
 
@@ -25,6 +28,7 @@ func TestCreateCategoryUseCaseSuite(t *testing.T) {
 }
 
 func (s *CreateCategoryUseCaseSuite) SetupTest() {
+	s.obs = fake.NewProvider()
 	s.ctx = context.Background()
 	s.categoryRepository = mocks.NewCategoryRepository(s.T())
 }
@@ -183,8 +187,7 @@ func (s *CreateCategoryUseCaseSuite) TestExecute() {
 	for _, scenario := range scenarios {
 		s.Run(scenario.name, func() {
 			// Act
-			telemetry := test_helpers.NewMockTelemetry()
-			uc := NewCreateCategoryUseCase(telemetry, scenario.dependencies.categoryRepository)
+			uc := NewCreateCategoryUseCase(s.obs, scenario.dependencies.categoryRepository)
 			output, err := uc.Execute(s.ctx, scenario.args.userID, scenario.args.input)
 
 			// Assert

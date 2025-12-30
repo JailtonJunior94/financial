@@ -1,42 +1,36 @@
 package user
 
 import (
+	"database/sql"
+
+	"github.com/JailtonJunior94/devkit-go/pkg/observability"
+	"github.com/jailtonjunior94/financial/configs"
 	"github.com/jailtonjunior94/financial/internal/user/application/usecase"
 	"github.com/jailtonjunior94/financial/internal/user/infrastructure/http"
 	"github.com/jailtonjunior94/financial/internal/user/infrastructure/repositories"
-	"github.com/jailtonjunior94/financial/pkg/bundle"
-
-	"github.com/JailtonJunior94/devkit-go/pkg/httpserver"
+	"github.com/jailtonjunior94/financial/pkg/auth"
+	"github.com/JailtonJunior94/devkit-go/pkg/encrypt"
 )
 
-func RegisterAuthModule(ioc *bundle.Container) []httpserver.Route {
-	userRepository := repositories.NewUserRepository(ioc.DB, ioc.Telemetry)
-	authUseCase := usecase.NewTokenUseCase(ioc.Config, ioc.Telemetry, ioc.Hash, ioc.Jwt, userRepository)
-	authHandler := http.NewAuthHandler(ioc.Telemetry, authUseCase)
-
-	authRoutes := http.NewUserRoutes()
-	authRoutes.Register(
-		httpserver.NewRoute(
-			"POST",
-			"/api/v1/token",
-			authHandler.Token,
-		),
-	)
-	return authRoutes.Routes()
+type UserModule struct {
+	UserRouter *http.UserRouter
 }
 
-func RegisterUserModule(ioc *bundle.Container) []httpserver.Route {
-	userRepository := repositories.NewUserRepository(ioc.DB, ioc.Telemetry)
-	createUserUseCase := usecase.NewCreateUserUseCase(ioc.Telemetry, ioc.Hash, userRepository)
-	userHandler := http.NewUserHandler(ioc.Telemetry, createUserUseCase)
+func NewUserModule(db *sql.DB, cfg *configs.Config, o11y observability.Observability) UserModule {
+	userRepository := repositories.NewUserRepository(db, o11y)
 
-	userRoutes := http.NewUserRoutes()
-	userRoutes.Register(
-		httpserver.NewRoute(
-			"POST",
-			"/api/v1/users",
-			userHandler.Create,
-		),
-	)
-	return userRoutes.Routes()
+	jwt := auth.NewJwtAdapter(cfg, o11y)
+	hash := encrypt.NewHashAdapter()
+
+	authUseCase := usecase.NewTokenUseCase(cfg, o11y, hash, jwt, userRepository)
+	createUserUseCase := usecase.NewCreateUserUseCase(o11y, hash, userRepository)
+
+	authHandler := http.NewAuthHandler(o11y, authUseCase)
+	userHandler := http.NewUserHandler(o11y, createUserUseCase)
+
+	userRouter := http.NewUserRouter(authHandler, userHandler)
+
+	return UserModule{
+		UserRouter: userRouter,
+	}
 }

@@ -9,15 +9,15 @@ import (
 	"github.com/jailtonjunior94/financial/internal/budget/domain/interfaces"
 	"github.com/jailtonjunior94/financial/pkg/database"
 
-	"github.com/JailtonJunior94/devkit-go/pkg/o11y"
+	"github.com/JailtonJunior94/devkit-go/pkg/observability"
 )
 
 type budgetRepository struct {
 	exec database.DBExecutor
-	o11y o11y.Telemetry
+	o11y observability.Observability
 }
 
-func NewBudgetRepository(exec database.DBExecutor, o11y o11y.Telemetry) interfaces.BudgetRepository {
+func NewBudgetRepository(exec database.DBExecutor, o11y observability.Observability) interfaces.BudgetRepository {
 	return &budgetRepository{
 		exec: exec,
 		o11y: o11y,
@@ -49,16 +49,16 @@ func (r *budgetRepository) Insert(ctx context.Context, budget *entities.Budget) 
 		budget.ID.Value,
 		budget.UserID.Value,
 		budget.Date,
-		budget.AmountGoal.Money(),
-		budget.AmountUsed.Money(),
-		budget.PercentageUsed.Percentage(),
+		budget.AmountGoal.Cents(),
+		budget.AmountUsed.Cents(),
+		budget.PercentageUsed.Value(),
 		budget.CreatedAt,
-		budget.UpdatedAt.Time,
-		budget.DeletedAt.Time,
+		budget.UpdatedAt.Ptr(),
+		budget.DeletedAt.Ptr(),
 	)
 	if err != nil {
-		span.AddEvent("error inserting budget", o11y.Attribute{Key: "budget_id", Value: budget.ID.Value}, o11y.Attribute{Key: "error", Value: err})
-		r.o11y.Logger().Error(ctx, err, "error inserting budget", o11y.Field{Key: "budget_id", Value: budget.ID.Value})
+		span.AddEvent("error inserting budget", observability.Field{Key: "budget_id", Value: budget.ID.String()}, observability.Field{Key: "error", Value: err})
+		r.o11y.Logger().Error(ctx, "error inserting budget", observability.Error(err), observability.String("budget_id", budget.ID.String()))
 		return err
 	}
 	return nil
@@ -89,14 +89,14 @@ func (r *budgetRepository) InsertItems(ctx context.Context, items []*entities.Bu
 			item.ID.Value,
 			item.BudgetID.Value,
 			item.CategoryID.Value,
-			item.PercentageGoal.Percentage(),
-			item.AmountGoal.Money(),
-			item.AmountUsed.Money(),
-			item.PercentageUsed.Percentage(),
-			item.PercentageTotal.Percentage(),
+			item.PercentageGoal.Value(),
+			item.AmountGoal.Cents(),
+			item.AmountUsed.Cents(),
+			item.PercentageUsed.Value(),
+			item.PercentageTotal.Value(),
 			item.CreatedAt,
-			item.UpdatedAt.Time,
-			item.DeletedAt.Time,
+			item.UpdatedAt.Ptr(),
+			item.DeletedAt.Ptr(),
 		)
 	}
 
@@ -118,8 +118,8 @@ func (r *budgetRepository) InsertItems(ctx context.Context, items []*entities.Bu
 
 	_, err := r.exec.ExecContext(ctx, query, valueArgs...)
 	if err != nil {
-		span.AddEvent("error batch inserting budget items", o11y.Attribute{Key: "count", Value: len(items)}, o11y.Attribute{Key: "error", Value: err})
-		r.o11y.Logger().Error(ctx, err, "error batch inserting budget items", o11y.Field{Key: "count", Value: len(items)})
+		span.AddEvent("error batch inserting budget items", observability.Field{Key: "count", Value: len(items)}, observability.Field{Key: "error", Value: err})
+		r.o11y.Logger().Error(ctx, "error batch inserting budget items", observability.Error(err), observability.Int("count", len(items)))
 		return err
 	}
 

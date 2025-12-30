@@ -1,21 +1,22 @@
 package http
 
 import (
-	"github.com/JailtonJunior94/devkit-go/pkg/httpserver"
+	"github.com/go-chi/chi/v5"
 )
 
-type userRoutes struct {
-	routes []httpserver.Route
+type UserRouter struct {
+	authHandler *AuthHandler
+	userHandler *UserHandler
 }
 
-func NewUserRoutes() *userRoutes {
-	return &userRoutes{}
+func NewUserRouter(authHandler *AuthHandler, userHandler *UserHandler) *UserRouter {
+	return &UserRouter{
+		authHandler: authHandler,
+		userHandler: userHandler,
+	}
 }
 
-func (u *userRoutes) Register(route httpserver.Route) {
-	u.routes = append(u.routes, route)
-}
-
-func (u *userRoutes) Routes() []httpserver.Route {
-	return u.routes
+func (r UserRouter) Register(router chi.Router) {
+	router.Post("/token", r.authHandler.Token)
+	router.Post("/users", r.userHandler.Create)
 }

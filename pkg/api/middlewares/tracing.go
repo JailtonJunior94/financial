@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"net/http"
 
-	"github.com/JailtonJunior94/devkit-go/pkg/o11y"
+	"github.com/JailtonJunior94/devkit-go/pkg/observability"
 
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/propagation"
@@ -15,10 +15,10 @@ type TracingMiddleware interface {
 }
 
 type tracingMiddleware struct {
-	o11y o11y.Telemetry
+	o11y observability.Observability
 }
 
-func NewTracingMiddleware(o11y o11y.Telemetry) TracingMiddleware {
+func NewTracingMiddleware(o11y observability.Observability) TracingMiddleware {
 	return &tracingMiddleware{o11y: o11y}
 }
 

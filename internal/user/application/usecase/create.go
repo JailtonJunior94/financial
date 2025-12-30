@@ -10,7 +10,7 @@ import (
 	customErrors "github.com/jailtonjunior94/financial/pkg/custom_errors"
 
 	"github.com/JailtonJunior94/devkit-go/pkg/encrypt"
-	"github.com/JailtonJunior94/devkit-go/pkg/o11y"
+	"github.com/JailtonJunior94/devkit-go/pkg/observability"
 )
 
 type (
@@ -19,14 +19,14 @@ type (
 	}
 
 	createUserUseCase struct {
-		o11y       o11y.Telemetry
+		o11y       observability.Observability
 		hash       encrypt.HashAdapter
 		repository interfaces.UserRepository
 	}
 )
 
 func NewCreateUserUseCase(
-	o11y o11y.Telemetry,
+	o11y observability.Observability,
 	hash encrypt.HashAdapter,
 	repository interfaces.UserRepository,
 ) CreateUserUseCase {
@@ -43,8 +43,8 @@ func (u *createUserUseCase) Execute(ctx context.Context, input *dtos.CreateUserI
 
 	// Validate input
 	if input.Password == "" {
-		span.AddEvent("password is required", o11y.Attribute{Key: "error", Value: customErrors.ErrPasswordIsRequired})
-		u.o11y.Logger().Error(ctx, customErrors.ErrPasswordIsRequired, "password is required")
+		span.AddEvent("password is required", observability.Field{Key: "error", Value: customErrors.ErrPasswordIsRequired})
+		u.o11y.Logger().Error(ctx, "password is required", observability.Error(customErrors.ErrPasswordIsRequired))
 		return nil, customErrors.ErrPasswordIsRequired
 	}
 
@@ -52,10 +52,10 @@ func (u *createUserUseCase) Execute(ctx context.Context, input *dtos.CreateUserI
 	if err != nil {
 		span.AddEvent(
 			"error creating user entity",
-			o11y.Attribute{Key: "e-mail", Value: input.Email},
-			o11y.Attribute{Key: "error", Value: err},
+			observability.Field{Key: "e-mail", Value: input.Email},
+			observability.Field{Key: "error", Value: err},
 		)
-		u.o11y.Logger().Error(ctx, err, "error creating user entity", o11y.Field{Key: "e-mail", Value: input.Email})
+		u.o11y.Logger().Error(ctx, "error creating user entity", observability.Error(err), observability.String("e-mail", input.Email))
 		return nil, customErrors.New("error creating user", fmt.Errorf("create_user_usecase: %v", err))
 	}
 
@@ -63,16 +63,16 @@ func (u *createUserUseCase) Execute(ctx context.Context, input *dtos.CreateUserI
 	if err != nil {
 		span.AddEvent(
 			"error generating hash",
-			o11y.Attribute{Key: "e-mail", Value: input.Email},
-			o11y.Attribute{Key: "error", Value: err},
+			observability.Field{Key: "e-mail", Value: input.Email},
+			observability.Field{Key: "error", Value: err},
 		)
-		u.o11y.Logger().Error(ctx, err, "error generating hash", o11y.Field{Key: "e-mail", Value: input.Email})
+		u.o11y.Logger().Error(ctx, "error generating hash", observability.Error(err), observability.String("e-mail", input.Email))
 		return nil, err
 	}
 
 	if err := user.SetPassword(hash); err != nil {
-		span.AddEvent("error setting password", o11y.Attribute{Key: "error", Value: err})
-		u.o11y.Logger().Error(ctx, err, "error setting password")
+		span.AddEvent("error setting password", observability.Field{Key: "error", Value: err})
+		u.o11y.Logger().Error(ctx, "error setting password", observability.Error(err))
 		return nil, err
 	}
 
@@ -80,10 +80,10 @@ func (u *createUserUseCase) Execute(ctx context.Context, input *dtos.CreateUserI
 	if err != nil {
 		span.AddEvent(
 			"error inserting user into repository",
-			o11y.Attribute{Key: "e-mail", Value: input.Email},
-			o11y.Attribute{Key: "error", Value: err},
+			observability.Field{Key: "e-mail", Value: input.Email},
+			observability.Field{Key: "error", Value: err},
 		)
-		u.o11y.Logger().Error(ctx, err, "error inserting user into repository", o11y.Field{Key: "e-mail", Value: input.Email})
+		u.o11y.Logger().Error(ctx, "error inserting user into repository", observability.Error(err), observability.String("e-mail", input.Email))
 		return nil, err
 	}
 

@@ -8,16 +8,16 @@ import (
 	"github.com/jailtonjunior94/financial/internal/category/domain/interfaces"
 	"github.com/jailtonjunior94/financial/pkg/database"
 
-	"github.com/JailtonJunior94/devkit-go/pkg/o11y"
+	"github.com/JailtonJunior94/devkit-go/pkg/observability"
 	"github.com/JailtonJunior94/devkit-go/pkg/vos"
 )
 
 type categoryRepository struct {
 	db   database.DBExecutor
-	o11y o11y.Telemetry
+	o11y observability.Observability
 }
 
-func NewCategoryRepository(db database.DBExecutor, o11y o11y.Telemetry) interfaces.CategoryRepository {
+func NewCategoryRepository(db database.DBExecutor, o11y observability.Observability) interfaces.CategoryRepository {
 	return &categoryRepository{
 		db:   db,
 		o11y: o11y,
@@ -50,14 +50,14 @@ func (r *categoryRepository) List(ctx context.Context, userID vos.UUID) ([]*enti
 
 	rows, err := r.db.QueryContext(ctx, query, userID.String())
 	if err != nil {
-		span.AddEvent("error finding categories", o11y.Attribute{Key: "user_id", Value: userID.String()}, o11y.Attribute{Key: "error", Value: err})
-		r.o11y.Logger().Error(ctx, err, "error finding categories", o11y.Field{Key: "user_id", Value: userID.String()})
+		span.AddEvent("error finding categories", observability.Field{Key: "user_id", Value: userID.String()}, observability.Field{Key: "error", Value: err})
+		r.o11y.Logger().Error(ctx, "error finding categories", observability.Error(err), observability.String("user_id", userID.String()))
 		return nil, err
 	}
 	defer func() {
 		if closeErr := rows.Close(); closeErr != nil {
-			span.AddEvent("error closing rows", o11y.Attribute{Key: "user_id", Value: userID.String()}, o11y.Attribute{Key: "error", Value: closeErr})
-			r.o11y.Logger().Error(ctx, closeErr, "error closing rows", o11y.Field{Key: "user_id", Value: userID.String()})
+			span.AddEvent("error closing rows", observability.Field{Key: "user_id", Value: userID.String()}, observability.Field{Key: "error", Value: closeErr})
+			r.o11y.Logger().Error(ctx, "error closing rows", observability.Error(closeErr), observability.String("user_id", userID.String()))
 		}
 	}()
 
@@ -69,13 +69,13 @@ func (r *categoryRepository) List(ctx context.Context, userID vos.UUID) ([]*enti
 			&category.UserID.Value,
 			&category.Name.Value,
 			&category.Sequence.Sequence,
-			&category.CreatedAt.Time,
-			&category.UpdatedAt.Time,
-			&category.DeletedAt.Time,
+			&category.CreatedAt,
+			&category.UpdatedAt,
+			&category.DeletedAt,
 		)
 		if err != nil {
-			span.AddEvent("error scanning categories", o11y.Attribute{Key: "user_id", Value: userID.String()}, o11y.Attribute{Key: "error", Value: err})
-			r.o11y.Logger().Error(ctx, err, "error scanning categories", o11y.Field{Key: "user_id", Value: userID.String()})
+			span.AddEvent("error scanning categories", observability.Field{Key: "user_id", Value: userID.String()}, observability.Field{Key: "error", Value: err})
+			r.o11y.Logger().Error(ctx, "error scanning categories", observability.Error(err), observability.String("user_id", userID.String()))
 			return nil, err
 		}
 		categories = append(categories, &category)
@@ -118,14 +118,14 @@ func (r *categoryRepository) FindByID(ctx context.Context, userID, id vos.UUID) 
 
 	rows, err := r.db.QueryContext(ctx, query, userID.String(), id.String())
 	if err != nil {
-		span.AddEvent("error finding category", o11y.Attribute{Key: "user_id", Value: userID.String()}, o11y.Attribute{Key: "error", Value: err})
-		r.o11y.Logger().Error(ctx, err, "error finding category", o11y.Field{Key: "user_id", Value: userID.String()})
+		span.AddEvent("error finding category", observability.Field{Key: "user_id", Value: userID.String()}, observability.Field{Key: "error", Value: err})
+		r.o11y.Logger().Error(ctx, "error finding category", observability.Error(err), observability.String("user_id", userID.String()))
 		return nil, err
 	}
 	defer func() {
 		if closeErr := rows.Close(); closeErr != nil {
-			span.AddEvent("error closing rows", o11y.Attribute{Key: "user_id", Value: userID.String()}, o11y.Attribute{Key: "error", Value: closeErr})
-			r.o11y.Logger().Error(ctx, closeErr, "error closing rows", o11y.Field{Key: "user_id", Value: userID.String()})
+			span.AddEvent("error closing rows", observability.Field{Key: "user_id", Value: userID.String()}, observability.Field{Key: "error", Value: closeErr})
+			r.o11y.Logger().Error(ctx, "error closing rows", observability.Error(closeErr), observability.String("user_id", userID.String()))
 		}
 	}()
 
@@ -142,21 +142,21 @@ func (r *categoryRepository) FindByID(ctx context.Context, userID, id vos.UUID) 
 			&category.ParentID,
 			&category.Name.Value,
 			&category.Sequence.Sequence,
-			&category.CreatedAt.Time,
-			&category.UpdatedAt.Time,
-			&category.DeletedAt.Time,
+			&category.CreatedAt,
+			&category.UpdatedAt,
+			&category.DeletedAt,
 			&subCategory.ID.Value,
 			&subCategory.UserID.Value,
 			&subCategory.Name.Value,
 			&subCategory.Sequence.Sequence,
-			&subCategory.CreatedAt.Time,
-			&subCategory.UpdatedAt.Time,
-			&subCategory.DeletedAt.Time,
+			&subCategory.CreatedAt,
+			&subCategory.UpdatedAt,
+			&subCategory.DeletedAt,
 		)
 
 		if err != nil {
-			span.AddEvent("error scanning category", o11y.Attribute{Key: "user_id", Value: userID.String()}, o11y.Attribute{Key: "error", Value: err})
-			r.o11y.Logger().Error(ctx, err, "error scanning category", o11y.Field{Key: "user_id", Value: userID.String()})
+			span.AddEvent("error scanning category", observability.Field{Key: "user_id", Value: userID.String()}, observability.Field{Key: "error", Value: err})
+			r.o11y.Logger().Error(ctx, "error scanning category", observability.Error(err), observability.String("user_id", userID.String()))
 			return nil, err
 		}
 
@@ -204,10 +204,10 @@ func (r *categoryRepository) Save(ctx context.Context, category *entities.Catego
 	if err != nil {
 		span.AddEvent(
 			"error preparing insert category",
-			o11y.Attribute{Key: "user_id", Value: category.UserID},
-			o11y.Attribute{Key: "error", Value: err},
+			observability.Field{Key: "user_id", Value: category.UserID},
+			observability.Field{Key: "error", Value: err},
 		)
-		r.o11y.Logger().Error(ctx, err, "error preparing insert category", o11y.Field{Key: "user_id", Value: category.UserID})
+		r.o11y.Logger().Error(ctx, "error preparing insert category", observability.Error(err), observability.String("user_id", category.UserID.String()))
 		return err
 	}
 	defer stmt.Close()
@@ -219,17 +219,17 @@ func (r *categoryRepository) Save(ctx context.Context, category *entities.Catego
 		category.ParentID.SafeUUID(),
 		category.Name.Value,
 		category.Sequence.Sequence,
-		category.CreatedAt.Time,
-		category.UpdatedAt.Time,
-		category.DeletedAt.Time,
+		category.CreatedAt.Ptr(),
+		category.UpdatedAt.Ptr(),
+		category.DeletedAt.Ptr(),
 	)
 	if err != nil {
 		span.AddEvent(
 			"error inserting category",
-			o11y.Attribute{Key: "user_id", Value: category.UserID},
-			o11y.Attribute{Key: "error", Value: err},
+			observability.Field{Key: "user_id", Value: category.UserID},
+			observability.Field{Key: "error", Value: err},
 		)
-		r.o11y.Logger().Error(ctx, err, "error inserting category", o11y.Field{Key: "user_id", Value: category.UserID})
+		r.o11y.Logger().Error(ctx, "error inserting category", observability.Error(err), observability.String("user_id", category.UserID.String()))
 		return err
 	}
 	return nil
@@ -258,10 +258,10 @@ func (r *categoryRepository) Update(ctx context.Context, category *entities.Cate
 	if err != nil {
 		span.AddEvent(
 			"error preparing update category",
-			o11y.Attribute{Key: "user_id", Value: category.UserID},
-			o11y.Attribute{Key: "error", Value: err},
+			observability.Field{Key: "user_id", Value: category.UserID},
+			observability.Field{Key: "error", Value: err},
 		)
-		r.o11y.Logger().Error(ctx, err, "error preparing update category", o11y.Field{Key: "user_id", Value: category.UserID})
+		r.o11y.Logger().Error(ctx, "error preparing update category", observability.Error(err), observability.String("user_id", category.UserID.String()))
 		return err
 	}
 	defer stmt.Close()
@@ -270,19 +270,19 @@ func (r *categoryRepository) Update(ctx context.Context, category *entities.Cate
 		ctx,
 		category.Name.Value,
 		category.Sequence.Sequence,
-		category.UpdatedAt.Time,
+		category.UpdatedAt.Ptr(),
 		category.ParentID.SafeUUID(),
-		category.DeletedAt.Time,
+		category.DeletedAt.Ptr(),
 		category.ID.Value,
 		category.UserID.Value,
 	)
 	if err != nil {
 		span.AddEvent(
 			"error updating category",
-			o11y.Attribute{Key: "user_id", Value: category.UserID},
-			o11y.Attribute{Key: "error", Value: err},
+			observability.Field{Key: "user_id", Value: category.UserID},
+			observability.Field{Key: "error", Value: err},
 		)
-		r.o11y.Logger().Error(ctx, err, "error updating category", o11y.Field{Key: "user_id", Value: category.UserID})
+		r.o11y.Logger().Error(ctx, "error updating category", observability.Error(err), observability.String("user_id", category.UserID.String()))
 		return err
 	}
 
@@ -318,15 +318,16 @@ func (r *categoryRepository) CheckCycleExists(ctx context.Context, userID, categ
 	if err != nil {
 		span.AddEvent(
 			"error checking category cycle",
-			o11y.Attribute{Key: "user_id", Value: userID.String()},
-			o11y.Attribute{Key: "category_id", Value: categoryID.String()},
-			o11y.Attribute{Key: "parent_id", Value: parentID.String()},
-			o11y.Attribute{Key: "error", Value: err},
+			observability.Field{Key: "user_id", Value: userID.String()},
+			observability.Field{Key: "category_id", Value: categoryID.String()},
+			observability.Field{Key: "parent_id", Value: parentID.String()},
+			observability.Field{Key: "error", Value: err},
 		)
-		r.o11y.Logger().Error(ctx, err, "error checking category cycle",
-			o11y.Field{Key: "user_id", Value: userID.String()},
-			o11y.Field{Key: "category_id", Value: categoryID.String()},
-			o11y.Field{Key: "parent_id", Value: parentID.String()})
+		r.o11y.Logger().Error(ctx, "error checking category cycle",
+			observability.Error(err),
+			observability.String("user_id", userID.String()),
+			observability.String("category_id", categoryID.String()),
+			observability.String("parent_id", parentID.String()))
 		return false, err
 	}
 

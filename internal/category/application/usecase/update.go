@@ -8,7 +8,7 @@ import (
 	"github.com/jailtonjunior94/financial/internal/category/domain/interfaces"
 	customErrors "github.com/jailtonjunior94/financial/pkg/custom_errors"
 
-	"github.com/JailtonJunior94/devkit-go/pkg/o11y"
+	"github.com/JailtonJunior94/devkit-go/pkg/observability"
 	"github.com/JailtonJunior94/devkit-go/pkg/vos"
 )
 
@@ -18,13 +18,13 @@ type (
 	}
 
 	updateCategoryUseCase struct {
-		o11y       o11y.Telemetry
+		o11y       observability.Observability
 		repository interfaces.CategoryRepository
 	}
 )
 
 func NewUpdateCategoryUseCase(
-	o11y o11y.Telemetry,
+	o11y observability.Observability,
 	repository interfaces.CategoryRepository,
 ) UpdateCategoryUseCase {
 	return &updateCategoryUseCase{
@@ -41,10 +41,10 @@ func (u *updateCategoryUseCase) Execute(ctx context.Context, userID, id string, 
 	if err != nil {
 		span.AddEvent(
 			"error parsing user id",
-			o11y.Attribute{Key: "user_id", Value: userID},
-			o11y.Attribute{Key: "error", Value: err},
+			observability.Field{Key: "user_id", Value: userID},
+			observability.Field{Key: "error", Value: err},
 		)
-		u.o11y.Logger().Error(ctx, err, "error parsing user id", o11y.Field{Key: "user_id", Value: userID})
+		u.o11y.Logger().Error(ctx, "error parsing user id", observability.Error(err), observability.String("user_id", userID))
 		return nil, err
 	}
 
@@ -52,10 +52,10 @@ func (u *updateCategoryUseCase) Execute(ctx context.Context, userID, id string, 
 	if err != nil {
 		span.AddEvent(
 			"error parsing category id",
-			o11y.Attribute{Key: "category_id", Value: id},
-			o11y.Attribute{Key: "error", Value: err},
+			observability.Field{Key: "category_id", Value: id},
+			observability.Field{Key: "error", Value: err},
 		)
-		u.o11y.Logger().Error(ctx, err, "error parsing category id", o11y.Field{Key: "category_id", Value: id})
+		u.o11y.Logger().Error(ctx, "error parsing category id", observability.Error(err), observability.String("category_id", id))
 		return nil, err
 	}
 
@@ -63,25 +63,27 @@ func (u *updateCategoryUseCase) Execute(ctx context.Context, userID, id string, 
 	if err != nil {
 		span.AddEvent(
 			"error finding category by id",
-			o11y.Attribute{Key: "user_id", Value: userID},
-			o11y.Attribute{Key: "category_id", Value: id},
-			o11y.Attribute{Key: "error", Value: err},
+			observability.Field{Key: "user_id", Value: userID},
+			observability.Field{Key: "category_id", Value: id},
+			observability.Field{Key: "error", Value: err},
 		)
-		u.o11y.Logger().Error(ctx, err, "error finding category by id",
-			o11y.Field{Key: "user_id", Value: userID},
-			o11y.Field{Key: "category_id", Value: id})
+		u.o11y.Logger().Error(ctx, "error finding category by id",
+			observability.Error(err),
+			observability.String("user_id", userID),
+			observability.String("category_id", id))
 		return nil, err
 	}
 
 	if category == nil {
 		span.AddEvent(
 			"category not found",
-			o11y.Attribute{Key: "user_id", Value: userID},
-			o11y.Attribute{Key: "category_id", Value: id},
+			observability.Field{Key: "user_id", Value: userID},
+			observability.Field{Key: "category_id", Value: id},
 		)
-		u.o11y.Logger().Error(ctx, customErrors.ErrCategoryNotFound, "category not found",
-			o11y.Field{Key: "user_id", Value: userID},
-			o11y.Field{Key: "category_id", Value: id})
+		u.o11y.Logger().Error(ctx, "category not found",
+			observability.Error(customErrors.ErrCategoryNotFound),
+			observability.String("user_id", userID),
+			observability.String("category_id", id))
 		return nil, customErrors.ErrCategoryNotFound
 	}
 
@@ -92,10 +94,10 @@ func (u *updateCategoryUseCase) Execute(ctx context.Context, userID, id string, 
 		if err != nil {
 			span.AddEvent(
 				"error parsing parent id",
-				o11y.Attribute{Key: "parent_id", Value: input.ParentID},
-				o11y.Attribute{Key: "error", Value: err},
+				observability.Field{Key: "parent_id", Value: input.ParentID},
+				observability.Field{Key: "error", Value: err},
 			)
-			u.o11y.Logger().Error(ctx, err, "error parsing parent id", o11y.Field{Key: "parent_id", Value: input.ParentID})
+			u.o11y.Logger().Error(ctx, "error parsing parent id", observability.Error(err), observability.String("parent_id", input.ParentID))
 			return nil, err
 		}
 
@@ -103,12 +105,13 @@ func (u *updateCategoryUseCase) Execute(ctx context.Context, userID, id string, 
 		if parsedParentID.String() == categoryID.String() {
 			span.AddEvent(
 				"category cannot be its own parent",
-				o11y.Attribute{Key: "category_id", Value: id},
-				o11y.Attribute{Key: "parent_id", Value: input.ParentID},
+				observability.Field{Key: "category_id", Value: id},
+				observability.Field{Key: "parent_id", Value: input.ParentID},
 			)
-			u.o11y.Logger().Error(ctx, customErrors.ErrCategoryCycle, "category cannot be its own parent",
-				o11y.Field{Key: "category_id", Value: id},
-				o11y.Field{Key: "parent_id", Value: input.ParentID})
+			u.o11y.Logger().Error(ctx, "category cannot be its own parent",
+				observability.Error(customErrors.ErrCategoryCycle),
+				observability.String("category_id", id),
+				observability.String("parent_id", input.ParentID))
 			return nil, customErrors.ErrCategoryCycle
 		}
 
@@ -116,13 +119,14 @@ func (u *updateCategoryUseCase) Execute(ctx context.Context, userID, id string, 
 		if err := u.validateNoCycle(ctx, user, parsedParentID, categoryID); err != nil {
 			span.AddEvent(
 				"cycle detected in category hierarchy",
-				o11y.Attribute{Key: "category_id", Value: id},
-				o11y.Attribute{Key: "parent_id", Value: input.ParentID},
-				o11y.Attribute{Key: "error", Value: err},
+				observability.Field{Key: "category_id", Value: id},
+				observability.Field{Key: "parent_id", Value: input.ParentID},
+				observability.Field{Key: "error", Value: err},
 			)
-			u.o11y.Logger().Error(ctx, err, "cycle detected in category hierarchy",
-				o11y.Field{Key: "category_id", Value: id},
-				o11y.Field{Key: "parent_id", Value: input.ParentID})
+			u.o11y.Logger().Error(ctx, "cycle detected in category hierarchy",
+				observability.Error(err),
+				observability.String("category_id", id),
+				observability.String("parent_id", input.ParentID))
 			return nil, err
 		}
 
@@ -132,26 +136,28 @@ func (u *updateCategoryUseCase) Execute(ctx context.Context, userID, id string, 
 	if err := category.Update(input.Name, input.Sequence, parentID); err != nil {
 		span.AddEvent(
 			"error validating category update",
-			o11y.Attribute{Key: "user_id", Value: userID},
-			o11y.Attribute{Key: "category_id", Value: id},
-			o11y.Attribute{Key: "error", Value: err},
+			observability.Field{Key: "user_id", Value: userID},
+			observability.Field{Key: "category_id", Value: id},
+			observability.Field{Key: "error", Value: err},
 		)
-		u.o11y.Logger().Error(ctx, err, "error validating category update",
-			o11y.Field{Key: "user_id", Value: userID},
-			o11y.Field{Key: "category_id", Value: id})
+		u.o11y.Logger().Error(ctx, "error validating category update",
+			observability.Error(err),
+			observability.String("user_id", userID),
+			observability.String("category_id", id))
 		return nil, err
 	}
 
 	if err := u.repository.Update(ctx, category); err != nil {
 		span.AddEvent(
 			"error updating category in repository",
-			o11y.Attribute{Key: "user_id", Value: userID},
-			o11y.Attribute{Key: "category_id", Value: id},
-			o11y.Attribute{Key: "error", Value: err},
+			observability.Field{Key: "user_id", Value: userID},
+			observability.Field{Key: "category_id", Value: id},
+			observability.Field{Key: "error", Value: err},
 		)
-		u.o11y.Logger().Error(ctx, err, "error updating category in repository",
-			o11y.Field{Key: "user_id", Value: userID},
-			o11y.Field{Key: "category_id", Value: id})
+		u.o11y.Logger().Error(ctx, "error updating category in repository",
+			observability.Error(err),
+			observability.String("user_id", userID),
+			observability.String("category_id", id))
 		return nil, err
 	}
 

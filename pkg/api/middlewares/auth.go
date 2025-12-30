@@ -8,7 +8,7 @@ import (
 	"github.com/jailtonjunior94/financial/pkg/auth"
 	customerrors "github.com/jailtonjunior94/financial/pkg/custom_errors"
 
-	"github.com/JailtonJunior94/devkit-go/pkg/o11y"
+	"github.com/JailtonJunior94/devkit-go/pkg/observability"
 	"github.com/JailtonJunior94/devkit-go/pkg/responses"
 )
 
@@ -20,7 +20,7 @@ type (
 	authorization struct {
 		jwt    auth.JwtAdapter
 		config *configs.Config
-		o11y   o11y.Telemetry
+		o11y   observability.Observability
 	}
 
 	contextKey struct {
@@ -41,7 +41,7 @@ func (a *authorization) Authorization(next http.Handler) http.Handler {
 		user, err := a.jwt.ValidateToken(ctx, r.Header.Get("Authorization"))
 		if err != nil {
 			if a.o11y != nil {
-				a.o11y.Logger().Error(ctx, err, "unauthorized: invalid or missing token")
+				a.o11y.Logger().Error(ctx, "unauthorized: invalid or missing token", observability.Error(err))
 			}
 			responses.Error(w, http.StatusUnauthorized, "Unauthorized")
 			return

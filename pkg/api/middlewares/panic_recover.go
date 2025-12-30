@@ -5,9 +5,8 @@ import (
 	"net/http"
 	"runtime/debug"
 
+	"github.com/JailtonJunior94/devkit-go/pkg/observability"
 	"github.com/JailtonJunior94/devkit-go/pkg/responses"
-
-	"github.com/JailtonJunior94/devkit-go/pkg/o11y"
 )
 
 type (
@@ -16,11 +15,11 @@ type (
 	}
 
 	panicRecoverMiddleware struct {
-		o11y o11y.Telemetry
+		o11y observability.Observability
 	}
 )
 
-func NewPanicRecoverMiddleware(o11y o11y.Telemetry) PanicRecoverMiddleware {
+func NewPanicRecoverMiddleware(o11y observability.Observability) PanicRecoverMiddleware {
 	return &panicRecoverMiddleware{o11y: o11y}
 }
 
@@ -39,9 +38,10 @@ func (m *panicRecoverMiddleware) Recover(next http.Handler) http.Handler {
 
 				errFormated := fmt.Sprintf("stacktrace from panic: \n %s", string(debug.Stack()))
 				m.o11y.Logger().Error(
-					ctx, err,
+					ctx,
 					"panic recovered in middleware",
-					o11y.Field{Key: "stacktrace", Value: errFormated},
+					observability.Error(err),
+					observability.String("stacktrace", errFormated),
 				)
 				responses.Error(w, http.StatusInternalServerError, "internal server error")
 			}

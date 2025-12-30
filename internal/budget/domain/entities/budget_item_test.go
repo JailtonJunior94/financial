@@ -1,3 +1,6 @@
+//go:build integration
+// +build integration
+
 package entities
 
 import (
@@ -106,9 +109,9 @@ func TestAddAmountUsed(t *testing.T) {
 				// PercentageUsed = (AmountUsed / Budget.AmountGoal) * 100
 				// (1323.80 / 14400.00) * 100 = 9.19%
 				expectedPercentage := vos.NewPercentage(9.19)
-				assert.True(t, budgetItem.PercentageUsed.Percentage() >= expectedPercentage.Percentage()-0.01 &&
-					budgetItem.PercentageUsed.Percentage() <= expectedPercentage.Percentage()+0.01,
-					"Expected percentage around %v, got %v", expectedPercentage.Percentage(), budgetItem.PercentageUsed.Percentage())
+				assert.True(t, budgetItem.PercentageUsed.Value() >= expectedPercentage.Value()-0.01 &&
+					budgetItem.PercentageUsed.Value() <= expectedPercentage.Value()+0.01,
+					"Expected percentage around %v, got %v", expectedPercentage.Value(), budgetItem.PercentageUsed.Value())
 			},
 		},
 	}

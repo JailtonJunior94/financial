@@ -9,7 +9,7 @@ import (
 
 	"github.com/jailtonjunior94/financial/configs"
 
-	"github.com/JailtonJunior94/devkit-go/pkg/o11y"
+	"github.com/JailtonJunior94/devkit-go/pkg/observability"
 
 	"github.com/golang-jwt/jwt"
 )
@@ -27,7 +27,7 @@ type (
 
 	jwtAdapter struct {
 		config *configs.Config
-		o11y   o11y.Telemetry
+		obs    observability.Observability
 	}
 
 	User struct {
@@ -40,12 +40,12 @@ func NewUser(id, email string) *User {
 	return &User{ID: id, Email: email}
 }
 
-func NewJwtAdapter(config *configs.Config, o11y o11y.Telemetry) JwtAdapter {
-	return &jwtAdapter{config: config, o11y: o11y}
+func NewJwtAdapter(config *configs.Config, obs observability.Observability) JwtAdapter {
+	return &jwtAdapter{config: config, obs: obs}
 }
 
 func (j *jwtAdapter) GenerateToken(ctx context.Context, id, email string) (string, error) {
-	_, span := j.o11y.Tracer().Start(ctx, "jwt_adapter.generate_token")
+	_, span := j.obs.Tracer().Start(ctx, "jwt_adapter.generate_token")
 	defer span.End()
 
 	claims := jwt.MapClaims{
@@ -59,17 +59,17 @@ func (j *jwtAdapter) GenerateToken(ctx context.Context, id, email string) (strin
 	if err != nil {
 		span.AddEvent(
 			"error trying to generate token",
-			o11y.Attribute{Key: "e-mail", Value: email},
-			o11y.Attribute{Key: "error", Value: err.Error()},
+			observability.Field{Key: "e-mail", Value: email},
+			observability.Field{Key: "error", Value: err.Error()},
 		)
-		j.o11y.Logger().Error(ctx, err, "error trying to generate token", o11y.Field{Key: "e-mail", Value: email})
+		j.obs.Logger().Error(ctx, "error trying to generate token", observability.Error(err), observability.String("e-mail", email))
 		return "", ErrGenerateToken
 	}
 	return tokenSigned, nil
 }
 
 func (j *jwtAdapter) ValidateToken(ctx context.Context, tokenRequest string) (*User, error) {
-	_, span := j.o11y.Tracer().Start(ctx, "jwt_adapter.validate_token")
+	_, span := j.obs.Tracer().Start(ctx, "jwt_adapter.validate_token")
 	defer span.End()
 
 	tokenString := j.removeBearerPrefix(tokenRequest)
@@ -82,9 +82,9 @@ func (j *jwtAdapter) ValidateToken(ctx context.Context, tokenRequest string) (*U
 		if _, ok := token.Method.(*jwt.SigningMethodHMAC); !ok {
 			span.AddEvent(
 				"invalid token signing method",
-				o11y.Attribute{Key: "method", Value: fmt.Sprintf("%v", token.Header["alg"])},
+				observability.Field{Key: "method", Value: fmt.Sprintf("%v", token.Header["alg"])},
 			)
-			j.o11y.Logger().Error(ctx, ErrInvalidToken, "invalid token signing method", o11y.Field{Key: "method", Value: fmt.Sprintf("%v", token.Header["alg"])})
+			j.obs.Logger().Error(ctx, "invalid token signing method", observability.Error(ErrInvalidToken), observability.String("method", fmt.Sprintf("%v", token.Header["alg"])))
 			return nil, ErrInvalidToken
 		}
 		return secret, nil
@@ -101,15 +101,15 @@ func (j *jwtAdapter) ValidateToken(ctx context.Context, tokenRequest string) (*U
 
 	sub, ok := claims["sub"].(string)
 	if !ok || sub == "" {
-		span.AddEvent("invalid sub claim", o11y.Attribute{Key: "sub", Value: claims["sub"]})
-		j.o11y.Logger().Error(ctx, ErrInvalidToken, "invalid sub claim")
+		span.AddEvent("invalid sub claim", observability.Field{Key: "sub", Value: claims["sub"]})
+		j.obs.Logger().Error(ctx, "invalid sub claim", observability.Error(ErrInvalidToken))
 		return nil, ErrInvalidToken
 	}
 
 	email, ok := claims["email"].(string)
 	if !ok || email == "" {
-		span.AddEvent("invalid email claim", o11y.Attribute{Key: "email", Value: claims["email"]})
-		j.o11y.Logger().Error(ctx, ErrInvalidToken, "invalid email claim")
+		span.AddEvent("invalid email claim", observability.Field{Key: "email", Value: claims["email"]})
+		j.obs.Logger().Error(ctx, "invalid email claim", observability.Error(ErrInvalidToken))
 		return nil, ErrInvalidToken
 	}
 

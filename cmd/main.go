@@ -1,12 +1,9 @@
 package main
 
 import (
-	"context"
 	"log"
 
 	"github.com/jailtonjunior94/financial/cmd/server"
-	"github.com/jailtonjunior94/financial/pkg/bundle"
-	migration "github.com/jailtonjunior94/financial/pkg/database/migrate"
 
 	"github.com/spf13/cobra"
 )
@@ -21,19 +18,18 @@ func main() {
 		Use:   "migrate",
 		Short: "Financial Migrations",
 		Run: func(cmd *cobra.Command, args []string) {
-			container := bundle.NewContainer(context.Background())
-			migrate, err := migration.NewMigrateCockroachDB(
-				container.DB,
-				container.Config.DBConfig.MigratePath,
-				container.Config.DBConfig.Name,
-			)
-			if err != nil {
-				log.Fatalf("error initializing migrations: %v", err)
-			}
+			// migrate, err := migration.NewMigrateCockroachDB(
+			// 	container.DB,
+			// 	container.Config.DBConfig.MigratePath,
+			// 	container.Config.DBConfig.Name,
+			// )
+			// if err != nil {
+			// 	log.Fatalf("error initializing migrations: %v", err)
+			// }
 
-			if err = migrate.Execute(); err != nil {
-				log.Fatalf("error executing migrations: %v", err)
-			}
+			// if err = migrate.Execute(); err != nil {
+			// 	log.Fatalf("error executing migrations: %v", err)
+			// }
 		},
 	}
 

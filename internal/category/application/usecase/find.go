@@ -2,13 +2,14 @@ package usecase
 
 import (
 	"context"
+	"time"
 
 	"github.com/jailtonjunior94/financial/internal/category/application/dtos"
 	"github.com/jailtonjunior94/financial/internal/category/domain/entities"
 	"github.com/jailtonjunior94/financial/internal/category/domain/interfaces"
-	"github.com/jailtonjunior94/financial/pkg/linq"
 
-	"github.com/JailtonJunior94/devkit-go/pkg/o11y"
+	"github.com/JailtonJunior94/devkit-go/pkg/linq"
+	"github.com/JailtonJunior94/devkit-go/pkg/observability"
 	"github.com/JailtonJunior94/devkit-go/pkg/vos"
 )
 
@@ -18,13 +19,13 @@ type (
 	}
 
 	findCategoryUseCase struct {
-		o11y       o11y.Telemetry
+		o11y       observability.Observability
 		repository interfaces.CategoryRepository
 	}
 )
 
 func NewFindCategoryUseCase(
-	o11y o11y.Telemetry,
+	o11y observability.Observability,
 	repository interfaces.CategoryRepository,
 ) FindCategoryUseCase {
 	return &findCategoryUseCase{
@@ -41,10 +42,10 @@ func (u *findCategoryUseCase) Execute(ctx context.Context, userID string) ([]*dt
 	if err != nil {
 		span.AddEvent(
 			"error parsing user id",
-			o11y.Attribute{Key: "user_id", Value: userID},
-			o11y.Attribute{Key: "error", Value: err},
+			observability.Field{Key: "user_id", Value: userID},
+			observability.Field{Key: "error", Value: err},
 		)
-		u.o11y.Logger().Error(ctx, err, "error parsing user id", o11y.Field{Key: "user_id", Value: userID})
+		u.o11y.Logger().Error(ctx, "error parsing user id", observability.Error(err), observability.String("user_id", userID))
 		return nil, err
 	}
 
@@ -52,10 +53,10 @@ func (u *findCategoryUseCase) Execute(ctx context.Context, userID string) ([]*dt
 	if err != nil {
 		span.AddEvent(
 			"error listing categories from repository",
-			o11y.Attribute{Key: "user_id", Value: userID},
-			o11y.Attribute{Key: "error", Value: err},
+			observability.Field{Key: "user_id", Value: userID},
+			observability.Field{Key: "error", Value: err},
 		)
-		u.o11y.Logger().Error(ctx, err, "error listing categories from repository", o11y.Field{Key: "user_id", Value: userID})
+		u.o11y.Logger().Error(ctx, "error listing categories from repository", observability.Error(err), observability.String("user_id", userID))
 		return nil, err
 	}
 
@@ -64,7 +65,7 @@ func (u *findCategoryUseCase) Execute(ctx context.Context, userID string) ([]*dt
 			ID:        category.ID.String(),
 			Name:      category.Name.String(),
 			Sequence:  category.Sequence.Value(),
-			CreatedAt: category.CreatedAt.Value(),
+			CreatedAt: category.CreatedAt.ValueOr(time.Time{}),
 		}
 	})
 

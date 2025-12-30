@@ -1,23 +1,27 @@
 package budget
 
 import (
+	"database/sql"
+
+	"github.com/JailtonJunior94/devkit-go/pkg/observability"
 	"github.com/jailtonjunior94/financial/internal/budget/infrastructure/http"
 	"github.com/jailtonjunior94/financial/internal/budget/usecase"
-	"github.com/jailtonjunior94/financial/pkg/bundle"
 	unitOfWork "github.com/jailtonjunior94/financial/pkg/database/uow"
-
-	"github.com/go-chi/chi/v5"
 )
 
-func RegisterBudgetModule(ioc *bundle.Container, router *chi.Mux) {
-	uow := unitOfWork.NewUnitOfWork(ioc.DB)
+type BudgetModule struct {
+	BudgetRouter *http.BudgetRouter
+}
 
-	createBudgetUseCase := usecase.NewCreateBudgetUseCase(uow, ioc.Telemetry)
-	budgetHandler := http.NewBudgetHandler(ioc.Telemetry, createBudgetUseCase)
+func NewBudgetModule(db *sql.DB, o11y observability.Observability) BudgetModule {
+	uow := unitOfWork.NewUnitOfWork(db)
 
-	http.NewBudgetRoutes(
-		router,
-		ioc.MiddlewareAuth,
-		http.WithCreateBudgetHandler(budgetHandler.Create),
-	)
+	createBudgetUseCase := usecase.NewCreateBudgetUseCase(uow, o11y)
+	budgetHandler := http.NewBudgetHandler(o11y, createBudgetUseCase)
+
+	budgetRoutes := http.NewBudgetRouter(budgetHandler)
+
+	return BudgetModule{
+		BudgetRouter: budgetRoutes,
+	}
 }

@@ -4,7 +4,7 @@ import (
 	"net/http"
 	"time"
 
-	"github.com/JailtonJunior94/devkit-go/pkg/o11y"
+	"github.com/JailtonJunior94/devkit-go/pkg/observability"
 )
 
 type (
@@ -13,7 +13,7 @@ type (
 	}
 
 	httpMetricsMiddleware struct {
-		o11y o11y.Telemetry
+		o11y observability.Observability
 	}
 
 	responseWriter struct {
@@ -22,7 +22,7 @@ type (
 	}
 )
 
-func NewHTTPMetricsMiddleware(o11y o11y.Telemetry) (HTTPMetricsMiddleware, error) {
+func NewHTTPMetricsMiddleware(o11y observability.Observability) (HTTPMetricsMiddleware, error) {
 
 	return &httpMetricsMiddleware{
 		o11y: o11y,
@@ -37,30 +37,31 @@ func (m *httpMetricsMiddleware) Metrics(next http.Handler) http.Handler {
 
 		next.ServeHTTP(rw, r.WithContext(ctx))
 
-		m.o11y.Metrics().AddCounter(ctx, "http.requests", 1, o11y.Attribute{
+		counter := m.o11y.Metrics().Counter("http.requests", "HTTP request count", "request")
+		counter.Add(ctx, 1, observability.Field{
 			Key:   "method",
 			Value: r.Method,
-		}, o11y.Attribute{
+		}, observability.Field{
 			Key:   "uri",
 			Value: r.RequestURI,
-		}, o11y.Attribute{
+		}, observability.Field{
 			Key:   "statusCode",
 			Value: rw.statusCode,
 		})
 
-		m.o11y.Metrics().RecordHistogram(
+		histogram := m.o11y.Metrics().Histogram("http.request.duration", "HTTP request duration", "ns")
+		histogram.Record(
 			ctx,
-			"http.request.duration",
 			float64(time.Since(start).Nanoseconds()),
-			o11y.Attribute{
+			observability.Field{
 				Key:   "method",
 				Value: r.Method,
 			},
-			o11y.Attribute{
+			observability.Field{
 				Key:   "uri",
 				Value: r.RequestURI,
 			},
-			o11y.Attribute{
+			observability.Field{
 				Key:   "statusCode",
 				Value: rw.statusCode,
 			},

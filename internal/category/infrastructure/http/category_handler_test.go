@@ -1,3 +1,6 @@
+//go:build integration
+// +build integration
+
 package http_test
 
 import (
@@ -21,7 +24,9 @@ import (
 	"github.com/jailtonjunior94/financial/internal/category/application/usecase"
 	"github.com/jailtonjunior94/financial/pkg/auth"
 	"github.com/jailtonjunior94/financial/pkg/database"
-	"github.com/jailtonjunior94/financial/pkg/test_helpers"
+	"github.com/JailtonJunior94/devkit-go/pkg/observability"
+
+	"github.com/JailtonJunior94/devkit-go/pkg/observability/fake"
 )
 
 type CategoryHandlerSuite struct {
@@ -62,8 +67,8 @@ func (s *CategoryHandlerSuite) SetupSuite() {
 			AuthTokenDuration: 1,
 		},
 	}
-	telemetry := test_helpers.NewMockTelemetry()
-	s.jwtAdapter = auth.NewJwtAdapter(cfg, telemetry)
+	obs := fake.NewProvider()
+	s.jwtAdapter = auth.NewJwtAdapter(cfg, obs)
 
 	// Arrange: Criar usuário de teste
 	s.testUserID = "550e8400-e29b-41d4-a716-446655440000"
@@ -80,15 +85,15 @@ func (s *CategoryHandlerSuite) SetupSuite() {
 	s.authToken = fmt.Sprintf("Bearer %s", token)
 
 	// Arrange: Configurar handler
-	categoryRepository := repositories.NewCategoryRepository(s.db, telemetry)
-	findCategoryUseCase := usecase.NewFindCategoryUseCase(telemetry, categoryRepository)
-	createCategoryUseCase := usecase.NewCreateCategoryUseCase(telemetry, categoryRepository)
-	findCategoryByUseCase := usecase.NewFindCategoryByUseCase(telemetry, categoryRepository)
-	updateCategoryUseCase := usecase.NewUpdateCategoryUseCase(telemetry, categoryRepository)
-	removeCategoryUseCase := usecase.NewRemoveCategoryUseCase(telemetry, categoryRepository)
+	categoryRepository := repositories.NewCategoryRepository(s.db, obs)
+	findCategoryUseCase := usecase.NewFindCategoryUseCase(obs, categoryRepository)
+	createCategoryUseCase := usecase.NewCreateCategoryUseCase(obs, categoryRepository)
+	findCategoryByUseCase := usecase.NewFindCategoryByUseCase(obs, categoryRepository)
+	updateCategoryUseCase := usecase.NewUpdateCategoryUseCase(obs, categoryRepository)
+	removeCategoryUseCase := usecase.NewRemoveCategoryUseCase(obs, categoryRepository)
 
 	s.handler = categoryHttp.NewCategoryHandler(
-		telemetry,
+		obs,
 		findCategoryUseCase,
 		createCategoryUseCase,
 		findCategoryByUseCase,

@@ -22,14 +22,40 @@ mocks:
 	go install github.com/vektra/mockery/v3@v3.5.0
 	mockery
 
-.PHONY: test
-test:
-	@echo "Running tests..."
-	go test -count=1 -race -covermode=atomic -coverprofile=coverage.out ./...
+.PHONY: test-unit
+test-unit:
+	@echo "Running unit tests..."
+	@go test -short -count=1 -race -covermode=atomic -coverprofile=coverage-unit.out ./...
+	@go tool cover -func=coverage-unit.out | grep total
 
-cover:
-	@echo "Generating coverage report..."
-	go tool cover -html=coverage.out
+.PHONY: test-integration
+test-integration:
+	@echo "Running integration tests..."
+	@go test -tags=integration -count=1 -race -covermode=atomic -coverprofile=coverage-integration.out ./...
+
+.PHONY: test-all
+test-all: test-unit test-integration
+	@echo "All tests completed successfully"
+
+.PHONY: test
+test: test-unit
+	@echo "Unit tests completed"
+
+.PHONY: cover-html
+cover-html:
+	@echo "Generating HTML coverage reports..."
+	@go tool cover -html=coverage-unit.out -o coverage-unit.html
+	@test -f coverage-integration.out && go tool cover -html=coverage-integration.out -o coverage-integration.html || echo "No integration coverage found"
+	@echo "Coverage reports: coverage-unit.html, coverage-integration.html"
+
+.PHONY: cover
+cover: cover-html
+	@echo "Opening unit test coverage..."
+	@go tool cover -html=coverage-unit.out
+
+.PHONY: check
+check: lint test-all
+	@echo "All checks passed successfully"
 
 start_minimal:
 	docker compose -f deployment/docker-compose.yml up --build -d financial_migration cockroachdb rabbitmq otel-lgtm
