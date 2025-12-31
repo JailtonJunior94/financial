@@ -76,7 +76,7 @@ func (r *budgetRepository) InsertItems(ctx context.Context, items []*entities.Bu
 	}
 
 	// Build batch insert query with multiple VALUES clauses
-	const numColumns = 11
+	const numColumns = 9
 	valueStrings := make([]string, 0, len(items))
 	valueArgs := make([]any, 0, len(items)*numColumns)
 
@@ -88,7 +88,6 @@ func (r *budgetRepository) InsertItems(ctx context.Context, items []*entities.Bu
 		}
 		valueStrings = append(valueStrings, fmt.Sprintf("(%s)", strings.Join(placeholders, ", ")))
 
-		percentageSpent := item.PercentageSpent()
 		valueArgs = append(valueArgs,
 			item.ID.Value,
 			item.BudgetID.Value,
@@ -96,8 +95,6 @@ func (r *budgetRepository) InsertItems(ctx context.Context, items []*entities.Bu
 			item.PercentageGoal.Value(),
 			item.PlannedAmount.Cents(),
 			item.SpentAmount.Cents(),
-			percentageSpent.Value(),
-			percentageSpent.Value(),
 			item.CreatedAt,
 			item.UpdatedAt.Ptr(),
 			item.DeletedAt.Ptr(),
@@ -112,8 +109,6 @@ func (r *budgetRepository) InsertItems(ctx context.Context, items []*entities.Bu
 					percentage_goal,
 					amount_goal,
 					amount_used,
-					percentage_used,
-					percentage_total,
 					created_at,
 					updated_at,
 					deleted_at
@@ -301,20 +296,14 @@ func (r *budgetRepository) UpdateItem(ctx context.Context, item *entities.Budget
 
 	query := `update budget_items set
 				amount_used = $2,
-				percentage_used = $3,
-				percentage_total = $4,
-				updated_at = $5
+				updated_at = $3
 			where id = $1`
-
-	percentageUsed := item.PercentageSpent()
 
 	_, err := r.exec.ExecContext(
 		ctx,
 		query,
 		item.ID.Value,
 		item.SpentAmount.Cents(),
-		percentageUsed.Value(),
-		percentageUsed.Value(), // percentage_total is same as percentage_used for item
 		time.Now().UTC(),
 	)
 	if err != nil {
@@ -331,8 +320,6 @@ func (r *budgetRepository) findItemsByBudgetID(ctx context.Context, budgetID vos
 				percentage_goal,
 				amount_goal,
 				amount_used,
-				percentage_used,
-				percentage_total,
 				created_at,
 				updated_at,
 				deleted_at
@@ -351,7 +338,7 @@ func (r *budgetRepository) findItemsByBudgetID(ctx context.Context, budgetID vos
 		var item entities.BudgetItem
 		var updatedAt, deletedAt *time.Time
 		var amountGoalCents, amountUsedCents int64
-		var percentageGoalValue, percentageUsedValue, percentageTotalValue int64
+		var percentageGoalValue int64
 
 		err := rows.Scan(
 			&item.ID.Value,
@@ -360,8 +347,6 @@ func (r *budgetRepository) findItemsByBudgetID(ctx context.Context, budgetID vos
 			&percentageGoalValue,
 			&amountGoalCents,
 			&amountUsedCents,
-			&percentageUsedValue,
-			&percentageTotalValue,
 			&item.CreatedAt,
 			&updatedAt,
 			&deletedAt,
