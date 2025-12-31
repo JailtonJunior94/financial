@@ -57,8 +57,8 @@ func (r *budgetRepository) Insert(ctx context.Context, budget *entities.Budget) 
 		budget.DeletedAt.Ptr(),
 	)
 	if err != nil {
-		span.AddEvent("error inserting budget", observability.Field{Key: "budget_id", Value: budget.ID.String()}, observability.Field{Key: "error", Value: err})
-		r.o11y.Logger().Error(ctx, "error inserting budget", observability.Error(err), observability.String("budget_id", budget.ID.String()))
+
+
 		return err
 	}
 	return nil
@@ -118,8 +118,8 @@ func (r *budgetRepository) InsertItems(ctx context.Context, items []*entities.Bu
 
 	_, err := r.exec.ExecContext(ctx, query, valueArgs...)
 	if err != nil {
-		span.AddEvent("error batch inserting budget items", observability.Field{Key: "count", Value: len(items)}, observability.Field{Key: "error", Value: err})
-		r.o11y.Logger().Error(ctx, "error batch inserting budget items", observability.Error(err), observability.Int("count", len(items)))
+
+
 		return err
 	}
 

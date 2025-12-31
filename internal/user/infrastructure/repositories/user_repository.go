@@ -3,12 +3,13 @@ package repositories
 import (
 	"context"
 	"database/sql"
+	"fmt"
 	"time"
 
 	"github.com/jailtonjunior94/financial/internal/user/domain/entities"
 	"github.com/jailtonjunior94/financial/internal/user/domain/interfaces"
-	customErrors "github.com/jailtonjunior94/financial/pkg/custom_errors"
 	"github.com/jailtonjunior94/financial/pkg/database"
+	dberrors "github.com/jailtonjunior94/financial/pkg/database"
 
 	"github.com/JailtonJunior94/devkit-go/pkg/observability"
 )
@@ -32,16 +33,10 @@ func (r *userRepository) Insert(ctx context.Context, user *entities.User) (*enti
 	ctx, span := r.o11y.Tracer().Start(ctx, "user_repository.insert")
 	defer span.End()
 
-	// Verificar se email já existe
-	existing, err := r.FindByEmail(ctx, user.Email.String())
-	if err != nil {
-		return nil, err
-	}
-	if existing != nil {
-		span.AddEvent("email already exists", observability.Field{Key: "email", Value: user.Email})
-		r.o11y.Logger().Error(ctx, "email already exists", observability.Error(customErrors.ErrEmailAlreadyExists))
-		return nil, customErrors.ErrEmailAlreadyExists
-	}
+	span.AddEvent("inserting user",
+		observability.Field{Key: "user.id", Value: user.ID.String()},
+		observability.Field{Key: "user.email", Value: user.Email.String()},
+	)
 
 	query := `insert into
 				users (
@@ -58,13 +53,8 @@ func (r *userRepository) Insert(ctx context.Context, user *entities.User) (*enti
 
 	stmt, err := r.db.PrepareContext(ctx, query)
 	if err != nil {
-		span.AddEvent(
-			"error preparing insert user query",
-			observability.Field{Key: "email", Value: user.Email},
-			observability.Field{Key: "error", Value: err},
-		)
-		r.o11y.Logger().Error(ctx, "error preparing insert user query", observability.Error(err), observability.String("email", user.Email.String()))
-		return nil, err
+		span.RecordError(err)
+		return nil, fmt.Errorf("preparing insert user statement: %w", err)
 	}
 	defer stmt.Close()
 
@@ -79,14 +69,10 @@ func (r *userRepository) Insert(ctx context.Context, user *entities.User) (*enti
 		user.DeletedAt.Ptr(),
 	)
 	if err != nil {
-		span.AddEvent(
-			"error inserting user",
-			observability.Field{Key: "email", Value: user.Email},
-			observability.Field{Key: "error", Value: err},
-		)
-		r.o11y.Logger().Error(ctx, "error inserting user", observability.Error(err), observability.String("email", user.Email.String()))
-		return nil, err
+		span.RecordError(err)
+		return nil, dberrors.ConvertDBError(err, "users")
 	}
+
 	return user, nil
 }
 
@@ -96,6 +82,10 @@ func (r *userRepository) FindByEmail(ctx context.Context, email string) (*entiti
 
 	ctx, span := r.o11y.Tracer().Start(ctx, "user_repository.find_by_email")
 	defer span.End()
+
+	span.AddEvent("finding user by email",
+		observability.Field{Key: "user.email", Value: email},
+	)
 
 	query := `select
 				id,
@@ -126,9 +116,9 @@ func (r *userRepository) FindByEmail(ctx context.Context, email string) (*entiti
 		if err == sql.ErrNoRows {
 			return nil, nil
 		}
-		span.AddEvent("error finding user", observability.Field{Key: "e-mail", Value: email}, observability.Field{Key: "error", Value: err})
-		r.o11y.Logger().Error(ctx, "error finding user", observability.Error(err), observability.String("e-mail", email))
-		return nil, err
+		span.RecordError(err)
+		return nil, fmt.Errorf("querying user by email: %w", err)
 	}
+
 	return &user, nil
 }

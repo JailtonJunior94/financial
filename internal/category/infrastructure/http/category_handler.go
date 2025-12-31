@@ -6,6 +6,7 @@ import (
 
 	"github.com/jailtonjunior94/financial/internal/category/application/dtos"
 	"github.com/jailtonjunior94/financial/internal/category/application/usecase"
+	"github.com/jailtonjunior94/financial/pkg/api/httperrors"
 	"github.com/jailtonjunior94/financial/pkg/api/middlewares"
 
 	"github.com/JailtonJunior94/devkit-go/pkg/observability"
@@ -16,6 +17,7 @@ import (
 
 type CategoryHandler struct {
 	o11y                  observability.Observability
+	errorHandler          httperrors.ErrorHandler
 	findCategoryUseCase   usecase.FindCategoryUseCase
 	createCategoryUseCase usecase.CreateCategoryUseCase
 	findCategoryByUseCase usecase.FindCategoryByUseCase
@@ -25,6 +27,7 @@ type CategoryHandler struct {
 
 func NewCategoryHandler(
 	o11y observability.Observability,
+	errorHandler httperrors.ErrorHandler,
 	findCategoryUseCase usecase.FindCategoryUseCase,
 	createCategoryUseCase usecase.CreateCategoryUseCase,
 	findCategoryByUseCase usecase.FindCategoryByUseCase,
@@ -33,6 +36,7 @@ func NewCategoryHandler(
 ) *CategoryHandler {
 	return &CategoryHandler{
 		o11y:                  o11y,
+		errorHandler:          errorHandler,
 		findCategoryUseCase:   findCategoryUseCase,
 		createCategoryUseCase: createCategoryUseCase,
 		updateCategoryUseCase: updateCategoryUseCase,

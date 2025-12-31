@@ -45,7 +45,7 @@ func (u *findCategoryUseCase) Execute(ctx context.Context, userID string) ([]*dt
 			observability.Field{Key: "user_id", Value: userID},
 			observability.Field{Key: "error", Value: err},
 		)
-		u.o11y.Logger().Error(ctx, "error parsing user id", observability.Error(err), observability.String("user_id", userID))
+
 		return nil, err
 	}
 
@@ -56,7 +56,7 @@ func (u *findCategoryUseCase) Execute(ctx context.Context, userID string) ([]*dt
 			observability.Field{Key: "user_id", Value: userID},
 			observability.Field{Key: "error", Value: err},
 		)
-		u.o11y.Logger().Error(ctx, "error listing categories from repository", observability.Error(err), observability.String("user_id", userID))
+
 		return nil, err
 	}
 

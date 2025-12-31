@@ -6,7 +6,7 @@ import (
 	"runtime/debug"
 
 	"github.com/JailtonJunior94/devkit-go/pkg/observability"
-	"github.com/JailtonJunior94/devkit-go/pkg/responses"
+	"github.com/jailtonjunior94/financial/pkg/api/httperrors"
 )
 
 type (
@@ -15,12 +15,16 @@ type (
 	}
 
 	panicRecoverMiddleware struct {
-		o11y observability.Observability
+		o11y         observability.Observability
+		errorHandler httperrors.ErrorHandler
 	}
 )
 
-func NewPanicRecoverMiddleware(o11y observability.Observability) PanicRecoverMiddleware {
-	return &panicRecoverMiddleware{o11y: o11y}
+func NewPanicRecoverMiddleware(o11y observability.Observability, errorHandler httperrors.ErrorHandler) PanicRecoverMiddleware {
+	return &panicRecoverMiddleware{
+		o11y:         o11y,
+		errorHandler: errorHandler,
+	}
 }
 
 func (m *panicRecoverMiddleware) Recover(next http.Handler) http.Handler {
@@ -36,14 +40,17 @@ func (m *panicRecoverMiddleware) Recover(next http.Handler) http.Handler {
 					err = fmt.Errorf("panic: %v", panicErr)
 				}
 
-				errFormated := fmt.Sprintf("stacktrace from panic: \n %s", string(debug.Stack()))
+				// Log stacktrace for panic (critical information)
+				stacktrace := string(debug.Stack())
 				m.o11y.Logger().Error(
 					ctx,
 					"panic recovered in middleware",
 					observability.Error(err),
-					observability.String("stacktrace", errFormated),
+					observability.String("stacktrace", stacktrace),
 				)
-				responses.Error(w, http.StatusInternalServerError, "internal server error")
+
+				// Delegate HTTP error response to error handler
+				m.errorHandler.HandleError(w, r, err)
 			}
 		}()
 

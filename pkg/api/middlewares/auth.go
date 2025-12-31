@@ -5,11 +5,11 @@ import (
 	"net/http"
 	"strings"
 
+	"github.com/jailtonjunior94/financial/pkg/api/httperrors"
 	"github.com/jailtonjunior94/financial/pkg/auth"
 	customerrors "github.com/jailtonjunior94/financial/pkg/custom_errors"
 
 	"github.com/JailtonJunior94/devkit-go/pkg/observability"
-	"github.com/JailtonJunior94/devkit-go/pkg/responses"
 )
 
 type (
@@ -19,8 +19,9 @@ type (
 	}
 
 	authorization struct {
-		validator auth.TokenValidator
-		o11y      observability.Observability
+		validator    auth.TokenValidator
+		o11y         observability.Observability
+		errorHandler httperrors.ErrorHandler
 	}
 
 	// contextKey é um tipo privado para evitar colisões no contexto.
@@ -33,10 +34,11 @@ var userCtxKey = &contextKey{"authenticated_user"}
 
 // NewAuthorization cria uma nova instância do middleware de autenticação.
 // Requer um TokenValidator para validar tokens e observability para logs/métricas.
-func NewAuthorization(validator auth.TokenValidator, o11y observability.Observability) Authorization {
+func NewAuthorization(validator auth.TokenValidator, o11y observability.Observability, errorHandler httperrors.ErrorHandler) Authorization {
 	return &authorization{
-		validator: validator,
-		o11y:      o11y,
+		validator:    validator,
+		o11y:         o11y,
+		errorHandler: errorHandler,
 	}
 }
 
@@ -54,24 +56,21 @@ func (a *authorization) Authorization(next http.Handler) http.Handler {
 		// Extrai o header Authorization
 		authHeader := r.Header.Get("Authorization")
 		if authHeader == "" {
-			a.logAuthError(ctx, "missing authorization header", customerrors.ErrMissingAuthHeader)
-			responses.Error(w, http.StatusUnauthorized, "Unauthorized")
+			a.errorHandler.HandleError(w, r, customerrors.ErrMissingAuthHeader)
 			return
 		}
 
 		// Valida o formato "Bearer <token>"
 		token, err := extractBearerToken(authHeader)
 		if err != nil {
-			a.logAuthError(ctx, "invalid authorization format", err)
-			responses.Error(w, http.StatusUnauthorized, "Unauthorized")
+			a.errorHandler.HandleError(w, r, err)
 			return
 		}
 
 		// Valida o token e obtém o usuário
 		user, err := a.validator.Validate(ctx, token)
 		if err != nil {
-			a.logAuthError(ctx, "token validation failed", err)
-			responses.Error(w, http.StatusUnauthorized, "Unauthorized")
+			a.errorHandler.HandleError(w, r, err)
 			return
 		}
 
@@ -101,20 +100,6 @@ func extractBearerToken(authHeader string) (string, error) {
 	}
 
 	return token, nil
-}
-
-// logAuthError registra erros de autenticação de forma estruturada.
-// Nunca loga tokens ou dados sensíveis.
-func (a *authorization) logAuthError(ctx context.Context, message string, err error) {
-	if a.o11y == nil {
-		return
-	}
-
-	a.o11y.Logger().Error(
-		ctx,
-		message,
-		observability.Error(err),
-	)
 }
 
 // GetUserFromContext recupera o usuário autenticado do contexto.

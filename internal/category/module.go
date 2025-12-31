@@ -7,6 +7,7 @@ import (
 	"github.com/jailtonjunior94/financial/internal/category/application/usecase"
 	"github.com/jailtonjunior94/financial/internal/category/infrastructure/http"
 	"github.com/jailtonjunior94/financial/internal/category/infrastructure/repositories"
+	"github.com/jailtonjunior94/financial/pkg/api/httperrors"
 )
 
 type CategoryModule struct {
@@ -14,6 +15,9 @@ type CategoryModule struct {
 }
 
 func NewCategoryModule(db *sql.DB, o11y observability.Observability) CategoryModule {
+	// Create error handler once for the module
+	errorHandler := httperrors.NewErrorHandler(o11y)
+
 	categoryRepository := repositories.NewCategoryRepository(db, o11y)
 	findCategoryUsecase := usecase.NewFindCategoryUseCase(o11y, categoryRepository)
 	findCategoryByUsecase := usecase.NewFindCategoryByUseCase(o11y, categoryRepository)
@@ -23,6 +27,7 @@ func NewCategoryModule(db *sql.DB, o11y observability.Observability) CategoryMod
 
 	categoryHandler := http.NewCategoryHandler(
 		o11y,
+		errorHandler,
 		findCategoryUsecase,
 		createCategoryUsecase,
 		findCategoryByUsecase,

@@ -41,49 +41,37 @@ func (u *createUserUseCase) Execute(ctx context.Context, input *dtos.CreateUserI
 	ctx, span := u.o11y.Tracer().Start(ctx, "create_user_usecase.execute")
 	defer span.End()
 
+	span.AddEvent("creating user",
+		observability.Field{Key: "user.email", Value: input.Email},
+		observability.Field{Key: "user.name", Value: input.Name},
+	)
+
 	// Validate input
 	if input.Password == "" {
-		span.AddEvent("password is required", observability.Field{Key: "error", Value: customErrors.ErrPasswordIsRequired})
-		u.o11y.Logger().Error(ctx, "password is required", observability.Error(customErrors.ErrPasswordIsRequired))
+		span.RecordError(customErrors.ErrPasswordIsRequired)
 		return nil, customErrors.ErrPasswordIsRequired
 	}
 
 	user, err := factories.CreateUser(input.Name, input.Email)
 	if err != nil {
-		span.AddEvent(
-			"error creating user entity",
-			observability.Field{Key: "e-mail", Value: input.Email},
-			observability.Field{Key: "error", Value: err},
-		)
-		u.o11y.Logger().Error(ctx, "error creating user entity", observability.Error(err), observability.String("e-mail", input.Email))
-		return nil, customErrors.New("error creating user", fmt.Errorf("create_user_usecase: %v", err))
+		span.RecordError(err)
+		return nil, err
 	}
 
 	hash, err := u.hash.GenerateHash(input.Password)
 	if err != nil {
-		span.AddEvent(
-			"error generating hash",
-			observability.Field{Key: "e-mail", Value: input.Email},
-			observability.Field{Key: "error", Value: err},
-		)
-		u.o11y.Logger().Error(ctx, "error generating hash", observability.Error(err), observability.String("e-mail", input.Email))
-		return nil, err
+		span.RecordError(err)
+		return nil, fmt.Errorf("generating password hash: %w", err)
 	}
 
 	if err := user.SetPassword(hash); err != nil {
-		span.AddEvent("error setting password", observability.Field{Key: "error", Value: err})
-		u.o11y.Logger().Error(ctx, "error setting password", observability.Error(err))
+		span.RecordError(err)
 		return nil, err
 	}
 
 	userCreated, err := u.repository.Insert(ctx, user)
 	if err != nil {
-		span.AddEvent(
-			"error inserting user into repository",
-			observability.Field{Key: "e-mail", Value: input.Email},
-			observability.Field{Key: "error", Value: err},
-		)
-		u.o11y.Logger().Error(ctx, "error inserting user into repository", observability.Error(err), observability.String("e-mail", input.Email))
+		span.RecordError(err)
 		return nil, err
 	}
 

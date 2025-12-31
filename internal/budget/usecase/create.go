@@ -39,8 +39,8 @@ func (u *createBudgetUseCase) Execute(ctx context.Context, userID string, input 
 
 	newBudget, err := factories.CreateBudget(userID, input)
 	if err != nil {
-		span.AddEvent("error creating budget entity", observability.Field{Key: "user_id", Value: userID}, observability.Field{Key: "error", Value: err})
-		u.o11y.Logger().Error(ctx, "error creating budget entity", observability.Error(err), observability.String("user_id", userID))
+
+
 		return nil, err
 	}
 
@@ -49,22 +49,22 @@ func (u *createBudgetUseCase) Execute(ctx context.Context, userID string, input 
 		budgetRepository := repositories.NewBudgetRepository(tx, u.o11y)
 
 		if err := budgetRepository.Insert(ctx, newBudget); err != nil {
-			span.AddEvent("error inserting budget", observability.Field{Key: "user_id", Value: userID}, observability.Field{Key: "error", Value: err})
-			u.o11y.Logger().Error(ctx, "error inserting budget", observability.Error(err), observability.String("user_id", userID))
+
+
 			return err
 		}
 
 		if err := budgetRepository.InsertItems(ctx, newBudget.Items); err != nil {
-			span.AddEvent("error inserting budget items", observability.Field{Key: "user_id", Value: userID}, observability.Field{Key: "error", Value: err})
-			u.o11y.Logger().Error(ctx, "error inserting budget items", observability.Error(err), observability.String("user_id", userID))
+
+
 			return err
 		}
 		return nil
 	})
 
 	if err != nil {
-		span.AddEvent("error in unit of work transaction", observability.Field{Key: "user_id", Value: userID}, observability.Field{Key: "error", Value: err})
-		u.o11y.Logger().Error(ctx, "error in unit of work transaction", observability.Error(err), observability.String("user_id", userID))
+
+
 		return nil, err
 	}
 	return &dtos.BudgetOutput{

@@ -43,7 +43,7 @@ func (u *createCategoryUseCase) Execute(ctx context.Context, userID string, inpu
 			observability.Field{Key: "user_id", Value: userID},
 			observability.Field{Key: "error", Value: err},
 		)
-		u.o11y.Logger().Error(ctx, "error creating category entity", observability.Error(err), observability.String("user_id", userID))
+
 		return nil, err
 	}
 
@@ -53,7 +53,7 @@ func (u *createCategoryUseCase) Execute(ctx context.Context, userID string, inpu
 			observability.Field{Key: "user_id", Value: userID},
 			observability.Field{Key: "error", Value: err},
 		)
-		u.o11y.Logger().Error(ctx, "error saving category to repository", observability.Error(err), observability.String("user_id", userID))
+
 		return nil, err
 	}
 
