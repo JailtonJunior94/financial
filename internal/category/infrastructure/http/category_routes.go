@@ -13,9 +13,9 @@ func NewCategoryRouter(handlers *CategoryHandler) *CategoryRouter {
 }
 
 func (r CategoryRouter) Register(router chi.Router) {
-	router.Get("/categories", r.handlers.Find)
-	router.Get("/categories/{id}", r.handlers.FindBy)
-	router.Post("/categories", r.handlers.Create)
-	router.Put("/categories/{id}", r.handlers.Update)
-	router.Delete("/categories/{id}", r.handlers.Delete)
+	router.Get("/api/v1/categories", r.handlers.Find)
+	router.Get("/api/v1/categories/{id}", r.handlers.FindBy)
+	router.Post("/api/v1/categories", r.handlers.Create)
+	router.Put("/api/v1/categories/{id}", r.handlers.Update)
+	router.Delete("/api/v1/categories/{id}", r.handlers.Delete)
 }

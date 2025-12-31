@@ -22,3 +22,9 @@ packages:
       pkgname: repositoryMock
     interfaces:
       BudgetRepository: {}
+  github.com/jailtonjunior94/financial/pkg/auth:
+    config:
+      dir: ./pkg/auth/mocks
+      pkgname: mocks
+    interfaces:
+      TokenValidator: {}

@@ -17,6 +17,6 @@ func NewUserRouter(authHandler *AuthHandler, userHandler *UserHandler) *UserRout
 }
 
 func (r UserRouter) Register(router chi.Router) {
-	router.Post("/token", r.authHandler.Token)
-	router.Post("/users", r.userHandler.Create)
+	router.Post("/api/v1/token", r.authHandler.Token)
+	router.Post("/api/v1/users", r.userHandler.Create)
 }

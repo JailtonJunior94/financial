@@ -3,8 +3,8 @@ package middlewares
 import (
 	"context"
 	"net/http"
+	"strings"
 
-	"github.com/jailtonjunior94/financial/configs"
 	"github.com/jailtonjunior94/financial/pkg/auth"
 	customerrors "github.com/jailtonjunior94/financial/pkg/custom_errors"
 
@@ -13,54 +13,122 @@ import (
 )
 
 type (
+	// Authorization define a interface para o middleware de autenticação.
 	Authorization interface {
 		Authorization(next http.Handler) http.Handler
 	}
 
 	authorization struct {
-		jwt    auth.JwtAdapter
-		config *configs.Config
-		o11y   observability.Observability
+		validator auth.TokenValidator
+		o11y      observability.Observability
 	}
 
+	// contextKey é um tipo privado para evitar colisões no contexto.
 	contextKey struct {
 		name string
 	}
 )
 
-var userCtxKey = &contextKey{"user"}
+var userCtxKey = &contextKey{"authenticated_user"}
 
-func NewAuthorization(config *configs.Config, jwt auth.JwtAdapter) Authorization {
-	return &authorization{config: config, jwt: jwt}
+// NewAuthorization cria uma nova instância do middleware de autenticação.
+// Requer um TokenValidator para validar tokens e observability para logs/métricas.
+func NewAuthorization(validator auth.TokenValidator, o11y observability.Observability) Authorization {
+	return &authorization{
+		validator: validator,
+		o11y:      o11y,
+	}
 }
 
+// Authorization é o middleware que valida tokens JWT e injeta o usuário autenticado no contexto.
+// Fluxo:
+// 1. Extrai o Bearer Token do header Authorization
+// 2. Valida o formato do header
+// 3. Valida o token usando o TokenValidator
+// 4. Injeta o usuário autenticado no contexto
+// 5. Chama o próximo handler
 func (a *authorization) Authorization(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		ctx := r.Context()
 
-		user, err := a.jwt.ValidateToken(ctx, r.Header.Get("Authorization"))
-		if err != nil {
-			if a.o11y != nil {
-				a.o11y.Logger().Error(ctx, "unauthorized: invalid or missing token", observability.Error(err))
-			}
+		// Extrai o header Authorization
+		authHeader := r.Header.Get("Authorization")
+		if authHeader == "" {
+			a.logAuthError(ctx, "missing authorization header", customerrors.ErrMissingAuthHeader)
 			responses.Error(w, http.StatusUnauthorized, "Unauthorized")
 			return
 		}
 
-		ctx = context.WithValue(ctx, userCtxKey, user)
+		// Valida o formato "Bearer <token>"
+		token, err := extractBearerToken(authHeader)
+		if err != nil {
+			a.logAuthError(ctx, "invalid authorization format", err)
+			responses.Error(w, http.StatusUnauthorized, "Unauthorized")
+			return
+		}
+
+		// Valida o token e obtém o usuário
+		user, err := a.validator.Validate(ctx, token)
+		if err != nil {
+			a.logAuthError(ctx, "token validation failed", err)
+			responses.Error(w, http.StatusUnauthorized, "Unauthorized")
+			return
+		}
+
+		// Injeta o usuário no contexto e chama o próximo handler
+		ctx = AddUserToContext(ctx, user)
 		next.ServeHTTP(w, r.WithContext(ctx))
 	})
 }
 
-func GetUserFromContext(ctx context.Context) (*auth.User, error) {
-	raw, ok := ctx.Value(userCtxKey).(*auth.User)
-	if !ok || raw == nil {
-		return nil, customerrors.ErrUnauthorized
+// extractBearerToken extrai o token do header Authorization.
+// Espera o formato: "Bearer <token>"
+// Retorna erro se:
+// - O formato não for "Bearer <token>"
+// - O token estiver vazio
+func extractBearerToken(authHeader string) (string, error) {
+	const bearerPrefix = "Bearer "
+
+	// Verifica se o header começa com "Bearer "
+	if !strings.HasPrefix(authHeader, bearerPrefix) {
+		return "", customerrors.ErrInvalidAuthFormat
 	}
-	return raw, nil
+
+	// Extrai o token (tudo após "Bearer ")
+	token := strings.TrimSpace(authHeader[len(bearerPrefix):])
+	if token == "" {
+		return "", customerrors.ErrEmptyToken
+	}
+
+	return token, nil
 }
 
-// AddUserToContext adiciona um usuário ao contexto (útil para testes)
-func AddUserToContext(ctx context.Context, user *auth.User) context.Context {
+// logAuthError registra erros de autenticação de forma estruturada.
+// Nunca loga tokens ou dados sensíveis.
+func (a *authorization) logAuthError(ctx context.Context, message string, err error) {
+	if a.o11y == nil {
+		return
+	}
+
+	a.o11y.Logger().Error(
+		ctx,
+		message,
+		observability.Error(err),
+	)
+}
+
+// GetUserFromContext recupera o usuário autenticado do contexto.
+// Retorna erro se o usuário não estiver presente no contexto.
+func GetUserFromContext(ctx context.Context) (*auth.AuthenticatedUser, error) {
+	user, ok := ctx.Value(userCtxKey).(*auth.AuthenticatedUser)
+	if !ok || user == nil {
+		return nil, customerrors.ErrUnauthorized
+	}
+	return user, nil
+}
+
+// AddUserToContext adiciona um usuário autenticado ao contexto.
+// Útil para testes e situações onde o usuário já foi validado externamente.
+func AddUserToContext(ctx context.Context, user *auth.AuthenticatedUser) context.Context {
 	return context.WithValue(ctx, userCtxKey, user)
 }

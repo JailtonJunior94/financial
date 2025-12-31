@@ -8,10 +8,41 @@ import (
 )
 
 var responseErrors = map[error]*ResponseError{
+	// Authentication errors
 	financialErrors.ErrUnauthorized: {
 		Code:    http.StatusUnauthorized,
 		Message: "Unauthorized",
 	},
+	financialErrors.ErrMissingAuthHeader: {
+		Code:    http.StatusUnauthorized,
+		Message: "Unauthorized",
+	},
+	financialErrors.ErrInvalidAuthFormat: {
+		Code:    http.StatusUnauthorized,
+		Message: "Unauthorized",
+	},
+	financialErrors.ErrInvalidToken: {
+		Code:    http.StatusUnauthorized,
+		Message: "Unauthorized",
+	},
+	financialErrors.ErrTokenExpired: {
+		Code:    http.StatusUnauthorized,
+		Message: "Unauthorized",
+	},
+	financialErrors.ErrEmptyToken: {
+		Code:    http.StatusUnauthorized,
+		Message: "Unauthorized",
+	},
+	financialErrors.ErrInvalidTokenClaims: {
+		Code:    http.StatusUnauthorized,
+		Message: "Unauthorized",
+	},
+	financialErrors.ErrInvalidSigningMethod: {
+		Code:    http.StatusUnauthorized,
+		Message: "Unauthorized",
+	},
+
+	// Domain errors
 	financialErrors.ErrBudgetNotFound: {
 		Code:    http.StatusNotFound,
 		Message: "Budget not found",

@@ -23,7 +23,6 @@ type (
 )
 
 func NewHTTPMetricsMiddleware(o11y observability.Observability) (HTTPMetricsMiddleware, error) {
-
 	return &httpMetricsMiddleware{
 		o11y: o11y,
 	}, nil
