@@ -51,7 +51,11 @@ func (u *tokenUseCase) Execute(ctx context.Context, input *dtos.AuthInput) (*dto
 	)
 
 	// Validate input
-	if input.Email == "" || input.Password == "" {
+	if input.Email == "" {
+		span.RecordError(customErrors.ErrCannotBeEmpty)
+		return nil, customErrors.New("email is required", customErrors.ErrCannotBeEmpty)
+	}
+	if input.Password == "" {
 		span.RecordError(customErrors.ErrPasswordIsRequired)
 		return nil, customErrors.ErrPasswordIsRequired
 	}

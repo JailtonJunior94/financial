@@ -81,7 +81,9 @@ func Run() error {
 		httpserver.WithHealthChecks(map[string]httpserver.HealthCheckFunc{"database": dbManager.Ping}),
 	)
 
-	srv.RegisterRouters(userModule.UserRouter, categoryModule.CategoryRouter, budgetModule.BudgetRouter)
+	srv.RegisterRouters(userModule.UserRouter)
+	srv.RegisterRouters(categoryModule.CategoryRouter)
+	srv.RegisterRouters(budgetModule.BudgetRouter)
 
 	go func() {
 		<-ctx.Done()

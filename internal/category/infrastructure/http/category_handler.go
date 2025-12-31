@@ -51,21 +51,23 @@ func (h *CategoryHandler) Create(w http.ResponseWriter, r *http.Request) {
 
 	user, err := middlewares.GetUserFromContext(ctx)
 	if err != nil {
+		h.errorHandler.HandleError(w, r, err)
 		return
 	}
 
 	var input *dtos.CategoryInput
 	if err = json.NewDecoder(r.Body).Decode(&input); err != nil {
+		h.errorHandler.HandleError(w, r, err)
 		return
 	}
 
 	output, err := h.createCategoryUseCase.Execute(ctx, user.ID, input)
 	if err != nil {
+		h.errorHandler.HandleError(w, r, err)
 		return
 	}
 
 	responses.JSON(w, http.StatusCreated, output)
-	return
 }
 
 func (h *CategoryHandler) Find(w http.ResponseWriter, r *http.Request) {
@@ -74,16 +76,17 @@ func (h *CategoryHandler) Find(w http.ResponseWriter, r *http.Request) {
 
 	user, err := middlewares.GetUserFromContext(ctx)
 	if err != nil {
+		h.errorHandler.HandleError(w, r, err)
 		return
 	}
 
 	output, err := h.findCategoryUseCase.Execute(ctx, user.ID)
 	if err != nil {
+		h.errorHandler.HandleError(w, r, err)
 		return
 	}
 
 	responses.JSON(w, http.StatusOK, output)
-	return
 }
 
 func (h *CategoryHandler) FindBy(w http.ResponseWriter, r *http.Request) {
@@ -92,16 +95,17 @@ func (h *CategoryHandler) FindBy(w http.ResponseWriter, r *http.Request) {
 
 	user, err := middlewares.GetUserFromContext(ctx)
 	if err != nil {
+		h.errorHandler.HandleError(w, r, err)
 		return
 	}
 
 	output, err := h.findCategoryByUseCase.Execute(ctx, user.ID, chi.URLParam(r, "id"))
 	if err != nil {
+		h.errorHandler.HandleError(w, r, err)
 		return
 	}
 
 	responses.JSON(w, http.StatusOK, output)
-	return
 }
 
 func (h *CategoryHandler) Update(w http.ResponseWriter, r *http.Request) {
@@ -110,11 +114,13 @@ func (h *CategoryHandler) Update(w http.ResponseWriter, r *http.Request) {
 
 	user, err := middlewares.GetUserFromContext(ctx)
 	if err != nil {
+		h.errorHandler.HandleError(w, r, err)
 		return
 	}
 
 	var input *dtos.CategoryInput
 	if err = json.NewDecoder(r.Body).Decode(&input); err != nil {
+		h.errorHandler.HandleError(w, r, err)
 		return
 	}
 
@@ -124,7 +130,6 @@ func (h *CategoryHandler) Update(w http.ResponseWriter, r *http.Request) {
 	}
 
 	responses.JSON(w, http.StatusOK, output)
-	return
 }
 
 func (h *CategoryHandler) Delete(w http.ResponseWriter, r *http.Request) {
@@ -133,13 +138,14 @@ func (h *CategoryHandler) Delete(w http.ResponseWriter, r *http.Request) {
 
 	user, err := middlewares.GetUserFromContext(ctx)
 	if err != nil {
+		h.errorHandler.HandleError(w, r, err)
 		return
 	}
 
 	if err := h.removeCategoryUseCase.Execute(ctx, user.ID, chi.URLParam(r, "id")); err != nil {
+		h.errorHandler.HandleError(w, r, err)
 		return
 	}
 
 	responses.JSON(w, http.StatusNoContent, nil)
-	return
 }

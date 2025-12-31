@@ -2,7 +2,6 @@ package repositories
 
 import (
 	"context"
-	"time"
 
 	"github.com/jailtonjunior94/financial/internal/category/domain/entities"
 	"github.com/jailtonjunior94/financial/internal/category/domain/interfaces"
@@ -25,9 +24,7 @@ func NewCategoryRepository(db database.DBExecutor, o11y observability.Observabil
 }
 
 func (r *categoryRepository) List(ctx context.Context, userID vos.UUID) ([]*entities.Category, error) {
-	ctx, cancel := context.WithTimeout(ctx, 5*time.Second)
-	defer cancel()
-
+	// Removido WithTimeout: confiar no timeout do contexto pai (HTTP request ou transação)
 	ctx, span := r.o11y.Tracer().Start(ctx, "category_repository.list")
 	defer span.End()
 
@@ -84,9 +81,7 @@ func (r *categoryRepository) List(ctx context.Context, userID vos.UUID) ([]*enti
 }
 
 func (r *categoryRepository) FindByID(ctx context.Context, userID, id vos.UUID) (*entities.Category, error) {
-	ctx, cancel := context.WithTimeout(ctx, 5*time.Second)
-	defer cancel()
-
+	// Removido WithTimeout: confiar no timeout do contexto pai (HTTP request ou transação)
 	ctx, span := r.o11y.Tracer().Start(ctx, "category_repository.find_by_id")
 	defer span.End()
 
@@ -180,9 +175,7 @@ func (r *categoryRepository) FindByID(ctx context.Context, userID, id vos.UUID) 
 }
 
 func (r *categoryRepository) Save(ctx context.Context, category *entities.Category) error {
-	ctx, cancel := context.WithTimeout(ctx, 5*time.Second)
-	defer cancel()
-
+	// Removido WithTimeout: confiar no timeout do contexto pai (HTTP request ou transação)
 	ctx, span := r.o11y.Tracer().Start(ctx, "category_repository.save")
 	defer span.End()
 
@@ -236,9 +229,7 @@ func (r *categoryRepository) Save(ctx context.Context, category *entities.Catego
 }
 
 func (r *categoryRepository) Update(ctx context.Context, category *entities.Category) error {
-	ctx, cancel := context.WithTimeout(ctx, 5*time.Second)
-	defer cancel()
-
+	// Removido WithTimeout: confiar no timeout do contexto pai (HTTP request ou transação)
 	ctx, span := r.o11y.Tracer().Start(ctx, "category_repository.update")
 	defer span.End()
 
@@ -290,9 +281,7 @@ func (r *categoryRepository) Update(ctx context.Context, category *entities.Cate
 }
 
 func (r *categoryRepository) CheckCycleExists(ctx context.Context, userID, categoryID, parentID vos.UUID) (bool, error) {
-	ctx, cancel := context.WithTimeout(ctx, 3*time.Second)
-	defer cancel()
-
+	// Removido WithTimeout: confiar no timeout do contexto pai (HTTP request ou transação)
 	ctx, span := r.o11y.Tracer().Start(ctx, "category_repository.check_cycle_exists")
 	defer span.End()
 

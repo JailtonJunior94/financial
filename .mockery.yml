@@ -28,3 +28,9 @@ packages:
       pkgname: mocks
     interfaces:
       TokenValidator: {}
+  github.com/jailtonjunior94/financial/pkg/api/httperrors:
+    config:
+      dir: ./pkg/api/httperrors/mocks
+      pkgname: mocks
+    interfaces:
+      ErrorHandler: {}

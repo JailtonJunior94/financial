@@ -3,6 +3,7 @@ package user
 import (
 	"database/sql"
 
+	"github.com/JailtonJunior94/devkit-go/pkg/encrypt"
 	"github.com/JailtonJunior94/devkit-go/pkg/observability"
 	"github.com/jailtonjunior94/financial/configs"
 	"github.com/jailtonjunior94/financial/internal/user/application/usecase"
@@ -10,7 +11,6 @@ import (
 	"github.com/jailtonjunior94/financial/internal/user/infrastructure/repositories"
 	"github.com/jailtonjunior94/financial/pkg/api/httperrors"
 	"github.com/jailtonjunior94/financial/pkg/auth"
-	"github.com/JailtonJunior94/devkit-go/pkg/encrypt"
 )
 
 type UserModule struct {
@@ -18,7 +18,6 @@ type UserModule struct {
 }
 
 func NewUserModule(db *sql.DB, cfg *configs.Config, o11y observability.Observability) UserModule {
-	// Create error handler once for the module
 	errorHandler := httperrors.NewErrorHandler(o11y)
 
 	userRepository := repositories.NewUserRepository(db, o11y)

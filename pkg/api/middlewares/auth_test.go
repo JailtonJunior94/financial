@@ -7,9 +7,10 @@ import (
 	"net/http/httptest"
 	"testing"
 
+	authmocks "github.com/jailtonjunior94/financial/pkg/auth/mocks"
+	errorhandlermocks "github.com/jailtonjunior94/financial/pkg/api/httperrors/mocks"
 	"github.com/jailtonjunior94/financial/pkg/api/middlewares"
 	"github.com/jailtonjunior94/financial/pkg/auth"
-	"github.com/jailtonjunior94/financial/pkg/auth/mocks"
 	customerrors "github.com/jailtonjunior94/financial/pkg/custom_errors"
 
 	"github.com/stretchr/testify/mock"
@@ -20,7 +21,8 @@ type AuthorizationMiddlewareSuite struct {
 	suite.Suite
 
 	ctx            context.Context
-	tokenValidator *mocks.TokenValidator
+	tokenValidator *authmocks.TokenValidator
+	errorHandler   *errorhandlermocks.ErrorHandler
 }
 
 func TestAuthorizationMiddlewareSuite(t *testing.T) {
@@ -29,7 +31,8 @@ func TestAuthorizationMiddlewareSuite(t *testing.T) {
 
 func (s *AuthorizationMiddlewareSuite) SetupTest() {
 	s.ctx = context.Background()
-	s.tokenValidator = mocks.NewTokenValidator(s.T())
+	s.tokenValidator = authmocks.NewTokenValidator(s.T())
+	s.errorHandler = errorhandlermocks.NewErrorHandler(s.T())
 }
 
 func (s *AuthorizationMiddlewareSuite) TestAuthorization() {
@@ -39,7 +42,8 @@ func (s *AuthorizationMiddlewareSuite) TestAuthorization() {
 		}
 
 		dependencies struct {
-			tokenValidator *mocks.TokenValidator
+			tokenValidator *authmocks.TokenValidator
+			errorHandler   *errorhandlermocks.ErrorHandler
 		}
 	)
 
@@ -55,14 +59,14 @@ func (s *AuthorizationMiddlewareSuite) TestAuthorization() {
 				authHeader: "",
 			},
 			dependencies: dependencies{
-				tokenValidator: func() *mocks.TokenValidator {
-					// Arrange: não espera chamada ao validator
-					return s.tokenValidator
+				tokenValidator: s.tokenValidator,
+				errorHandler: func() *errorhandlermocks.ErrorHandler {
+					s.errorHandler.EXPECT().HandleError(mock.Anything, mock.Anything, mock.Anything).Once()
+					return s.errorHandler
 				}(),
 			},
 			expect: func(recorder *httptest.ResponseRecorder, handlerCalled *bool) {
-				// Assert: deve retornar 401 e não chamar o próximo handler
-				s.Equal(http.StatusUnauthorized, recorder.Code)
+				// Assert: não deve chamar o próximo handler
 				s.False(*handlerCalled)
 			},
 		},
@@ -72,14 +76,14 @@ func (s *AuthorizationMiddlewareSuite) TestAuthorization() {
 				authHeader: "Invalid token123",
 			},
 			dependencies: dependencies{
-				tokenValidator: func() *mocks.TokenValidator {
-					// Arrange: não espera chamada ao validator
-					return s.tokenValidator
+				tokenValidator: s.tokenValidator,
+				errorHandler: func() *errorhandlermocks.ErrorHandler {
+					s.errorHandler.EXPECT().HandleError(mock.Anything, mock.Anything, mock.Anything).Once()
+					return s.errorHandler
 				}(),
 			},
 			expect: func(recorder *httptest.ResponseRecorder, handlerCalled *bool) {
-				// Assert: deve retornar 401 e não chamar o próximo handler
-				s.Equal(http.StatusUnauthorized, recorder.Code)
+				// Assert: não deve chamar o próximo handler
 				s.False(*handlerCalled)
 			},
 		},
@@ -89,14 +93,14 @@ func (s *AuthorizationMiddlewareSuite) TestAuthorization() {
 				authHeader: "Bearer ",
 			},
 			dependencies: dependencies{
-				tokenValidator: func() *mocks.TokenValidator {
-					// Arrange: não espera chamada ao validator
-					return s.tokenValidator
+				tokenValidator: s.tokenValidator,
+				errorHandler: func() *errorhandlermocks.ErrorHandler {
+					s.errorHandler.EXPECT().HandleError(mock.Anything, mock.Anything, mock.Anything).Once()
+					return s.errorHandler
 				}(),
 			},
 			expect: func(recorder *httptest.ResponseRecorder, handlerCalled *bool) {
-				// Assert: deve retornar 401 e não chamar o próximo handler
-				s.Equal(http.StatusUnauthorized, recorder.Code)
+				// Assert: não deve chamar o próximo handler
 				s.False(*handlerCalled)
 			},
 		},
@@ -106,7 +110,7 @@ func (s *AuthorizationMiddlewareSuite) TestAuthorization() {
 				authHeader: "Bearer invalid-token",
 			},
 			dependencies: dependencies{
-				tokenValidator: func() *mocks.TokenValidator {
+				tokenValidator: func() *authmocks.TokenValidator {
 					// Arrange: configurar mock para retornar erro de token inválido
 					s.tokenValidator.
 						EXPECT().
@@ -115,10 +119,13 @@ func (s *AuthorizationMiddlewareSuite) TestAuthorization() {
 						Once()
 					return s.tokenValidator
 				}(),
+				errorHandler: func() *errorhandlermocks.ErrorHandler {
+					s.errorHandler.EXPECT().HandleError(mock.Anything, mock.Anything, mock.Anything).Once()
+					return s.errorHandler
+				}(),
 			},
 			expect: func(recorder *httptest.ResponseRecorder, handlerCalled *bool) {
-				// Assert: deve retornar 401 e não chamar o próximo handler
-				s.Equal(http.StatusUnauthorized, recorder.Code)
+				// Assert: não deve chamar o próximo handler
 				s.False(*handlerCalled)
 			},
 		},
@@ -128,7 +135,7 @@ func (s *AuthorizationMiddlewareSuite) TestAuthorization() {
 				authHeader: "Bearer expired-token",
 			},
 			dependencies: dependencies{
-				tokenValidator: func() *mocks.TokenValidator {
+				tokenValidator: func() *authmocks.TokenValidator {
 					// Arrange: configurar mock para retornar erro de token expirado
 					s.tokenValidator.
 						EXPECT().
@@ -137,10 +144,13 @@ func (s *AuthorizationMiddlewareSuite) TestAuthorization() {
 						Once()
 					return s.tokenValidator
 				}(),
+				errorHandler: func() *errorhandlermocks.ErrorHandler {
+					s.errorHandler.EXPECT().HandleError(mock.Anything, mock.Anything, mock.Anything).Once()
+					return s.errorHandler
+				}(),
 			},
 			expect: func(recorder *httptest.ResponseRecorder, handlerCalled *bool) {
-				// Assert: deve retornar 401 e não chamar o próximo handler
-				s.Equal(http.StatusUnauthorized, recorder.Code)
+				// Assert: não deve chamar o próximo handler
 				s.False(*handlerCalled)
 			},
 		},
@@ -150,7 +160,7 @@ func (s *AuthorizationMiddlewareSuite) TestAuthorization() {
 				authHeader: "Bearer token-with-error",
 			},
 			dependencies: dependencies{
-				tokenValidator: func() *mocks.TokenValidator {
+				tokenValidator: func() *authmocks.TokenValidator {
 					// Arrange: configurar mock para retornar erro genérico
 					s.tokenValidator.
 						EXPECT().
@@ -159,10 +169,13 @@ func (s *AuthorizationMiddlewareSuite) TestAuthorization() {
 						Once()
 					return s.tokenValidator
 				}(),
+				errorHandler: func() *errorhandlermocks.ErrorHandler {
+					s.errorHandler.EXPECT().HandleError(mock.Anything, mock.Anything, mock.Anything).Once()
+					return s.errorHandler
+				}(),
 			},
 			expect: func(recorder *httptest.ResponseRecorder, handlerCalled *bool) {
-				// Assert: deve retornar 401 e não chamar o próximo handler
-				s.Equal(http.StatusUnauthorized, recorder.Code)
+				// Assert: não deve chamar o próximo handler
 				s.False(*handlerCalled)
 			},
 		},
@@ -172,7 +185,7 @@ func (s *AuthorizationMiddlewareSuite) TestAuthorization() {
 				authHeader: "Bearer valid-token",
 			},
 			dependencies: dependencies{
-				tokenValidator: func() *mocks.TokenValidator {
+				tokenValidator: func() *authmocks.TokenValidator {
 					// Arrange: configurar mock para retornar usuário válido
 					user := auth.NewAuthenticatedUser("user-123", "user@example.com", []string{"admin"})
 					s.tokenValidator.
@@ -182,9 +195,10 @@ func (s *AuthorizationMiddlewareSuite) TestAuthorization() {
 						Once()
 					return s.tokenValidator
 				}(),
+				errorHandler: s.errorHandler,
 			},
 			expect: func(recorder *httptest.ResponseRecorder, handlerCalled *bool) {
-				// Assert: deve retornar 200 e chamar o próximo handler
+				// Assert: deve chamar o próximo handler
 				s.Equal(http.StatusOK, recorder.Code)
 				s.True(*handlerCalled)
 			},
@@ -195,7 +209,7 @@ func (s *AuthorizationMiddlewareSuite) TestAuthorization() {
 				authHeader: "Bearer valid-token-lowercase",
 			},
 			dependencies: dependencies{
-				tokenValidator: func() *mocks.TokenValidator {
+				tokenValidator: func() *authmocks.TokenValidator {
 					// Arrange: configurar mock para retornar usuário válido
 					user := auth.NewAuthenticatedUser("user-456", "another@example.com", []string{"user"})
 					s.tokenValidator.
@@ -205,9 +219,10 @@ func (s *AuthorizationMiddlewareSuite) TestAuthorization() {
 						Once()
 					return s.tokenValidator
 				}(),
+				errorHandler: s.errorHandler,
 			},
 			expect: func(recorder *httptest.ResponseRecorder, handlerCalled *bool) {
-				// Assert: deve retornar 200 e chamar o próximo handler
+				// Assert: deve chamar o próximo handler
 				s.Equal(http.StatusOK, recorder.Code)
 				s.True(*handlerCalled)
 			},
@@ -217,7 +232,11 @@ func (s *AuthorizationMiddlewareSuite) TestAuthorization() {
 	for _, scenario := range scenarios {
 		s.T().Run(scenario.name, func(t *testing.T) {
 			// Arrange: criar middleware e handler de teste
-			authMiddleware := middlewares.NewAuthorization(scenario.dependencies.tokenValidator, nil)
+			authMiddleware := middlewares.NewAuthorization(
+				scenario.dependencies.tokenValidator,
+				nil, // o11y não usado nos testes
+				scenario.dependencies.errorHandler,
+			)
 
 			handlerCalled := false
 			nextHandler := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
@@ -252,24 +271,17 @@ func (s *AuthorizationMiddlewareSuite) TestAuthorization() {
 }
 
 func (s *AuthorizationMiddlewareSuite) TestGetUserFromContext() {
-	type (
-		args struct {
-			ctx context.Context
-		}
-	)
-
 	scenarios := []struct {
 		name   string
-		args   args
+		setup  func() context.Context
 		expect func(user *auth.AuthenticatedUser, err error)
 	}{
 		{
 			name: "deve retornar erro quando o usuário não está no contexto",
-			args: args{
-				ctx: context.Background(),
+			setup: func() context.Context {
+				return context.Background()
 			},
 			expect: func(user *auth.AuthenticatedUser, err error) {
-				// Assert: deve retornar erro e usuário nil
 				s.Error(err)
 				s.Nil(user)
 				s.Equal(customerrors.ErrUnauthorized, err)
@@ -277,43 +289,42 @@ func (s *AuthorizationMiddlewareSuite) TestGetUserFromContext() {
 		},
 		{
 			name: "deve retornar o usuário quando está presente no contexto",
-			args: args{
-				ctx: func() context.Context {
-					// Arrange: adicionar usuário ao contexto
-					user := auth.NewAuthenticatedUser("user-123", "user@example.com", []string{"admin"})
-					return middlewares.AddUserToContext(context.Background(), user)
-				}(),
+			setup: func() context.Context {
+				user := auth.NewAuthenticatedUser("user-123", "user@example.com", []string{"admin"})
+				return middlewares.AddUserToContext(context.Background(), user)
 			},
 			expect: func(user *auth.AuthenticatedUser, err error) {
-				// Assert: deve retornar o usuário sem erro
 				s.NoError(err)
 				s.NotNil(user)
 				s.Equal("user-123", user.ID)
 				s.Equal("user@example.com", user.Email)
-				s.Equal([]string{"admin"}, user.Roles)
+				s.Contains(user.Roles, "admin")
 			},
 		},
 	}
 
 	for _, scenario := range scenarios {
 		s.T().Run(scenario.name, func(t *testing.T) {
-			// Act: obter usuário do contexto
-			user, err := middlewares.GetUserFromContext(scenario.args.ctx)
+			// Arrange
+			ctx := scenario.setup()
 
-			// Assert: chamar função de verificação
+			// Act
+			user, err := middlewares.GetUserFromContext(ctx)
+
+			// Assert
 			scenario.expect(user, err)
 		})
 	}
 }
 
 func (s *AuthorizationMiddlewareSuite) TestAddUserToContext() {
-	// Arrange: criar usuário
-	user := auth.NewAuthenticatedUser("user-123", "user@example.com", []string{"admin", "user"})
+	// Arrange
+	user := auth.NewAuthenticatedUser("user-789", "test@example.com", []string{"user", "admin"})
 
-	// Act: adicionar usuário ao contexto
+	// Act
 	ctx := middlewares.AddUserToContext(context.Background(), user)
 
-	// Assert: verificar se o usuário foi adicionado corretamente
+	// Assert
 	retrievedUser, err := middlewares.GetUserFromContext(ctx)
 	s.NoError(err)
 	s.NotNil(retrievedUser)

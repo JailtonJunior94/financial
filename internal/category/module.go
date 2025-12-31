@@ -15,7 +15,6 @@ type CategoryModule struct {
 }
 
 func NewCategoryModule(db *sql.DB, o11y observability.Observability) CategoryModule {
-	// Create error handler once for the module
 	errorHandler := httperrors.NewErrorHandler(o11y)
 
 	categoryRepository := repositories.NewCategoryRepository(db, o11y)

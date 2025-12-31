@@ -4,7 +4,6 @@ import (
 	"context"
 	"database/sql"
 	"fmt"
-	"time"
 
 	"github.com/jailtonjunior94/financial/internal/user/domain/entities"
 	"github.com/jailtonjunior94/financial/internal/user/domain/interfaces"
@@ -27,9 +26,8 @@ func NewUserRepository(db database.DBExecutor, o11y observability.Observability)
 }
 
 func (r *userRepository) Insert(ctx context.Context, user *entities.User) (*entities.User, error) {
-	ctx, cancel := context.WithTimeout(ctx, 5*time.Second)
-	defer cancel()
-
+	// Removido WithTimeout: confiar no timeout do contexto pai (HTTP request ou transação)
+	// para evitar goroutine leaks em queries lentas
 	ctx, span := r.o11y.Tracer().Start(ctx, "user_repository.insert")
 	defer span.End()
 
@@ -77,9 +75,8 @@ func (r *userRepository) Insert(ctx context.Context, user *entities.User) (*enti
 }
 
 func (r *userRepository) FindByEmail(ctx context.Context, email string) (*entities.User, error) {
-	ctx, cancel := context.WithTimeout(ctx, 5*time.Second)
-	defer cancel()
-
+	// Removido WithTimeout: confiar no timeout do contexto pai (HTTP request ou transação)
+	// para evitar goroutine leaks em queries lentas
 	ctx, span := r.o11y.Tracer().Start(ctx, "user_repository.find_by_email")
 	defer span.End()
 
