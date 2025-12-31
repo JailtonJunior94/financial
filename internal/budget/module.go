@@ -5,7 +5,7 @@ import (
 
 	"github.com/JailtonJunior94/devkit-go/pkg/observability"
 	"github.com/jailtonjunior94/financial/internal/budget/infrastructure/http"
-	"github.com/jailtonjunior94/financial/internal/budget/usecase"
+	"github.com/jailtonjunior94/financial/internal/budget/application/usecase"
 	"github.com/jailtonjunior94/financial/pkg/api/httperrors"
 	unitOfWork "github.com/jailtonjunior94/financial/pkg/database/uow"
 )

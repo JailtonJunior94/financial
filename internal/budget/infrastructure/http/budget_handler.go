@@ -4,8 +4,8 @@ import (
 	"encoding/json"
 	"net/http"
 
-	"github.com/jailtonjunior94/financial/internal/budget/domain/dtos"
-	"github.com/jailtonjunior94/financial/internal/budget/usecase"
+	"github.com/jailtonjunior94/financial/internal/budget/application/dtos"
+	"github.com/jailtonjunior94/financial/internal/budget/application/usecase"
 	"github.com/jailtonjunior94/financial/pkg/api/httperrors"
 	"github.com/jailtonjunior94/financial/pkg/api/middlewares"
 
@@ -41,7 +41,7 @@ func (h *BudgetHandler) Create(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	var input *dtos.BugetInput
+	var input *dtos.BudgetCreateInput
 	if err = json.NewDecoder(r.Body).Decode(&input); err != nil {
 		h.errorHandler.HandleError(w, r, err)
 		return

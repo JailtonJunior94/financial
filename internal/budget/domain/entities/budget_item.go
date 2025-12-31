@@ -7,16 +7,16 @@ import (
 	"github.com/JailtonJunior94/devkit-go/pkg/vos"
 )
 
+// BudgetItem representa um item individual de um orçamento
+// Nota: Mutações devem passar pelo Budget (aggregate root)
 type BudgetItem struct {
 	entity.Base
-	Budget          *Budget
-	BudgetID        vos.UUID
-	CategoryID      vos.UUID
-	PercentageGoal  vos.Percentage
-	AmountGoal      vos.Money
-	AmountUsed      vos.Money
-	PercentageUsed  vos.Percentage
-	PercentageTotal vos.Percentage
+	Budget         *Budget
+	BudgetID       vos.UUID
+	CategoryID     vos.UUID
+	PercentageGoal vos.Percentage
+	PlannedAmount  vos.Money
+	SpentAmount    vos.Money
 }
 
 func NewBudgetItem(
@@ -25,66 +25,61 @@ func NewBudgetItem(
 	percentageGoal vos.Percentage,
 ) *BudgetItem {
 	// Initialize zero values with correct types
-	zeroCurrency := budget.AmountGoal.Currency()
+	zeroCurrency := budget.TotalAmount.Currency()
 	zeroMoney, _ := vos.NewMoney(0, zeroCurrency)
-	zeroPercentage, _ := vos.NewPercentage(0)
-	hundredPercentage, _ := vos.NewPercentage(100000) // 100.000% with scale 3
 
 	budgetItem := &BudgetItem{
-		Budget:          budget,
-		BudgetID:        budget.ID,
-		CategoryID:      categoryID,
-		PercentageGoal:  percentageGoal,
-		AmountUsed:      zeroMoney,
-		PercentageUsed:  zeroPercentage,
-		PercentageTotal: hundredPercentage,
+		Budget:         budget,
+		BudgetID:       budget.ID,
+		CategoryID:     categoryID,
+		PercentageGoal: percentageGoal,
+		SpentAmount:    zeroMoney,
 		Base: entity.Base{
 			CreatedAt: time.Now().UTC(),
 		},
 	}
 
-	budgetItem.CalculateAmountGoal()
+	budgetItem.calculatePlannedAmount()
 	return budgetItem
 }
 
-func (b *BudgetItem) CalculateAmountGoal() {
-	// Apply percentage to budget amount goal
-	if amount, err := b.PercentageGoal.Apply(b.Budget.AmountGoal); err == nil {
-		b.AmountGoal = amount
+// calculatePlannedAmount calcula o valor planejado com base na porcentagem
+func (b *BudgetItem) calculatePlannedAmount() {
+	// Apply percentage to budget total amount
+	if amount, err := b.PercentageGoal.Apply(b.Budget.TotalAmount); err == nil {
+		b.PlannedAmount = amount
 	}
 }
 
-func (b *BudgetItem) AddAmountUsed(amount vos.Money) error {
-	// Add amount used
-	newAmountUsed, err := b.AmountUsed.Add(amount)
-	if err != nil {
-		return err
-	}
-	b.AmountUsed = newAmountUsed
-
-	// Prevent division by zero
-	if b.Budget.AmountGoal.IsZero() {
+// PercentageSpent calcula a porcentagem gasta em relação ao planejado
+func (b *BudgetItem) PercentageSpent() vos.Percentage {
+	// Evita divisão por zero
+	if b.PlannedAmount.IsZero() {
 		zeroPercentage, _ := vos.NewPercentage(0)
-		b.PercentageUsed = zeroPercentage
-		b.PercentageTotal = zeroPercentage
-		return nil
+		return zeroPercentage
 	}
 
-	// Calculate percentage used: (AmountUsed / AmountGoal) * 100
-	// Use Float() for division, then convert to percentage with scale 3
-	usedFloat := b.AmountUsed.Float()
-	goalFloat := b.Budget.AmountGoal.Float()
-	percentageFloat := (usedFloat / goalFloat) * 100.0
+	// Calcula: (SpentAmount / PlannedAmount) * 100
+	spentFloat := b.SpentAmount.Float()
+	plannedFloat := b.PlannedAmount.Float()
+	percentageFloat := (spentFloat / plannedFloat) * 100.0
 
-	// Convert to Percentage (scale 3: 12.345% = 12345)
-	percentageUsed, err := vos.NewPercentageFromFloat(percentageFloat)
+	percentageSpent, err := vos.NewPercentageFromFloat(percentageFloat)
 	if err != nil {
-		return err
+		zeroPercentage, _ := vos.NewPercentage(0)
+		return zeroPercentage
 	}
-	b.PercentageUsed = percentageUsed
 
-	// PercentageTotal is the same as PercentageUsed for this item
-	b.PercentageTotal = percentageUsed
+	return percentageSpent
+}
 
-	return nil
+// RemainingAmount calcula o valor restante disponível
+func (b *BudgetItem) RemainingAmount() vos.Money {
+	remaining, err := b.PlannedAmount.Subtract(b.SpentAmount)
+	if err != nil {
+		zeroCurrency := b.PlannedAmount.Currency()
+		zeroMoney, _ := vos.NewMoney(0, zeroCurrency)
+		return zeroMoney
+	}
+	return remaining
 }

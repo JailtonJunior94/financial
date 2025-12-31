@@ -5,79 +5,217 @@ import (
 
 	"github.com/JailtonJunior94/devkit-go/pkg/entity"
 	"github.com/JailtonJunior94/devkit-go/pkg/vos"
+
+	"github.com/jailtonjunior94/financial/internal/budget/domain"
+	budgetVos "github.com/jailtonjunior94/financial/internal/budget/domain/vos"
 )
 
+// Budget é o Aggregate Root que garante a integridade do orçamento
 type Budget struct {
 	entity.Base
 	UserID         vos.UUID
-	Date           time.Time
-	AmountGoal     vos.Money
-	AmountUsed     vos.Money
+	ReferenceMonth budgetVos.ReferenceMonth
+	TotalAmount    vos.Money
+	SpentAmount    vos.Money
 	PercentageUsed vos.Percentage
 	Items          []*BudgetItem
 }
 
-func NewBudget(userID vos.UUID, amountGoal vos.Money, date time.Time) *Budget {
+func NewBudget(userID vos.UUID, totalAmount vos.Money, referenceMonth budgetVos.ReferenceMonth) *Budget {
+	zeroMoney, _ := vos.NewMoney(0, totalAmount.Currency())
+	zeroPercentage, _ := vos.NewPercentage(0)
+
 	return &Budget{
-		Date:       date,
-		UserID:     userID,
-		AmountGoal: amountGoal,
+		UserID:         userID,
+		ReferenceMonth: referenceMonth,
+		TotalAmount:    totalAmount,
+		SpentAmount:    zeroMoney,
+		PercentageUsed: zeroPercentage,
+		Items:          []*BudgetItem{},
 		Base: entity.Base{
 			CreatedAt: time.Now().UTC(),
 		},
 	}
 }
 
-func (b *Budget) AddItems(items []*BudgetItem) bool {
+// AddItems adiciona múltiplos itens e valida que a soma das porcentagens seja exatamente 100%
+func (b *Budget) AddItems(items []*BudgetItem) error {
+	// Valida se items não está vazio
+	if len(items) == 0 {
+		return domain.ErrBudgetNoItems
+	}
+
+	// Calcula soma total das porcentagens incluindo os novos itens
+	var totalPercentage vos.Percentage
+	for _, existingItem := range b.Items {
+		if sum, err := totalPercentage.Add(existingItem.PercentageGoal); err == nil {
+			totalPercentage = sum
+		}
+	}
+
+	for _, newItem := range items {
+		// Valida categoria duplicada
+		if b.hasCategoryID(newItem.CategoryID) {
+			return domain.ErrDuplicateCategory
+		}
+
+		if sum, err := totalPercentage.Add(newItem.PercentageGoal); err == nil {
+			totalPercentage = sum
+		}
+	}
+
+	// Valida que soma seja exatamente 100%
+	hundredPercent, _ := vos.NewPercentage(100000) // 100.000% with scale 3
+	if totalPercentage.GreaterThan(hundredPercent) {
+		return domain.ErrBudgetPercentageExceeds100
+	}
+	if !totalPercentage.Equals(hundredPercent) {
+		return domain.ErrBudgetInvalidTotal
+	}
+
+	// Adiciona os itens
 	b.Items = append(b.Items, items...)
-	// Reset acumuladores antes de recalcular para evitar duplicação
-	b.AmountUsed = vos.Money{}
-	b.PercentageUsed = vos.Percentage{}
-	b.CalculateAmountUsed()
-	b.CalculatePercentageUsed()
-	return b.CalculatePercentageTotal()
+	b.recalculateSpentAmount()
+	b.recalculatePercentageUsed()
+
+	return nil
 }
 
-func (b *Budget) AddItem(item *BudgetItem) bool {
+// AddItem adiciona um único item e valida que a soma das porcentagens não exceda 100%
+func (b *Budget) AddItem(item *BudgetItem) error {
+	// Valida categoria duplicada
+	if b.hasCategoryID(item.CategoryID) {
+		return domain.ErrDuplicateCategory
+	}
+
+	// Calcula soma total das porcentagens incluindo o novo item
+	var totalPercentage vos.Percentage
+	for _, existingItem := range b.Items {
+		if sum, err := totalPercentage.Add(existingItem.PercentageGoal); err == nil {
+			totalPercentage = sum
+		}
+	}
+
+	if sum, err := totalPercentage.Add(item.PercentageGoal); err == nil {
+		totalPercentage = sum
+	}
+
+	// Valida que soma não exceda 100%
+	hundredPercent, _ := vos.NewPercentage(100000) // 100.000% with scale 3
+	if totalPercentage.GreaterThan(hundredPercent) {
+		return domain.ErrBudgetPercentageExceeds100
+	}
+
+	// Adiciona o item
 	b.Items = append(b.Items, item)
-	// Reset acumuladores antes de recalcular para evitar duplicação
-	b.AmountUsed = vos.Money{}
-	b.PercentageUsed = vos.Percentage{}
-	b.CalculateAmountUsed()
-	b.CalculatePercentageUsed()
-	return b.CalculatePercentageTotal()
+	b.recalculateSpentAmount()
+	b.recalculatePercentageUsed()
+
+	return nil
 }
 
-func (b *Budget) CalculateAmountUsed() {
-	// Usa variável local para acumular corretamente
-	var total vos.Money
+// UpdateItemSpentAmount atualiza o valor gasto de um item específico (passando pelo aggregate)
+func (b *Budget) UpdateItemSpentAmount(itemID vos.UUID, newSpentAmount vos.Money) error {
+	// Valida que o valor não seja negativo
+	if newSpentAmount.IsNegative() {
+		return domain.ErrNegativeAmount
+	}
+
+	// Encontra o item
+	item := b.findItemByID(itemID)
+	if item == nil {
+		return domain.ErrBudgetItemNotFound
+	}
+
+	// PERMITE gastar acima do planejado - o RemainingAmount ficará negativo
+	// Isso é comportamento esperado: usuário pode estourar o orçamento
+
+	// Atualiza o valor gasto do item
+	item.SpentAmount = newSpentAmount
+	item.UpdatedAt = vos.NewNullableTime(time.Now().UTC())
+
+	// Recalcula os totais do budget
+	b.recalculateSpentAmount()
+	b.recalculatePercentageUsed()
+
+	return nil
+}
+
+// FindItemByID busca um item pelo ID
+func (b *Budget) FindItemByID(itemID vos.UUID) *BudgetItem {
+	return b.findItemByID(itemID)
+}
+
+// hasCategoryID verifica se já existe um item com a categoria informada
+func (b *Budget) hasCategoryID(categoryID vos.UUID) bool {
 	for _, item := range b.Items {
-		if sum, err := total.Add(item.AmountUsed); err == nil {
+		if item.CategoryID.String() == categoryID.String() {
+			return true
+		}
+	}
+	return false
+}
+
+// findItemByID busca um item pelo ID
+func (b *Budget) findItemByID(itemID vos.UUID) *BudgetItem {
+	for _, item := range b.Items {
+		if item.ID.String() == itemID.String() {
+			return item
+		}
+	}
+	return nil
+}
+
+// recalculateSpentAmount recalcula o valor total gasto
+func (b *Budget) recalculateSpentAmount() {
+	zeroCurrency := b.TotalAmount.Currency()
+	total, _ := vos.NewMoney(0, zeroCurrency)
+
+	for _, item := range b.Items {
+		if sum, err := total.Add(item.SpentAmount); err == nil {
 			total = sum
 		}
 	}
-	b.AmountUsed = total
+	b.SpentAmount = total
 }
 
-func (b *Budget) CalculatePercentageUsed() {
-	// Usa variável local para acumular corretamente
-	var total vos.Percentage
-	for _, item := range b.Items {
-		if sum, err := total.Add(item.PercentageUsed); err == nil {
-			total = sum
-		}
+// recalculatePercentageUsed recalcula a porcentagem total utilizada
+func (b *Budget) recalculatePercentageUsed() {
+	// Evita divisão por zero
+	if b.TotalAmount.IsZero() {
+		zeroPercentage, _ := vos.NewPercentage(0)
+		b.PercentageUsed = zeroPercentage
+		return
 	}
-	b.PercentageUsed = total
+
+	// Calcula: (SpentAmount / TotalAmount) * 100
+	spentFloat := b.SpentAmount.Float()
+	totalFloat := b.TotalAmount.Float()
+	percentageFloat := (spentFloat / totalFloat) * 100.0
+
+	percentageUsed, err := vos.NewPercentageFromFloat(percentageFloat)
+	if err != nil {
+		zeroPercentage, _ := vos.NewPercentage(0)
+		b.PercentageUsed = zeroPercentage
+		return
+	}
+
+	b.PercentageUsed = percentageUsed
 }
 
-func (b *Budget) CalculatePercentageTotal() bool {
+// TotalPercentageAllocated retorna a porcentagem total alocada nos itens
+func (b *Budget) TotalPercentageAllocated() vos.Percentage {
 	var total vos.Percentage
 	for _, item := range b.Items {
 		if sum, err := total.Add(item.PercentageGoal); err == nil {
 			total = sum
 		}
 	}
-	// NewPercentage(100*1000) because scale is 3 decimal places (100.000%)
+	return total
+}
+
+// IsFullyAllocated verifica se o orçamento está 100% alocado
+func (b *Budget) IsFullyAllocated() bool {
 	hundredPercent, _ := vos.NewPercentage(100000)
-	return total.Equals(hundredPercent)
+	return b.TotalPercentageAllocated().Equals(hundredPercent)
 }

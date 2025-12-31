@@ -3,7 +3,7 @@ package usecase
 import (
 	"context"
 
-	"github.com/jailtonjunior94/financial/internal/budget/domain/dtos"
+	"github.com/jailtonjunior94/financial/internal/budget/application/dtos"
 	"github.com/jailtonjunior94/financial/internal/budget/domain/factories"
 	"github.com/jailtonjunior94/financial/internal/budget/infrastructure/repositories"
 	"github.com/jailtonjunior94/financial/pkg/database"
@@ -14,7 +14,7 @@ import (
 
 type (
 	CreateBudgetUseCase interface {
-		Execute(ctx context.Context, userID string, input *dtos.BugetInput) (*dtos.BudgetOutput, error)
+		Execute(ctx context.Context, userID string, input *dtos.BudgetCreateInput) (*dtos.BudgetOutput, error)
 	}
 
 	createBudgetUseCase struct {
@@ -33,13 +33,12 @@ func NewCreateBudgetUseCase(
 	}
 }
 
-func (u *createBudgetUseCase) Execute(ctx context.Context, userID string, input *dtos.BugetInput) (*dtos.BudgetOutput, error) {
+func (u *createBudgetUseCase) Execute(ctx context.Context, userID string, input *dtos.BudgetCreateInput) (*dtos.BudgetOutput, error) {
 	ctx, span := u.o11y.Tracer().Start(ctx, "create_budget_usecase.execute")
 	defer span.End()
 
 	newBudget, err := factories.CreateBudget(userID, input)
 	if err != nil {
-
 		return nil, err
 	}
 
@@ -48,27 +47,28 @@ func (u *createBudgetUseCase) Execute(ctx context.Context, userID string, input 
 		budgetRepository := repositories.NewBudgetRepository(tx, u.o11y)
 
 		if err := budgetRepository.Insert(ctx, newBudget); err != nil {
-
 			return err
 		}
 
 		if err := budgetRepository.InsertItems(ctx, newBudget.Items); err != nil {
-
 			return err
 		}
 		return nil
 	})
 
 	if err != nil {
-
 		return nil, err
 	}
+
+	// Build output
 	return &dtos.BudgetOutput{
-		ID:         newBudget.ID.String(),
-		Date:       newBudget.Date,
-		AmountGoal: newBudget.AmountGoal.Float(),
-		AmountUsed: newBudget.AmountUsed.Float(),
-		Percentage: newBudget.PercentageUsed.Float(),
-		CreatedAt:  newBudget.CreatedAt,
+		ID:             newBudget.ID.String(),
+		UserID:         newBudget.UserID.String(),
+		ReferenceMonth: newBudget.ReferenceMonth.String(),
+		TotalAmount:    newBudget.TotalAmount.String(),
+		SpentAmount:    newBudget.SpentAmount.String(),
+		PercentageUsed: newBudget.PercentageUsed.String(),
+		Currency:       string(newBudget.TotalAmount.Currency()),
+		CreatedAt:      newBudget.CreatedAt,
 	}, nil
 }
