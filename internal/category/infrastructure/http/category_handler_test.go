@@ -17,28 +17,28 @@ import (
 	"github.com/go-chi/chi/v5"
 	"github.com/stretchr/testify/suite"
 
+	"github.com/JailtonJunior94/devkit-go/pkg/observability"
 	"github.com/jailtonjunior94/financial/configs"
 	"github.com/jailtonjunior94/financial/internal/category/application/dtos"
+	"github.com/jailtonjunior94/financial/internal/category/application/usecase"
 	categoryHttp "github.com/jailtonjunior94/financial/internal/category/infrastructure/http"
 	"github.com/jailtonjunior94/financial/internal/category/infrastructure/repositories"
-	"github.com/jailtonjunior94/financial/internal/category/application/usecase"
 	"github.com/jailtonjunior94/financial/pkg/auth"
 	"github.com/jailtonjunior94/financial/pkg/database"
-	"github.com/JailtonJunior94/devkit-go/pkg/observability"
 
 	"github.com/JailtonJunior94/devkit-go/pkg/observability/fake"
 )
 
 type CategoryHandlerSuite struct {
 	suite.Suite
-	ctx         context.Context
-	db          *sql.DB
-	container   *database.CockroachDBContainer
-	handler     *categoryHttp.CategoryHandler
-	jwtAdapter  auth.JwtAdapter
-	authToken   string
-	testUserID  string
-	testEmail   string
+	ctx        context.Context
+	db         *sql.DB
+	container  *database.CockroachDBContainer
+	handler    *categoryHttp.CategoryHandler
+	jwtAdapter auth.JwtAdapter
+	authToken  string
+	testUserID string
+	testEmail  string
 }
 
 func TestCategoryHandlerSuite(t *testing.T) {

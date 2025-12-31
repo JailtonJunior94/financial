@@ -6,8 +6,8 @@ import (
 	"fmt"
 	"strings"
 
-	customerrors "github.com/jailtonjunior94/financial/pkg/custom_errors"
 	"github.com/go-sql-driver/mysql"
+	customerrors "github.com/jailtonjunior94/financial/pkg/custom_errors"
 	"github.com/lib/pq"
 )
 

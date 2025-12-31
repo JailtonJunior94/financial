@@ -58,7 +58,6 @@ func (r *budgetRepository) Insert(ctx context.Context, budget *entities.Budget) 
 	)
 	if err != nil {
 
-
 		return err
 	}
 	return nil
@@ -118,7 +117,6 @@ func (r *budgetRepository) InsertItems(ctx context.Context, items []*entities.Bu
 
 	_, err := r.exec.ExecContext(ctx, query, valueArgs...)
 	if err != nil {
-
 
 		return err
 	}

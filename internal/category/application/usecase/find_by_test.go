@@ -8,11 +8,11 @@ import (
 
 	"github.com/stretchr/testify/suite"
 
+	"github.com/JailtonJunior94/devkit-go/pkg/observability"
 	"github.com/jailtonjunior94/financial/internal/category/application/dtos"
 	"github.com/jailtonjunior94/financial/internal/category/domain/entities"
 	"github.com/jailtonjunior94/financial/internal/category/domain/factories"
 	mocks "github.com/jailtonjunior94/financial/internal/category/infrastructure/repositories/mocks"
-	"github.com/JailtonJunior94/devkit-go/pkg/observability"
 	customErrors "github.com/jailtonjunior94/financial/pkg/custom_errors"
 
 	"github.com/JailtonJunior94/devkit-go/pkg/observability/fake"

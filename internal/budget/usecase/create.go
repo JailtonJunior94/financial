@@ -40,7 +40,6 @@ func (u *createBudgetUseCase) Execute(ctx context.Context, userID string, input 
 	newBudget, err := factories.CreateBudget(userID, input)
 	if err != nil {
 
-
 		return nil, err
 	}
 
@@ -50,12 +49,10 @@ func (u *createBudgetUseCase) Execute(ctx context.Context, userID string, input 
 
 		if err := budgetRepository.Insert(ctx, newBudget); err != nil {
 
-
 			return err
 		}
 
 		if err := budgetRepository.InsertItems(ctx, newBudget.Items); err != nil {
-
 
 			return err
 		}
@@ -63,7 +60,6 @@ func (u *createBudgetUseCase) Execute(ctx context.Context, userID string, input 
 	})
 
 	if err != nil {
-
 
 		return nil, err
 	}

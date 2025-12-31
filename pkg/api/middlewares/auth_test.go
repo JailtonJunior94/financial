@@ -7,10 +7,10 @@ import (
 	"net/http/httptest"
 	"testing"
 
-	authmocks "github.com/jailtonjunior94/financial/pkg/auth/mocks"
 	errorhandlermocks "github.com/jailtonjunior94/financial/pkg/api/httperrors/mocks"
 	"github.com/jailtonjunior94/financial/pkg/api/middlewares"
 	"github.com/jailtonjunior94/financial/pkg/auth"
+	authmocks "github.com/jailtonjunior94/financial/pkg/auth/mocks"
 	customerrors "github.com/jailtonjunior94/financial/pkg/custom_errors"
 
 	"github.com/stretchr/testify/mock"

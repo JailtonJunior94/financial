@@ -23,8 +23,8 @@ func TestCategoryEntitySuite(t *testing.T) {
 
 func (s *CategoryEntitySuite) TestNewCategory() {
 	scenarios := []struct {
-		name   string
-		args   struct {
+		name string
+		args struct {
 			userID   sharedVos.UUID
 			parentID *sharedVos.UUID
 			name     vos.CategoryName
@@ -94,8 +94,8 @@ func (s *CategoryEntitySuite) TestNewCategory() {
 
 func (s *CategoryEntitySuite) TestUpdate() {
 	scenarios := []struct {
-		name   string
-		args   struct {
+		name string
+		args struct {
 			name     string
 			sequence uint
 			parentID *sharedVos.UUID
