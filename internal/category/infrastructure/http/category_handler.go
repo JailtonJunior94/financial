@@ -126,6 +126,7 @@ func (h *CategoryHandler) Update(w http.ResponseWriter, r *http.Request) {
 
 	output, err := h.updateCategoryUseCase.Execute(ctx, user.ID, chi.URLParam(r, "id"), input)
 	if err != nil {
+		h.errorHandler.HandleError(w, r, err)
 		return
 	}
 

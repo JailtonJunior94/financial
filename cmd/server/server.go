@@ -13,6 +13,7 @@ import (
 	"github.com/jailtonjunior94/financial/internal/budget"
 	"github.com/jailtonjunior94/financial/internal/category"
 	"github.com/jailtonjunior94/financial/internal/user"
+	"github.com/jailtonjunior94/financial/pkg/auth"
 
 	"github.com/JailtonJunior94/devkit-go/pkg/database/postgres"
 	httpserver "github.com/JailtonJunior94/devkit-go/pkg/http_server/chi_server"
@@ -68,7 +69,11 @@ func Run() error {
 	}
 
 	userModule := user.NewUserModule(dbManager.DB(), cfg, o11y)
-	categoryModule := category.NewCategoryModule(dbManager.DB(), o11y)
+
+	// JWT adapter para validação de tokens (usado por múltiplos módulos)
+	jwtAdapter := auth.NewJwtAdapter(cfg, o11y)
+
+	categoryModule := category.NewCategoryModule(dbManager.DB(), o11y, jwtAdapter)
 	budgetModule := budget.NewBudgetModule(dbManager.DB(), o11y)
 
 	srv := httpserver.New(
