@@ -5,15 +5,18 @@ import (
 
 	"github.com/JailtonJunior94/devkit-go/pkg/observability"
 	"github.com/jailtonjunior94/financial/internal/card/application/usecase"
+	"github.com/jailtonjunior94/financial/internal/card/infrastructure/adapters"
 	"github.com/jailtonjunior94/financial/internal/card/infrastructure/http"
 	"github.com/jailtonjunior94/financial/internal/card/infrastructure/repositories"
+	invoiceInterfaces "github.com/jailtonjunior94/financial/internal/invoice/domain/interfaces"
 	"github.com/jailtonjunior94/financial/pkg/api/httperrors"
 	"github.com/jailtonjunior94/financial/pkg/api/middlewares"
 	"github.com/jailtonjunior94/financial/pkg/auth"
 )
 
 type CardModule struct {
-	CardRouter *http.CardRouter
+	CardRouter   *http.CardRouter
+	CardProvider invoiceInterfaces.CardProvider // ✅ Export adapter for invoice module
 }
 
 func NewCardModule(db *sql.DB, o11y observability.Observability, tokenValidator auth.TokenValidator) CardModule {
@@ -39,7 +42,11 @@ func NewCardModule(db *sql.DB, o11y observability.Observability, tokenValidator 
 
 	cardRouter := http.NewCardRouter(cardHandler, authMiddleware)
 
+	// ✅ Create CardProvider adapter for invoice module
+	cardProvider := adapters.NewCardProviderAdapter(cardRepository, o11y)
+
 	return CardModule{
-		CardRouter: cardRouter,
+		CardRouter:   cardRouter,
+		CardProvider: cardProvider,
 	}
 }

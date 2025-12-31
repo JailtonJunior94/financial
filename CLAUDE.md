@@ -1,171 +1,259 @@
 # CLAUDE.md
 
-This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
+Este arquivo define as diretrizes obrigatórias para a IA ao trabalhar neste repositório, garantindo coerência arquitetural, reutilização de código existente e respostas contextualizadas.
 
-## Build and Development Commands
+---
 
-### Environment Setup
-```bash
-make dotenv  # Generate .env file from .env.example in cmd/
-```
+## Objetivos deste Arquivo
 
-### Build
-```bash
-make build   # Compiles to ./bin/financial (CGO_ENABLED=0, optimized with -ldflags="-w -s")
-```
+1. Definir regras globais de comportamento da IA
+2. Explicar como a IA deve interpretar o contexto do projeto
+3. Priorizar código existente antes de sugerir novas abstrações
+4. Reduzir respostas genéricas ou fora do padrão do projeto
+5. Garantir consistência arquitetural e de estilo
+6. Evitar decisões implícitas sem validação do contexto existente
 
-### Testing
-```bash
-make test    # Run all tests with race detection and coverage
-make cover   # Generate and view HTML coverage report
-```
+---
 
-### Linting
-```bash
-make lint    # Run golangci-lint with .golangci.yml configuration
-```
+## Uso de Contexto (Regras Obrigatórias)
 
-### Mocks
-```bash
-make mocks   # Generate mocks using mockery (configured in .mockery.yml)
-```
+### 1. Leitura de Contexto
+- Sempre assumir que **o código existente é a fonte da verdade**
+- Nunca sugerir soluções que contradigam:
+  - Estrutura de pastas
+  - Padrões já adotados
+  - Bibliotecas internas (`pkg/*`)
+- Antes de criar algo novo, **avaliar se já existe algo semelhante**
 
-### Database Migrations
-```bash
-make migrate NAME=migration_name  # Create new migration files in database/migrations
-```
+### 2. Continuidade de Conversa
+- Considerar mensagens anteriores como **contexto ativo**
+- Manter consistência entre respostas dentro da mesma conversa
+- Não redefinir padrões já estabelecidos sem justificativa técnica clara
 
-### Running the Application
-```bash
-# Run API server
-./bin/financial api
+### 3. Escopo da Resposta
+- Responder **apenas ao que foi solicitado**
+- Não antecipar features ou refatorações não pedidas
+- Se faltar contexto, **pedir explicitamente**, sem assumir
 
-# Run database migrations (CockroachDB)
-./bin/financial migrate
+---
 
-# Consumers (not yet implemented)
-./bin/financial consumers
-```
+## Diretrizes Arquiteturais
 
-### Docker
-```bash
-make start_minimal  # Start CockroachDB, migration, RabbitMQ, and OTEL
-make start_docker   # Start all services
-make stop_docker    # Stop all services
-```
+A IA deve assumir que o projeto segue, salvo indicação contrária:
 
-## Architecture
+- Clean Architecture / Hexagonal
+- Domain-Driven Design (DDD)
+- Separação clara entre:
+  - handlers / controllers (infrastructure/http)
+  - usecases (application)
+  - domain (entities, VOs, factories)
+  - repositories (interfaces no domain, implementação na infrastructure)
+- Comunicação entre módulos bem definida
+- Uso intenso de `context.Context`
+- Código idiomático em Go (Go 1.20+)
 
-### Clean Architecture with Domain-Driven Design
+### Princípios Invioláveis
+- SOLID
+- DRY
+- KISS
+- Baixo acoplamento e alta coesão
 
-The codebase follows Clean Architecture principles organized into distinct layers:
+---
 
-**Domain Layer** (`internal/{module}/domain/`)
-- `entities/`: Core business entities with behavior (e.g., Budget, Category, User)
-- `vos/`: Value Objects (e.g., CategoryName, Email, Money, Percentage)
-- `factories/`: Entity creation with validation logic
-- `interfaces/`: Repository interfaces (dependency inversion)
+## Qualidade de Código Esperada
 
-**Application Layer** (`internal/{module}/application/`)
-- `usecase/`: Application-specific business rules and orchestration
-- `dtos/`: Data Transfer Objects for request/response
+Toda sugestão de código deve:
 
-**Infrastructure Layer** (`internal/{module}/infrastructure/`)
-- `repositories/`: Database implementations of domain interfaces
-- `http/`: HTTP handlers, routes, and transport concerns
-- `mocks/`: Generated mocks for testing (via mockery)
+- Evitar `panic`
+- Ser `nil-safe`
+- Evitar race conditions
+- Evitar memory leaks
+- Passar em:
+  - go vet
+  - go fmt
+  - golangci-lint (configurado em `.golangci.yml`)
+- Usar tratamento explícito de erros
+- Seguir padrões já existentes no projeto
 
-**Module Registration Pattern**
-Each domain module (user, category, budget) has a `module.go` file that:
-- Wires up dependencies (repositories, use cases, handlers)
-- Returns HTTP routes for registration
-- Encapsulates module initialization
+---
 
-### Dependency Injection Container
+## Segurança e Autenticação
 
-The `pkg/bundle/container.go` provides centralized dependency management:
-- Database connection (`*sql.DB`)
-- Configuration (`configs.Config`)
-- JWT and hashing adapters
-- OpenTelemetry telemetry (traces, metrics, logs via devkit-go)
-- Shared middlewares (auth, panic recovery)
+Quando o tema envolver segurança:
 
-### Unit of Work Pattern
+- Nunca assumir autenticação inexistente
+- Sempre reutilizar middlewares já criados (`pkg/api/middlewares`)
+- Não duplicar lógica de auth
+- Respeitar propagação de usuário via `context.Context`
+- Retornar status HTTP corretos (401, 403, etc.)
+- Usar JWT implementado em `pkg/auth/jwt.go`
 
-`pkg/database/uow/` implements Unit of Work for transactional operations:
-- `Executor()`: Returns current DB executor (transaction or connection)
-- `Do(ctx, fn)`: Wraps operations in a transaction with automatic rollback
-- Used primarily in Budget module for multi-entity operations
+---
 
-### Database Strategy
+## Reutilização Antes de Criação
 
-- **Primary Database**: CockroachDB (PostgreSQL-compatible)
-- **Support**: MySQL and Postgres drivers available
-- **Migrations**: Uses golang-migrate with Unix timestamp naming
-- **Testing**: Testcontainers for integration tests (CockroachDB and Postgres modules)
+Antes de sugerir:
+- novos helpers
+- novas libs
+- novos middlewares
+- novos padrões
 
-### HTTP Server Architecture
+A IA deve:
+1. Procurar algo existente no projeto
+2. Avaliar adaptação/extensão
+3. Somente então propor algo novo, com justificativa clara
 
-Built on `github.com/JailtonJunior94/devkit-go/pkg/httpserver`:
-- Custom error handling via `pkg/custom_errors` and `pkg/httperrors`
-- Middleware chain: RequestID, Auth, Panic Recovery, Metrics, Tracing
-- Health check endpoint at `/health` (pings database)
-- Routes registered per module with optional middleware
+### Bibliotecas Internas Existentes (`pkg/`)
+- `pkg/bundle/`: Container de injeção de dependências
+- `pkg/database/`: Abstrações de banco, migrações, Unit of Work
+- `pkg/auth/`: Implementação JWT
+- `pkg/api/`: Middlewares, error handlers, HTTP utilities
+- `pkg/custom_errors/`: Tratamento customizado de erros
+- `pkg/linq/`: Utilidades para slices
 
-### Custom Error Handling
+---
+
+## Estilo de Resposta
+
+As respostas da IA devem ser:
+
+- Técnicas
+- Objetivas
+- Estruturadas (títulos, listas, passos)
+- Escritas em **português brasileiro**
+- Sem emojis desnecessários
+- Sem explicações óbvias
+- Sem texto promocional ou genérico
+
+---
+
+## O Que a IA NÃO Deve Fazer
+
+- Não reescrever código inteiro sem pedido explícito
+- Não mudar decisões arquiteturais sem análise
+- Não inventar dependências
+- Não assumir tecnologias não mencionadas
+- Não simplificar problemas complexos sem alertar
+- Não criar novos padrões quando já existem padrões estabelecidos
+- Não sugerir bibliotecas externas sem verificar alternativas internas
+
+---
+
+## Arquitetura do Projeto
+
+### Clean Architecture com Domain-Driven Design
+
+A base de código segue os princípios da Clean Architecture organizados em camadas distintas:
+
+**Camada de Domínio** (`internal/{module}/domain/`)
+- `entities/`: Entidades de negócio principais com comportamento (ex: Budget, Category, User)
+- `vos/`: Value Objects (ex: CategoryName, Email, Money, Percentage)
+- `factories/`: Criação de entidades com lógica de validação
+- `interfaces/`: Interfaces de repositório (inversão de dependência)
+
+**Camada de Aplicação** (`internal/{module}/application/`)
+- `usecase/`: Regras de negócio específicas da aplicação e orquestração
+- `dtos/`: Data Transfer Objects para request/response
+
+**Camada de Infraestrutura** (`internal/{module}/infrastructure/`)
+- `repositories/`: Implementações de banco de dados das interfaces do domínio
+- `http/`: Handlers HTTP, rotas e transporte
+- `mocks/`: Mocks gerados para testes (via mockery)
+
+**Padrão de Registro de Módulos**
+Cada módulo de domínio (user, category, budget, card, invoice, payment_method) possui um arquivo `module.go` que:
+- Conecta dependências (repositories, use cases, handlers)
+- Retorna rotas HTTP para registro
+- Encapsula inicialização do módulo
+
+### Container de Injeção de Dependências
+
+O `pkg/bundle/container.go` fornece gerenciamento centralizado de dependências:
+- Conexão com banco de dados (`*sql.DB`)
+- Configuração (`configs.Config`)
+- Adaptadores JWT e hashing
+- Telemetria OpenTelemetry (traces, métricas, logs via devkit-go)
+- Middlewares compartilhados (auth, panic recovery)
+
+### Padrão Unit of Work
+
+`pkg/database/uow/` implementa Unit of Work para operações transacionais:
+- `Executor()`: Retorna executor de DB atual (transaction ou connection)
+- `Do(ctx, fn)`: Envolve operações em transação com rollback automático
+- Usado principalmente no módulo Budget para operações multi-entidade
+
+### Estratégia de Banco de Dados
+
+- **Banco Principal**: CockroachDB (compatível com PostgreSQL)
+- **Suporte**: Drivers MySQL e Postgres disponíveis
+- **Migrações**: Usa golang-migrate com nomenclatura Unix timestamp
+- **Testes**: Testcontainers para testes de integração (módulos CockroachDB e Postgres)
+
+### Arquitetura do Servidor HTTP
+
+Construído sobre `github.com/JailtonJunior94/devkit-go/pkg/httpserver`:
+- Tratamento customizado de erros via `pkg/custom_errors` e `pkg/httperrors`
+- Cadeia de middlewares: RequestID, Auth, Panic Recovery, Metrics, Tracing
+- Endpoint de health check em `/health` (verifica database)
+- Rotas registradas por módulo com middleware opcional
+
+### Tratamento Customizado de Erros
 
 `pkg/custom_errors/custom_errors.go`:
-- `CustomError` wraps errors with additional context (message, details)
-- `pkg/httperrors/http_errors.go` maps domain errors to HTTP status codes
-- Server extracts original error from CustomError for proper HTTP mapping
-- Supports error details in JSON responses
+- `CustomError` envolve erros com contexto adicional (mensagem, detalhes)
+- `pkg/httperrors/http_errors.go` mapeia erros de domínio para códigos HTTP
+- Servidor extrai erro original de CustomError para mapeamento HTTP correto
+- Suporta detalhes de erro em respostas JSON
 
-### Authentication
+### Autenticação
 
-JWT-based authentication (`pkg/auth/jwt.go`):
-- Token generation with configurable duration
-- Middleware validates tokens and extracts user claims
-- Configuration via `AUTH_SECRET_KEY` and `AUTH_TOKEN_DURATION`
+Autenticação baseada em JWT (`pkg/auth/jwt.go`):
+- Geração de token com duração configurável
+- Middleware valida tokens e extrai claims do usuário
+- Configuração via `AUTH_SECRET_KEY` e `AUTH_TOKEN_DURATION`
+- Propagação de dados do usuário via `context.Context`
 
-### Observability
+### Observabilidade
 
-Full OpenTelemetry integration via devkit-go:
-- Distributed tracing (OTLP gRPC)
-- Metrics collection
-- Structured logging
-- Configure via `OTEL_*` environment variables
-- Middleware automatically instruments HTTP handlers
+Integração completa com OpenTelemetry via devkit-go:
+- Rastreamento distribuído (OTLP gRPC)
+- Coleta de métricas
+- Logging estruturado
+- Configuração via variáveis de ambiente `OTEL_*`
+- Middleware instrumenta automaticamente handlers HTTP
 
-### Testing Strategy
+### Estratégia de Testes
 
-- Domain entities have unit tests (`*_test.go`)
-- Repository tests use testcontainers for real database scenarios
-- Mocks generated via mockery for use case testing
-- Coverage reports generated with `make cover`
+- Entidades de domínio possuem testes unitários (`*_test.go`)
+- Testes de repositório usam testcontainers para cenários reais de banco
+- Mocks gerados via mockery para testes de use case
+- Relatórios de cobertura gerados com `make cover`
 
-## Testing Patterns
+---
 
-### AAA Pattern (Arrange-Act-Assert)
+## Padrões de Teste
 
-All tests should follow the AAA (Arrange-Act-Assert) pattern for clarity and maintainability:
+### Padrão AAA (Arrange-Act-Assert)
 
-- **Arrange**: Set up test data, mocks, and dependencies
-- **Act**: Execute the function/method being tested
-- **Assert**: Verify the expected outcomes
+Todos os testes devem seguir o padrão AAA para clareza e manutenibilidade:
 
-### Unit Testing with Mocks
+- **Arrange**: Configurar dados de teste, mocks e dependências
+- **Act**: Executar a função/método sendo testado
+- **Assert**: Verificar os resultados esperados
 
-For unit tests, always use the `.mockery.yml` configuration and generate mocks with:
+### Testes Unitários com Mocks
+
+Para testes unitários, sempre usar a configuração `.mockery.yml` e gerar mocks com:
 
 ```bash
 make mocks
 ```
 
-This ensures consistent mock generation across the codebase.
+Isso garante geração consistente de mocks em toda a base de código.
 
-### Test Structure with testify/suite
+### Estrutura de Teste com testify/suite
 
-Use `testify/suite` for organizing related tests with shared setup:
+Usar `testify/suite` para organizar testes relacionados com setup compartilhado:
 
 ```go
 package usecase_test
@@ -175,9 +263,9 @@ import (
     "errors"
     "testing"
 
-    "your-project/internal/domain/interfaces/mocks"
-    "your-project/internal/application/usecase"
-    "your-project/internal/application/dtos"
+    "github.com/jailtonjunior94/financial/internal/domain/interfaces/mocks"
+    "github.com/jailtonjunior94/financial/internal/application/usecase"
+    "github.com/jailtonjunior94/financial/internal/application/dtos"
 
     "github.com/stretchr/testify/mock"
     "github.com/stretchr/testify/suite"
@@ -281,87 +369,160 @@ func (s *CreateCategoryUseCaseSuite) TestExecute() {
 }
 ```
 
-### Key Testing Principles
+### Princípios-Chave de Testes
 
-1. **Isolation**: Each test should be independent and not rely on other tests
-2. **Table-Driven Tests**: Use scenario-based approach for multiple test cases
-3. **Mock Configuration**: Configure mocks inside dependency functions for each scenario
-4. **Clear Naming**: Use descriptive test names in Portuguese explaining the expected behavior
-5. **Comprehensive Coverage**: Test both success and error scenarios
-6. **Mock Verification**: Use `.Once()` to ensure mocks are called exactly once
-7. **Setup and Teardown**: Use `SetupTest()` for test initialization
+1. **Isolamento**: Cada teste deve ser independente e não depender de outros testes
+2. **Testes Orientados a Tabelas**: Usar abordagem baseada em cenários para múltiplos casos de teste
+3. **Configuração de Mocks**: Configurar mocks dentro de funções de dependência para cada cenário
+4. **Nomenclatura Clara**: Usar nomes descritivos de teste em português explicando o comportamento esperado
+5. **Cobertura Abrangente**: Testar cenários de sucesso e erro
+6. **Verificação de Mocks**: Usar `.Once()` para garantir que mocks sejam chamados exatamente uma vez
+7. **Setup e Teardown**: Usar `SetupTest()` para inicialização de testes
 
-### Running Specific Tests
+### Executando Testes Específicos
 
 ```bash
-# Run all tests in a package
+# Executar todos os testes em um pacote
 go test -v -count=1 ./internal/category/application/usecase/
 
-# Run a specific test suite
+# Executar uma suite de testes específica
 go test -v -count=1 -run TestCreateCategoryUseCaseSuite ./internal/category/application/usecase/
 
-# Run a specific test case
+# Executar um caso de teste específico
 go test -v -count=1 -run TestCreateCategoryUseCaseSuite/deve_criar_uma_nova_categoria ./internal/category/application/usecase/
 ```
 
-## Project Structure
+---
+
+## Estrutura do Projeto
 
 ```
 .
 ├── cmd/
-│   ├── main.go           # Cobra CLI entry (api, migrate, consumers commands)
-│   ├── server/           # HTTP server setup and module wiring
-│   └── .env.example      # Environment template
+│   ├── main.go           # CLI Cobra (comandos api, migrate, consumers)
+│   ├── server/           # Setup do servidor HTTP e conexão de módulos
+│   └── .env.example      # Template de variáveis de ambiente
 ├── internal/
-│   ├── user/             # User domain (auth, creation)
-│   ├── category/         # Category domain (hierarchical with children)
-│   └── budget/           # Budget domain (with items, percentage validation)
+│   ├── user/             # Domínio User (auth, criação)
+│   ├── category/         # Domínio Category (hierárquico com children)
+│   ├── budget/           # Domínio Budget (com items, validação de porcentagem)
+│   ├── card/             # Domínio Card (cartões de crédito)
+│   ├── invoice/          # Domínio Invoice (faturas e compras)
+│   └── payment_method/   # Domínio PaymentMethod (métodos de pagamento)
 ├── pkg/
-│   ├── bundle/           # Dependency injection container
-│   ├── database/         # DB abstraction, migrations, UoW, test helpers
-│   ├── auth/             # JWT implementation
-│   ├── api/              # HTTP utilities, middlewares, error handlers
-│   ├── custom_errors/    # Error wrapping and mapping
-│   └── linq/             # Utility functions for slices
-├── configs/              # Viper-based configuration loading
-├── database/migrations/  # SQL migrations (Unix timestamp format)
-└── deployment/           # Docker Compose and container configs
+│   ├── bundle/           # Container de injeção de dependências
+│   ├── database/         # Abstração de DB, migrações, UoW, helpers de teste
+│   ├── auth/             # Implementação JWT
+│   ├── api/              # Utilitários HTTP, middlewares, error handlers
+│   ├── custom_errors/    # Wrapping e mapeamento de erros
+│   └── linq/             # Funções utilitárias para slices
+├── configs/              # Carregamento de configuração via Viper
+├── database/migrations/  # Migrações SQL (formato Unix timestamp)
+└── deployment/           # Docker Compose e configurações de container
 ```
 
-## Configuration
+---
 
-Configuration loaded from `.env` via Viper (see `cmd/.env.example`):
-- HTTP port
-- Database connection (supports Postgres/CockroachDB/MySQL)
-- OpenTelemetry endpoints
-- JWT secret and token duration
+## Configuração
 
-## Important Patterns
+Configuração carregada do `.env` via Viper (ver `cmd/.env.example`):
+- Porta HTTP
+- Conexão com banco de dados (suporta Postgres/CockroachDB/MySQL)
+- Endpoints OpenTelemetry
+- Secret JWT e duração do token
+
+---
+
+## Padrões Importantes do Domínio
 
 ### Value Objects
-Extensively used for domain validation (Money, Percentage, Email, CategoryName).
-Created via factory functions that enforce business rules.
+Amplamente usados para validação de domínio (Money, Percentage, Email, CategoryName).
+Criados via funções factory que enforçam regras de negócio.
 
-### Repository Pattern
-All persistence abstracted behind interfaces in domain layer.
-Repositories accept `database.DBExecutor` interface (supports both `*sql.DB` and `*sql.Tx`).
+### Padrão Repository
+Toda persistência abstraída por interfaces na camada de domínio.
+Repositories aceitam interface `database.DBExecutor` (suporta `*sql.DB` e `*sql.Tx`).
 
-### Budget Domain Rules
-- Budget must have items with percentages totaling exactly 100%
-- `AddItem()` and `AddItems()` return `bool` indicating if percentage rule is satisfied
-- AmountUsed and PercentageUsed calculated automatically when items added
+### Regras do Domínio Budget
+- Budget deve ter itens com porcentagens totalizando exatamente 100%
+- `AddItem()` e `AddItems()` retornam `bool` indicando se a regra de porcentagem é satisfeita
+- AmountUsed e PercentageUsed calculados automaticamente quando itens são adicionados
 
-### Category Hierarchy
-Categories support parent-child relationships via `ParentID *UUID`.
-Repository loads children recursively and attaches via `AddChildrens()`.
+### Hierarquia de Categorias
+Categorias suportam relacionamentos pai-filho via `ParentID *UUID`.
+Repository carrega children recursivamente e anexa via `AddChildrens()`.
 
 ### Soft Deletes
-Entities use `DeletedAt` timestamps (via `sharedVos.NullableTime`).
-Call entity's `Delete()` method to set timestamp.
+Entidades usam timestamps `DeletedAt` (via `sharedVos.NullableTime`).
+Chamar método `Delete()` da entidade para definir timestamp.
 
-## Running Tests for a Single Package
+---
 
+## Comandos de Build e Desenvolvimento
+
+### Setup do Ambiente
 ```bash
-go test -v -count=1 ./internal/category/domain/entities/
-go test -v -count=1 ./internal/budget/usecase/
+make dotenv  # Gerar arquivo .env do .env.example em cmd/
 ```
+
+### Build
+```bash
+make build   # Compila para ./bin/financial (CGO_ENABLED=0, otimizado com -ldflags="-w -s")
+```
+
+### Testes
+```bash
+make test-unit           # Executar testes unitários com detecção de race e cobertura
+make test-integration    # Executar testes de integração
+make test-all           # Executar todos os testes
+make cover              # Gerar e visualizar relatório HTML de cobertura
+make cover-html         # Gerar relatórios HTML de cobertura
+```
+
+### Linting
+```bash
+make lint    # Executar golangci-lint com configuração .golangci.yml
+```
+
+### Mocks
+```bash
+make mocks   # Gerar mocks usando mockery (configurado em .mockery.yml)
+```
+
+### Migrações de Banco de Dados
+```bash
+make migrate NAME=migration_name  # Criar novos arquivos de migração em database/migrations
+```
+
+### Executando a Aplicação
+```bash
+# Executar servidor API
+./bin/financial api
+
+# Executar migrações de banco (CockroachDB)
+./bin/financial migrate
+
+# Consumers (ainda não implementado)
+./bin/financial consumers
+```
+
+### Docker
+```bash
+make start_minimal  # Iniciar CockroachDB, migration, RabbitMQ e OTEL
+make start_docker   # Iniciar todos os serviços
+make stop_docker    # Parar todos os serviços
+```
+
+---
+
+## Resultado Esperado
+
+Ao seguir este CLAUDE.md, a IA deve:
+
+- Produzir respostas altamente contextualizadas
+- Reduzir retrabalho e correções manuais
+- Manter coerência entre módulos
+- Ajudar na evolução do projeto sem quebrar padrões existentes
+- Respeitar a arquitetura e decisões técnicas já tomadas
+- Priorizar reutilização sobre criação
+- Manter consistência de estilo e qualidade de código
