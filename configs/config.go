@@ -70,3 +70,13 @@ func LoadConfig(path string) (*Config, error) {
 
 	return config, nil
 }
+
+func (c *DBConfig) DSN() string {
+	return fmt.Sprintf("postgres://%s:%s@%s:%s/%s?sslmode=disable",
+		c.User,
+		c.Password,
+		c.Host,
+		c.Port,
+		c.Name,
+	)
+}
