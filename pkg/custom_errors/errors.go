@@ -17,6 +17,7 @@ var (
 	ErrBudgetNotFound        = errors.New("budget not found")
 	ErrCardNotFound          = errors.New("card not found")
 	ErrCategoryNotFound      = errors.New("category not found")
+	ErrPaymentMethodNotFound = errors.New("payment method not found")
 	ErrCannotBeEmpty         = errors.New("name cannot be empty")
 	ErrInvalidEmail          = errors.New("invalid email format")
 	ErrEmailAlreadyExists    = errors.New("email already exists")

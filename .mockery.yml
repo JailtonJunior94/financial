@@ -28,6 +28,12 @@ packages:
       pkgname: repositoryMock
     interfaces:
       CardRepository: {}
+  github.com/jailtonjunior94/financial/internal/payment_method/domain/interfaces:
+    config:
+      dir: ./internal/payment_method/infrastructure/repositories/mocks
+      pkgname: repositoryMock
+    interfaces:
+      PaymentMethodRepository: {}
   github.com/jailtonjunior94/financial/pkg/auth:
     config:
       dir: ./pkg/auth/mocks

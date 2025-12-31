@@ -13,6 +13,7 @@ import (
 	"github.com/jailtonjunior94/financial/internal/budget"
 	"github.com/jailtonjunior94/financial/internal/card"
 	"github.com/jailtonjunior94/financial/internal/category"
+	"github.com/jailtonjunior94/financial/internal/payment_method"
 	"github.com/jailtonjunior94/financial/internal/user"
 	"github.com/jailtonjunior94/financial/pkg/auth"
 
@@ -76,6 +77,7 @@ func Run() error {
 
 	categoryModule := category.NewCategoryModule(dbManager.DB(), o11y, jwtAdapter)
 	cardModule := card.NewCardModule(dbManager.DB(), o11y, jwtAdapter)
+	paymentMethodModule := payment_method.NewPaymentMethodModule(dbManager.DB(), o11y)
 	budgetModule := budget.NewBudgetModule(dbManager.DB(), o11y)
 
 	srv := httpserver.New(
@@ -91,6 +93,7 @@ func Run() error {
 	srv.RegisterRouters(userModule.UserRouter)
 	srv.RegisterRouters(categoryModule.CategoryRouter)
 	srv.RegisterRouters(cardModule.CardRouter)
+	srv.RegisterRouters(paymentMethodModule.PaymentMethodRouter)
 	srv.RegisterRouters(budgetModule.BudgetRouter)
 
 	go func() {
