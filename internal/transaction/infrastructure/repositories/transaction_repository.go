@@ -1,0 +1,485 @@
+package repositories
+
+import (
+	"context"
+	"database/sql"
+	"time"
+
+	"github.com/JailtonJunior94/devkit-go/pkg/observability"
+	sharedVos "github.com/JailtonJunior94/devkit-go/pkg/vos"
+
+	"github.com/jailtonjunior94/financial/internal/transaction/domain/entities"
+	"github.com/jailtonjunior94/financial/internal/transaction/domain/interfaces"
+	transactionVos "github.com/jailtonjunior94/financial/internal/transaction/domain/vos"
+	"github.com/jailtonjunior94/financial/pkg/database"
+)
+
+type transactionRepository struct {
+	db   database.DBExecutor
+	o11y observability.Observability
+}
+
+// NewTransactionRepository cria uma nova instância do repositório.
+func NewTransactionRepository(
+	db database.DBExecutor,
+	o11y observability.Observability,
+) interfaces.TransactionRepository {
+	return &transactionRepository{
+		db:   db,
+		o11y: o11y,
+	}
+}
+
+// FindOrCreateMonthly busca ou cria o aggregate do mês.
+func (r *transactionRepository) FindOrCreateMonthly(
+	ctx context.Context,
+	executor database.DBExecutor,
+	userID sharedVos.UUID,
+	referenceMonth transactionVos.ReferenceMonth,
+) (*entities.MonthlyTransaction, error) {
+	ctx, span := r.o11y.Tracer().Start(ctx, "transaction_repository.find_or_create_monthly")
+	defer span.End()
+
+	// Tenta buscar existente
+	monthly, err := r.findMonthlyByUserAndMonth(ctx, executor, userID, referenceMonth)
+	if err != nil {
+		return nil, err
+	}
+
+	// Se encontrou, retorna
+	if monthly != nil {
+		// Carrega os items
+		items, err := r.findItemsByMonthlyID(ctx, executor, monthly.ID)
+		if err != nil {
+			return nil, err
+		}
+		monthly.LoadItems(items)
+		return monthly, nil
+	}
+
+	// Se não encontrou, cria novo
+	monthly, err = entities.NewMonthlyTransaction(userID, referenceMonth)
+	if err != nil {
+		return nil, err
+	}
+
+	// Gera ID
+	id, _ := sharedVos.NewUUID()
+	monthly.SetID(id)
+
+	// Persiste
+	if err := r.insertMonthly(ctx, executor, monthly); err != nil {
+		return nil, err
+	}
+
+	return monthly, nil
+}
+
+// FindMonthlyByID busca o aggregate por ID com todos os items.
+func (r *transactionRepository) FindMonthlyByID(
+	ctx context.Context,
+	executor database.DBExecutor,
+	userID sharedVos.UUID,
+	monthlyID sharedVos.UUID,
+) (*entities.MonthlyTransaction, error) {
+	ctx, span := r.o11y.Tracer().Start(ctx, "transaction_repository.find_monthly_by_id")
+	defer span.End()
+
+	query := `
+		SELECT 
+			id, user_id, reference_month, 
+			total_income, total_expense, total_amount,
+			created_at, updated_at
+		FROM monthly_transactions
+		WHERE id = $1 AND user_id = $2
+	`
+
+	var monthly entities.MonthlyTransaction
+	var refMonthStr string
+	var totalIncomeInt, totalExpenseInt, totalAmountInt int64
+	var createdAt time.Time
+	var updatedAt sql.NullTime
+
+	err := executor.QueryRowContext(ctx, query, monthlyID.String(), userID.String()).Scan(
+		&monthly.ID,
+		&monthly.UserID,
+		&refMonthStr,
+		&totalIncomeInt,
+		&totalExpenseInt,
+		&totalAmountInt,
+		&createdAt,
+		&updatedAt,
+	)
+
+	if err == sql.ErrNoRows {
+		return nil, nil
+	}
+	if err != nil {
+		r.o11y.Logger().Error(ctx, "failed to find monthly transaction", observability.Error(err))
+		return nil, err
+	}
+
+	// Parse reference month
+	monthly.ReferenceMonth, err = transactionVos.NewReferenceMonthFromString(refMonthStr)
+	if err != nil {
+		return nil, err
+	}
+
+	// Parse money values
+	monthly.TotalIncome, _ = sharedVos.NewMoney(totalIncomeInt, sharedVos.CurrencyBRL)
+	monthly.TotalExpense, _ = sharedVos.NewMoney(totalExpenseInt, sharedVos.CurrencyBRL)
+	monthly.TotalAmount, _ = sharedVos.NewMoney(totalAmountInt, sharedVos.CurrencyBRL)
+
+	// Parse timestamps
+	monthly.CreatedAt = sharedVos.NewNullableTime(createdAt)
+	if updatedAt.Valid {
+		monthly.UpdatedAt = sharedVos.NewNullableTime(updatedAt.Time)
+	}
+
+	// Load items
+	items, err := r.findItemsByMonthlyID(ctx, executor, monthly.ID)
+	if err != nil {
+		return nil, err
+	}
+	monthly.LoadItems(items)
+
+	return &monthly, nil
+}
+
+// UpdateMonthly atualiza o aggregate (totais).
+func (r *transactionRepository) UpdateMonthly(
+	ctx context.Context,
+	executor database.DBExecutor,
+	monthly *entities.MonthlyTransaction,
+) error {
+	ctx, span := r.o11y.Tracer().Start(ctx, "transaction_repository.update_monthly")
+	defer span.End()
+
+	query := `
+		UPDATE monthly_transactions
+		SET 
+			total_income = $1,
+			total_expense = $2,
+			total_amount = $3,
+			updated_at = $4
+		WHERE id = $5
+	`
+
+	_, err := executor.ExecContext(ctx, query,
+		monthly.TotalIncome.Cents(),
+		monthly.TotalExpense.Cents(),
+		monthly.TotalAmount.Cents(),
+		time.Now().UTC(),
+		monthly.ID.String(),
+	)
+
+	if err != nil {
+		r.o11y.Logger().Error(ctx, "failed to update monthly transaction", observability.Error(err))
+		return err
+	}
+
+	return nil
+}
+
+// InsertItem insere um novo transaction item.
+func (r *transactionRepository) InsertItem(
+	ctx context.Context,
+	executor database.DBExecutor,
+	item *entities.TransactionItem,
+) error {
+	ctx, span := r.o11y.Tracer().Start(ctx, "transaction_repository.insert_item")
+	defer span.End()
+
+	query := `
+		INSERT INTO transaction_items (
+			id, monthly_id, category_id, title, description,
+			amount, direction, type, is_paid, created_at
+		) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
+	`
+
+	_, err := executor.ExecContext(ctx, query,
+		item.ID.String(),
+		item.MonthlyID.String(),
+		item.CategoryID.String(),
+		item.Title,
+		item.Description,
+		item.Amount.Cents(),
+		item.Direction.String(),
+		item.Type.String(),
+		item.IsPaid,
+		item.CreatedAt.ValueOr(time.Now().UTC()),
+	)
+
+	if err != nil {
+		r.o11y.Logger().Error(ctx, "failed to insert transaction item", observability.Error(err))
+		return err
+	}
+
+	return nil
+}
+
+// UpdateItem atualiza um transaction item existente.
+func (r *transactionRepository) UpdateItem(
+	ctx context.Context,
+	executor database.DBExecutor,
+	item *entities.TransactionItem,
+) error {
+	ctx, span := r.o11y.Tracer().Start(ctx, "transaction_repository.update_item")
+	defer span.End()
+
+	query := `
+		UPDATE transaction_items
+		SET 
+			title = $1,
+			description = $2,
+			amount = $3,
+			direction = $4,
+			type = $5,
+			is_paid = $6,
+			updated_at = $7,
+			deleted_at = $8
+		WHERE id = $9
+	`
+
+	var deletedAt interface{}
+	if item.IsDeleted() {
+		deletedAt = item.DeletedAt.ValueOr(time.Now().UTC())
+	}
+
+	_, err := executor.ExecContext(ctx, query,
+		item.Title,
+		item.Description,
+		item.Amount.Cents(),
+		item.Direction.String(),
+		item.Type.String(),
+		item.IsPaid,
+		time.Now().UTC(),
+		deletedAt,
+		item.ID.String(),
+	)
+
+	if err != nil {
+		r.o11y.Logger().Error(ctx, "failed to update transaction item", observability.Error(err))
+		return err
+	}
+
+	return nil
+}
+
+// FindItemByID busca um item por ID.
+func (r *transactionRepository) FindItemByID(
+	ctx context.Context,
+	executor database.DBExecutor,
+	userID sharedVos.UUID,
+	itemID sharedVos.UUID,
+) (*entities.TransactionItem, error) {
+	ctx, span := r.o11y.Tracer().Start(ctx, "transaction_repository.find_item_by_id")
+	defer span.End()
+
+	query := `
+		SELECT 
+			ti.id, ti.monthly_id, ti.category_id, ti.title, ti.description,
+			ti.amount, ti.direction, ti.type, ti.is_paid,
+			ti.created_at, ti.updated_at, ti.deleted_at
+		FROM transaction_items ti
+		INNER JOIN monthly_transactions mt ON ti.monthly_id = mt.id
+		WHERE ti.id = $1 AND mt.user_id = $2
+	`
+
+	var item entities.TransactionItem
+	var amountInt int64
+	var direction, itemType string
+	var createdAt time.Time
+	var updatedAt, deletedAt sql.NullTime
+
+	err := executor.QueryRowContext(ctx, query, itemID.String(), userID.String()).Scan(
+		&item.ID,
+		&item.MonthlyID,
+		&item.CategoryID,
+		&item.Title,
+		&item.Description,
+		&amountInt,
+		&direction,
+		&itemType,
+		&item.IsPaid,
+		&createdAt,
+		&updatedAt,
+		&deletedAt,
+	)
+
+	if err == sql.ErrNoRows {
+		return nil, nil
+	}
+	if err != nil {
+		r.o11y.Logger().Error(ctx, "failed to find transaction item", observability.Error(err))
+		return nil, err
+	}
+
+	// Parse values
+	item.Amount, _ = sharedVos.NewMoney(amountInt, sharedVos.CurrencyBRL)
+	item.Direction, _ = transactionVos.NewTransactionDirection(direction)
+	item.Type, _ = transactionVos.NewTransactionType(itemType)
+	item.CreatedAt = sharedVos.NewNullableTime(createdAt)
+	if updatedAt.Valid {
+		item.UpdatedAt = sharedVos.NewNullableTime(updatedAt.Time)
+	}
+	if deletedAt.Valid {
+		item.DeletedAt = sharedVos.NewNullableTime(deletedAt.Time)
+	}
+
+	return &item, nil
+}
+
+// --- Private methods ---
+
+// findMonthlyByUserAndMonth busca aggregate por user e mês.
+func (r *transactionRepository) findMonthlyByUserAndMonth(
+	ctx context.Context,
+	executor database.DBExecutor,
+	userID sharedVos.UUID,
+	referenceMonth transactionVos.ReferenceMonth,
+) (*entities.MonthlyTransaction, error) {
+	query := `
+		SELECT 
+			id, user_id, reference_month,
+			total_income, total_expense, total_amount,
+			created_at, updated_at
+		FROM monthly_transactions
+		WHERE user_id = $1 AND reference_month = $2
+	`
+
+	var monthly entities.MonthlyTransaction
+	var refMonthStr string
+	var totalIncomeInt, totalExpenseInt, totalAmountInt int64
+	var createdAt time.Time
+	var updatedAt sql.NullTime
+
+	err := executor.QueryRowContext(ctx, query, userID.String(), referenceMonth.String()).Scan(
+		&monthly.ID,
+		&monthly.UserID,
+		&refMonthStr,
+		&totalIncomeInt,
+		&totalExpenseInt,
+		&totalAmountInt,
+		&createdAt,
+		&updatedAt,
+	)
+
+	if err == sql.ErrNoRows {
+		return nil, nil
+	}
+	if err != nil {
+		return nil, err
+	}
+
+	// Parse values
+	monthly.ReferenceMonth, _ = transactionVos.NewReferenceMonthFromString(refMonthStr)
+	monthly.TotalIncome, _ = sharedVos.NewMoney(totalIncomeInt, sharedVos.CurrencyBRL)
+	monthly.TotalExpense, _ = sharedVos.NewMoney(totalExpenseInt, sharedVos.CurrencyBRL)
+	monthly.TotalAmount, _ = sharedVos.NewMoney(totalAmountInt, sharedVos.CurrencyBRL)
+	monthly.CreatedAt = sharedVos.NewNullableTime(createdAt)
+	if updatedAt.Valid {
+		monthly.UpdatedAt = sharedVos.NewNullableTime(updatedAt.Time)
+	}
+
+	return &monthly, nil
+}
+
+// insertMonthly insere um novo aggregate.
+func (r *transactionRepository) insertMonthly(
+	ctx context.Context,
+	executor database.DBExecutor,
+	monthly *entities.MonthlyTransaction,
+) error {
+	query := `
+		INSERT INTO monthly_transactions (
+			id, user_id, reference_month,
+			total_income, total_expense, total_amount,
+			created_at
+		) VALUES ($1, $2, $3, $4, $5, $6, $7)
+	`
+
+	_, err := executor.ExecContext(ctx, query,
+		monthly.ID.String(),
+		monthly.UserID.String(),
+		monthly.ReferenceMonth.String(),
+		monthly.TotalIncome.Cents(),
+		monthly.TotalExpense.Cents(),
+		monthly.TotalAmount.Cents(),
+		monthly.CreatedAt.ValueOr(time.Now().UTC()),
+	)
+
+	if err != nil {
+		r.o11y.Logger().Error(ctx, "failed to insert monthly transaction", observability.Error(err))
+		return err
+	}
+
+	return nil
+}
+
+// findItemsByMonthlyID busca todos os items de um aggregate (exceto deletados).
+func (r *transactionRepository) findItemsByMonthlyID(
+	ctx context.Context,
+	executor database.DBExecutor,
+	monthlyID sharedVos.UUID,
+) ([]*entities.TransactionItem, error) {
+	query := `
+		SELECT 
+			id, monthly_id, category_id, title, description,
+			amount, direction, type, is_paid,
+			created_at, updated_at, deleted_at
+		FROM transaction_items
+		WHERE monthly_id = $1
+		ORDER BY created_at ASC
+	`
+
+	rows, err := executor.QueryContext(ctx, query, monthlyID.String())
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	items := make([]*entities.TransactionItem, 0)
+
+	for rows.Next() {
+		var item entities.TransactionItem
+		var amountInt int64
+		var direction, itemType string
+		var createdAt time.Time
+		var updatedAt, deletedAt sql.NullTime
+
+		err := rows.Scan(
+			&item.ID,
+			&item.MonthlyID,
+			&item.CategoryID,
+			&item.Title,
+			&item.Description,
+			&amountInt,
+			&direction,
+			&itemType,
+			&item.IsPaid,
+			&createdAt,
+			&updatedAt,
+			&deletedAt,
+		)
+		if err != nil {
+			return nil, err
+		}
+
+		// Parse values
+		item.Amount, _ = sharedVos.NewMoney(amountInt, sharedVos.CurrencyBRL)
+		item.Direction, _ = transactionVos.NewTransactionDirection(direction)
+		item.Type, _ = transactionVos.NewTransactionType(itemType)
+		item.CreatedAt = sharedVos.NewNullableTime(createdAt)
+		if updatedAt.Valid {
+			item.UpdatedAt = sharedVos.NewNullableTime(updatedAt.Time)
+		}
+		if deletedAt.Valid {
+			item.DeletedAt = sharedVos.NewNullableTime(deletedAt.Time)
+		}
+
+		items = append(items, &item)
+	}
+
+	return items, rows.Err()
+}

@@ -11,14 +11,14 @@ import (
 	customErrors "github.com/jailtonjunior94/financial/pkg/custom_errors"
 )
 
-// CardProviderAdapter implementa a interface CardProvider do módulo invoice
-// Permite que invoice obtenha dados de faturamento sem acoplamento direto
+// CardProviderAdapter implementa a interface CardProvider do módulo invoice.
+// Permite que invoice obtenha dados de faturamento sem acoplamento direto.
 type CardProviderAdapter struct {
 	cardRepository interfaces.CardRepository
 	o11y           observability.Observability
 }
 
-// NewCardProviderAdapter cria um novo adapter de provedor de cartão
+// NewCardProviderAdapter cria um novo adapter de provedor de cartão.
 func NewCardProviderAdapter(
 	cardRepository interfaces.CardRepository,
 	o11y observability.Observability,
@@ -29,8 +29,8 @@ func NewCardProviderAdapter(
 	}
 }
 
-// GetCardBillingInfo obtém informações de faturamento do cartão
-// Valida que o cartão pertence ao usuário
+// GetCardBillingInfo obtém informações de faturamento do cartão.
+// Valida que o cartão pertence ao usuário.
 func (a *CardProviderAdapter) GetCardBillingInfo(
 	ctx context.Context,
 	userID vos.UUID,
@@ -51,9 +51,10 @@ func (a *CardProviderAdapter) GetCardBillingInfo(
 	}
 
 	// Retorna apenas as informações necessárias para faturamento
+	// ✅ Cards é a fonte da verdade sobre ciclo de faturamento
 	return &invoiceInterfaces.CardBillingInfo{
-		CardID:     card.ID,
-		ClosingDay: card.DueDay.Value, // DueDay é o dia de fechamento no nosso modelo
-		DueDay:     card.DueDay.Value, // Simplificação: mesmo dia para fechamento e vencimento
+		CardID:            card.ID,
+		DueDay:            card.DueDay.Value,
+		ClosingOffsetDays: card.ClosingOffsetDays.Value,
 	}, nil
 }

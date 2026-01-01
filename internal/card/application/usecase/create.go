@@ -58,9 +58,10 @@ func (u *createCardUseCase) Execute(ctx context.Context, userID string, input *d
 	}
 
 	return &dtos.CardOutput{
-		ID:        card.ID.String(),
-		Name:      card.Name.String(),
-		DueDay:    card.DueDay.Int(),
-		CreatedAt: card.CreatedAt.ValueOr(time.Time{}),
+		ID:                card.ID.String(),
+		Name:              card.Name.String(),
+		DueDay:            card.DueDay.Int(),
+		ClosingOffsetDays: card.ClosingOffsetDays.Int(),
+		CreatedAt:         card.CreatedAt.ValueOr(time.Time{}),
 	}, nil
 }

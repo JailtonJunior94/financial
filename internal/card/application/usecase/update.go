@@ -87,7 +87,13 @@ func (u *updateCardUseCase) Execute(ctx context.Context, userID, id string, inpu
 		return nil, customErrors.ErrCardNotFound
 	}
 
-	if err := card.Update(input.Name, input.DueDay); err != nil {
+	// Se não fornecido, mantém o valor atual
+	closingOffsetDays := input.ClosingOffsetDays
+	if closingOffsetDays == 0 {
+		closingOffsetDays = card.ClosingOffsetDays.Int()
+	}
+
+	if err := card.Update(input.Name, input.DueDay, closingOffsetDays); err != nil {
 		span.AddEvent(
 			"error validating card update",
 			observability.Field{Key: "user_id", Value: userID},
@@ -116,9 +122,10 @@ func (u *updateCardUseCase) Execute(ctx context.Context, userID, id string, inpu
 	}
 
 	output := &dtos.CardOutput{
-		ID:     card.ID.String(),
-		Name:   card.Name.String(),
-		DueDay: card.DueDay.Int(),
+		ID:                card.ID.String(),
+		Name:              card.Name.String(),
+		DueDay:            card.DueDay.Int(),
+		ClosingOffsetDays: card.ClosingOffsetDays.Int(),
 	}
 	if !card.UpdatedAt.ValueOr(time.Time{}).IsZero() {
 		output.UpdatedAt = card.UpdatedAt.ValueOr(time.Time{})

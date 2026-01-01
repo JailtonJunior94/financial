@@ -8,10 +8,11 @@ import (
 
 // CardBillingInfo contém informações de faturamento do cartão
 // necessárias para calcular a fatura correta
+// ✅ Fonte da verdade: módulo cards
 type CardBillingInfo struct {
-	CardID     vos.UUID
-	ClosingDay int // Dia de fechamento da fatura (1-31)
-	DueDay     int // Dia de vencimento da fatura (1-31)
+	CardID            vos.UUID
+	DueDay            int // Dia de vencimento da fatura (1-31)
+	ClosingOffsetDays int // Quantos dias ANTES do vencimento fecha a fatura (padrão brasileiro: 7)
 }
 
 // CardProvider é uma porta de domínio que abstrai o acesso a dados do cartão

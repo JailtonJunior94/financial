@@ -113,7 +113,8 @@ func (u *createPurchaseUseCase) Execute(ctx context.Context, userID string, inpu
 	// ✅ Usar InvoiceCalculator para determinar os meses de cada parcela
 	installmentMonths := u.invoiceCalculator.CalculateInstallmentMonths(
 		purchaseDate,
-		cardBillingInfo.ClosingDay,
+		cardBillingInfo.DueDay,
+		cardBillingInfo.ClosingOffsetDays,
 		input.InstallmentTotal,
 	)
 

@@ -15,6 +15,7 @@ import (
 	"github.com/jailtonjunior94/financial/internal/category"
 	"github.com/jailtonjunior94/financial/internal/invoice"
 	"github.com/jailtonjunior94/financial/internal/payment_method"
+	"github.com/jailtonjunior94/financial/internal/transaction"
 	"github.com/jailtonjunior94/financial/internal/user"
 	"github.com/jailtonjunior94/financial/pkg/auth"
 
@@ -84,6 +85,9 @@ func Run() error {
 	// ✅ Invoice module depends on CardProvider from card module
 	invoiceModule := invoice.NewInvoiceModule(dbManager.DB(), o11y, jwtAdapter, cardModule.CardProvider)
 
+	// ✅ Transaction module
+	transactionModule := transaction.NewTransactionModule(dbManager.DB(), o11y, jwtAdapter)
+
 	srv := httpserver.New(
 		o11y,
 		httpserver.WithMetrics(),
@@ -97,6 +101,7 @@ func Run() error {
 	srv.RegisterRouters(userModule.UserRouter)
 	srv.RegisterRouters(categoryModule.CategoryRouter)
 	srv.RegisterRouters(cardModule.CardRouter)
+	srv.RegisterRouters(transactionModule.TransactionRouter)
 	srv.RegisterRouters(paymentMethodModule.PaymentMethodRouter)
 	srv.RegisterRouters(budgetModule.BudgetRouter)
 	srv.RegisterRouters(invoiceModule.InvoiceRouter)

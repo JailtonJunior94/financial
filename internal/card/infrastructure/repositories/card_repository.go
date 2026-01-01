@@ -32,6 +32,7 @@ func (r *cardRepository) List(ctx context.Context, userID vos.UUID) ([]*entities
 				user_id,
 				name,
 				due_day,
+				closing_offset_days,
 				created_at,
 				updated_at,
 				deleted_at
@@ -64,6 +65,7 @@ func (r *cardRepository) List(ctx context.Context, userID vos.UUID) ([]*entities
 			&card.UserID.Value,
 			&card.Name.Value,
 			&card.DueDay.Value,
+			&card.ClosingOffsetDays.Value,
 			&card.CreatedAt,
 			&card.UpdatedAt,
 			&card.DeletedAt,
@@ -87,6 +89,7 @@ func (r *cardRepository) FindByID(ctx context.Context, userID, id vos.UUID) (*en
 				user_id,
 				name,
 				due_day,
+				closing_offset_days,
 				created_at,
 				updated_at,
 				deleted_at
@@ -103,6 +106,7 @@ func (r *cardRepository) FindByID(ctx context.Context, userID, id vos.UUID) (*en
 		&card.UserID.Value,
 		&card.Name.Value,
 		&card.DueDay.Value,
+		&card.ClosingOffsetDays.Value,
 		&card.CreatedAt,
 		&card.UpdatedAt,
 		&card.DeletedAt,
@@ -130,12 +134,13 @@ func (r *cardRepository) Save(ctx context.Context, card *entities.Card) error {
 					user_id,
 					name,
 					due_day,
+					closing_offset_days,
 					created_at,
 					updated_at,
 					deleted_at
 				)
 				values
-					($1, $2, $3, $4, $5, $6, $7)`
+					($1, $2, $3, $4, $5, $6, $7, $8)`
 
 	stmt, err := r.db.PrepareContext(ctx, query)
 	if err != nil {
@@ -159,6 +164,7 @@ func (r *cardRepository) Save(ctx context.Context, card *entities.Card) error {
 		card.UserID.Value,
 		card.Name.Value,
 		card.DueDay.Value,
+		card.ClosingOffsetDays.Value,
 		card.CreatedAt.Ptr(),
 		card.UpdatedAt.Ptr(),
 		card.DeletedAt.Ptr(),
@@ -184,11 +190,12 @@ func (r *cardRepository) Update(ctx context.Context, card *entities.Card) error 
 			set
 				name = $1,
 				due_day = $2,
-				updated_at = $3,
-				deleted_at = $4
+				closing_offset_days = $3,
+				updated_at = $4,
+				deleted_at = $5
 			where
-				id = $5
-				and user_id = $6`
+				id = $6
+				and user_id = $7`
 
 	stmt, err := r.db.PrepareContext(ctx, query)
 	if err != nil {
@@ -210,6 +217,7 @@ func (r *cardRepository) Update(ctx context.Context, card *entities.Card) error 
 		ctx,
 		card.Name.Value,
 		card.DueDay.Value,
+		card.ClosingOffsetDays.Value,
 		card.UpdatedAt.Ptr(),
 		card.DeletedAt.Ptr(),
 		card.ID.Value,

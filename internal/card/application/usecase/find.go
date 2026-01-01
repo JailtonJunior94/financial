@@ -62,10 +62,11 @@ func (u *findCardUseCase) Execute(ctx context.Context, userID string) ([]*dtos.C
 
 	cardsOutput := linq.Map(cards, func(card *entities.Card) *dtos.CardOutput {
 		output := &dtos.CardOutput{
-			ID:        card.ID.String(),
-			Name:      card.Name.String(),
-			DueDay:    card.DueDay.Int(),
-			CreatedAt: card.CreatedAt.ValueOr(time.Time{}),
+			ID:                card.ID.String(),
+			Name:              card.Name.String(),
+			DueDay:            card.DueDay.Int(),
+			ClosingOffsetDays: card.ClosingOffsetDays.Int(),
+			CreatedAt:         card.CreatedAt.ValueOr(time.Time{}),
 		}
 		if !card.UpdatedAt.ValueOr(time.Time{}).IsZero() {
 			output.UpdatedAt = card.UpdatedAt.ValueOr(time.Time{})
