@@ -11,6 +11,7 @@ import (
 
 	"github.com/jailtonjunior94/financial/cmd/consumer"
 	"github.com/jailtonjunior94/financial/cmd/server"
+	"github.com/jailtonjunior94/financial/cmd/worker"
 	"github.com/jailtonjunior94/financial/configs"
 
 	"github.com/JailtonJunior94/devkit-go/pkg/migration"
@@ -126,7 +127,17 @@ func main() {
 		},
 	}
 
-	root.AddCommand(migrate, api, consumers)
+	workerCmd := &cobra.Command{
+		Use:   "worker",
+		Short: "Financial Worker (Cron Jobs)",
+		Run: func(cmd *cobra.Command, args []string) {
+			if err := worker.Run(); err != nil {
+				log.Fatalf("worker failed: %v", err)
+			}
+		},
+	}
+
+	root.AddCommand(migrate, api, consumers, workerCmd)
 	if err := root.Execute(); err != nil {
 		log.Fatalf("error executing command: %v", err)
 	}

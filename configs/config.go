@@ -17,6 +17,7 @@ type (
 		RabbitMQConfig RabbitMQConfig `mapstructure:",squash"`
 		OutboxConfig   OutboxConfig   `mapstructure:",squash"`
 		ConsumerConfig ConsumerConfig `mapstructure:",squash"`
+		WorkerConfig   WorkerConfig   `mapstructure:",squash"`
 	}
 
 	DBConfig struct {
@@ -66,6 +67,12 @@ type (
 		PollIntervalSeconds int `mapstructure:"OUTBOX_POLL_INTERVAL_SECONDS"`
 		BatchSize           int `mapstructure:"OUTBOX_BATCH_SIZE"`
 		MaxRetries          int `mapstructure:"OUTBOX_MAX_RETRIES"`
+	}
+
+	WorkerConfig struct {
+		ServiceName           string `mapstructure:"SERVICE_NAME_WORKER"`
+		DefaultTimeoutSeconds int    `mapstructure:"WORKER_DEFAULT_TIMEOUT_SECONDS"`
+		MaxConcurrentJobs     int    `mapstructure:"WORKER_MAX_CONCURRENT_JOBS"`
 	}
 )
 

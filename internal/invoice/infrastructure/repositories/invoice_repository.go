@@ -3,6 +3,8 @@ package repositories
 import (
 	"context"
 	"database/sql"
+	"fmt"
+	"strconv"
 	"time"
 
 	"github.com/jailtonjunior94/financial/internal/invoice/domain/entities"
@@ -50,7 +52,7 @@ func (r *invoiceRepository) Insert(ctx context.Context, invoice *entities.Invoic
 		invoice.CardID.Value,
 		invoice.ReferenceMonth.ToTime(),
 		invoice.DueDate,
-		invoice.TotalAmount.Cents(),
+		float64(invoice.TotalAmount.Cents())/100.0,
 		invoice.CreatedAt,
 		invoice.UpdatedAt.Ptr(),
 		invoice.DeletedAt.Ptr(),
@@ -91,10 +93,10 @@ func (r *invoiceRepository) InsertItems(ctx context.Context, items []*entities.I
 			item.CategoryID.Value,
 			item.PurchaseDate,
 			item.Description,
-			item.TotalAmount.Cents(),
+			float64(item.TotalAmount.Cents())/100.0,
 			item.InstallmentNumber,
 			item.InstallmentTotal,
-			item.InstallmentAmount.Cents(),
+			float64(item.InstallmentAmount.Cents())/100.0,
 			item.CreatedAt,
 			item.UpdatedAt.Ptr(),
 			item.DeletedAt.Ptr(),
@@ -296,7 +298,7 @@ func (r *invoiceRepository) Update(ctx context.Context, invoice *entities.Invoic
 		ctx,
 		query,
 		invoice.ID.Value,
-		invoice.TotalAmount.Cents(),
+		float64(invoice.TotalAmount.Cents())/100.0,
 		time.Now().UTC(),
 	)
 
@@ -321,8 +323,8 @@ func (r *invoiceRepository) UpdateItem(ctx context.Context, item *entities.Invoi
 		item.ID.Value,
 		item.CategoryID.Value,
 		item.Description,
-		item.TotalAmount.Cents(),
-		item.InstallmentAmount.Cents(),
+		float64(item.TotalAmount.Cents())/100.0,
+		float64(item.InstallmentAmount.Cents())/100.0,
 		time.Now().UTC(),
 	)
 
@@ -427,7 +429,7 @@ func (r *invoiceRepository) findItemsByInvoiceID(ctx context.Context, invoiceID 
 func (r *invoiceRepository) scanInvoice(row *sql.Row) (*entities.Invoice, error) {
 	var invoice entities.Invoice
 	var updatedAt, deletedAt *time.Time
-	var totalAmountCents int64
+	var totalAmount string
 	var referenceDate time.Time
 
 	err := row.Scan(
@@ -436,7 +438,7 @@ func (r *invoiceRepository) scanInvoice(row *sql.Row) (*entities.Invoice, error)
 		&invoice.CardID.Value,
 		&referenceDate,
 		&invoice.DueDate,
-		&totalAmountCents,
+		&totalAmount,
 		&invoice.CreatedAt,
 		&updatedAt,
 		&deletedAt,
@@ -445,8 +447,16 @@ func (r *invoiceRepository) scanInvoice(row *sql.Row) (*entities.Invoice, error)
 		return nil, err
 	}
 
-	totalAmountFloat := float64(totalAmountCents) / 100.0
-	invoice.TotalAmount, _ = vos.NewMoneyFromFloat(totalAmountFloat, "BRL")
+	totalAmountFloat, err := strconv.ParseFloat(totalAmount, 64)
+	if err != nil {
+		return nil, fmt.Errorf("failed to parse total_amount: %w", err)
+	}
+
+	invoice.TotalAmount, err = vos.NewMoneyFromFloat(totalAmountFloat, "BRL")
+	if err != nil {
+		return nil, fmt.Errorf("failed to create Money from total_amount: %w", err)
+	}
+
 	invoice.ReferenceMonth = invoiceVos.NewReferenceMonthFromDate(referenceDate)
 
 	if updatedAt != nil {
@@ -462,7 +472,7 @@ func (r *invoiceRepository) scanInvoice(row *sql.Row) (*entities.Invoice, error)
 func (r *invoiceRepository) scanInvoiceFromRows(rows *sql.Rows) (*entities.Invoice, error) {
 	var invoice entities.Invoice
 	var updatedAt, deletedAt *time.Time
-	var totalAmountCents int64
+	var totalAmount string
 	var referenceDate time.Time
 
 	err := rows.Scan(
@@ -471,7 +481,7 @@ func (r *invoiceRepository) scanInvoiceFromRows(rows *sql.Rows) (*entities.Invoi
 		&invoice.CardID.Value,
 		&referenceDate,
 		&invoice.DueDate,
-		&totalAmountCents,
+		&totalAmount,
 		&invoice.CreatedAt,
 		&updatedAt,
 		&deletedAt,
@@ -480,8 +490,16 @@ func (r *invoiceRepository) scanInvoiceFromRows(rows *sql.Rows) (*entities.Invoi
 		return nil, err
 	}
 
-	totalAmountFloat := float64(totalAmountCents) / 100.0
-	invoice.TotalAmount, _ = vos.NewMoneyFromFloat(totalAmountFloat, "BRL")
+	totalAmountFloat, err := strconv.ParseFloat(totalAmount, 64)
+	if err != nil {
+		return nil, fmt.Errorf("failed to parse total_amount: %w", err)
+	}
+
+	invoice.TotalAmount, err = vos.NewMoneyFromFloat(totalAmountFloat, "BRL")
+	if err != nil {
+		return nil, fmt.Errorf("failed to create Money from total_amount: %w", err)
+	}
+
 	invoice.ReferenceMonth = invoiceVos.NewReferenceMonthFromDate(referenceDate)
 
 	if updatedAt != nil {
@@ -497,7 +515,7 @@ func (r *invoiceRepository) scanInvoiceFromRows(rows *sql.Rows) (*entities.Invoi
 func (r *invoiceRepository) scanInvoiceItemFromRows(rows *sql.Rows) (*entities.InvoiceItem, error) {
 	var item entities.InvoiceItem
 	var updatedAt, deletedAt *time.Time
-	var totalAmountCents, installmentAmountCents int64
+	var totalAmount, installmentAmount string
 
 	err := rows.Scan(
 		&item.ID.Value,
@@ -505,10 +523,10 @@ func (r *invoiceRepository) scanInvoiceItemFromRows(rows *sql.Rows) (*entities.I
 		&item.CategoryID.Value,
 		&item.PurchaseDate,
 		&item.Description,
-		&totalAmountCents,
+		&totalAmount,
 		&item.InstallmentNumber,
 		&item.InstallmentTotal,
-		&installmentAmountCents,
+		&installmentAmount,
 		&item.CreatedAt,
 		&updatedAt,
 		&deletedAt,
@@ -517,8 +535,15 @@ func (r *invoiceRepository) scanInvoiceItemFromRows(rows *sql.Rows) (*entities.I
 		return nil, err
 	}
 
-	totalAmountFloat := float64(totalAmountCents) / 100.0
-	installmentAmountFloat := float64(installmentAmountCents) / 100.0
+	totalAmountFloat, err := strconv.ParseFloat(totalAmount, 64)
+	if err != nil {
+		return nil, fmt.Errorf("failed to parse total_amount: %w", err)
+	}
+
+	installmentAmountFloat, err := strconv.ParseFloat(installmentAmount, 64)
+	if err != nil {
+		return nil, fmt.Errorf("failed to parse installment_amount: %w", err)
+	}
 
 	item.TotalAmount, _ = vos.NewMoneyFromFloat(totalAmountFloat, "BRL")
 	item.InstallmentAmount, _ = vos.NewMoneyFromFloat(installmentAmountFloat, "BRL")
