@@ -2,6 +2,7 @@ package http
 
 import (
 	"encoding/json"
+	"fmt"
 	"net/http"
 
 	"github.com/jailtonjunior94/financial/internal/budget/application/dtos"
@@ -17,17 +18,26 @@ type BudgetHandler struct {
 	o11y                observability.Observability
 	errorHandler        httperrors.ErrorHandler
 	createBudgetUseCase usecase.CreateBudgetUseCase
+	findBudgetUseCase   usecase.FindBudgetUseCase
+	updateBudgetUseCase usecase.UpdateBudgetUseCase
+	deleteBudgetUseCase usecase.DeleteBudgetUseCase
 }
 
 func NewBudgetHandler(
 	o11y observability.Observability,
 	errorHandler httperrors.ErrorHandler,
 	createBudgetUseCase usecase.CreateBudgetUseCase,
+	findBudgetUseCase usecase.FindBudgetUseCase,
+	updateBudgetUseCase usecase.UpdateBudgetUseCase,
+	deleteBudgetUseCase usecase.DeleteBudgetUseCase,
 ) *BudgetHandler {
 	return &BudgetHandler{
 		o11y:                o11y,
 		errorHandler:        errorHandler,
 		createBudgetUseCase: createBudgetUseCase,
+		findBudgetUseCase:   findBudgetUseCase,
+		updateBudgetUseCase: updateBudgetUseCase,
+		deleteBudgetUseCase: deleteBudgetUseCase,
 	}
 }
 
@@ -54,4 +64,67 @@ func (h *BudgetHandler) Create(w http.ResponseWriter, r *http.Request) {
 	}
 
 	responses.JSON(w, http.StatusCreated, output)
+}
+
+func (h *BudgetHandler) Find(w http.ResponseWriter, r *http.Request) {
+	ctx, span := h.o11y.Tracer().Start(r.Context(), "budget_handler.find")
+	defer span.End()
+
+	budgetID := r.PathValue("budgetID")
+	if budgetID == "" {
+		h.errorHandler.HandleError(w, r, fmt.Errorf("budget_id is required"))
+		return
+	}
+
+	output, err := h.findBudgetUseCase.Execute(ctx, budgetID)
+	if err != nil {
+		h.errorHandler.HandleError(w, r, err)
+		return
+	}
+
+	responses.JSON(w, http.StatusOK, output)
+}
+
+func (h *BudgetHandler) Update(w http.ResponseWriter, r *http.Request) {
+	ctx, span := h.o11y.Tracer().Start(r.Context(), "budget_handler.update")
+	defer span.End()
+
+	budgetID := r.PathValue("budgetID")
+	if budgetID == "" {
+		h.errorHandler.HandleError(w, r, fmt.Errorf("budget_id is required"))
+		return
+	}
+
+	var input *dtos.BudgetUpdateInput
+	if err := json.NewDecoder(r.Body).Decode(&input); err != nil {
+		h.errorHandler.HandleError(w, r, err)
+		return
+	}
+
+	output, err := h.updateBudgetUseCase.Execute(ctx, budgetID, input)
+	if err != nil {
+		h.errorHandler.HandleError(w, r, err)
+		return
+	}
+
+	responses.JSON(w, http.StatusOK, output)
+}
+
+func (h *BudgetHandler) Delete(w http.ResponseWriter, r *http.Request) {
+	ctx, span := h.o11y.Tracer().Start(r.Context(), "budget_handler.delete")
+	defer span.End()
+
+	budgetID := r.PathValue("budgetID")
+	if budgetID == "" {
+		h.errorHandler.HandleError(w, r, fmt.Errorf("budget_id is required"))
+		return
+	}
+
+	err := h.deleteBudgetUseCase.Execute(ctx, budgetID)
+	if err != nil {
+		h.errorHandler.HandleError(w, r, err)
+		return
+	}
+
+	responses.JSON(w, http.StatusNoContent, nil)
 }

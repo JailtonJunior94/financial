@@ -5,18 +5,18 @@ import (
 
 	"github.com/jailtonjunior94/financial/internal/card/domain/entities"
 	"github.com/jailtonjunior94/financial/internal/card/domain/interfaces"
-	"github.com/jailtonjunior94/financial/pkg/database"
 
+	"github.com/JailtonJunior94/devkit-go/pkg/database"
 	"github.com/JailtonJunior94/devkit-go/pkg/observability"
 	"github.com/JailtonJunior94/devkit-go/pkg/vos"
 )
 
 type cardRepository struct {
-	db   database.DBExecutor
+	db   database.DBTX
 	o11y observability.Observability
 }
 
-func NewCardRepository(db database.DBExecutor, o11y observability.Observability) interfaces.CardRepository {
+func NewCardRepository(db database.DBTX, o11y observability.Observability) interfaces.CardRepository {
 	return &cardRepository{
 		db:   db,
 		o11y: o11y,

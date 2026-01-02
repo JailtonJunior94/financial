@@ -4,13 +4,13 @@ import (
 	"context"
 	"fmt"
 
-	"github.com/JailtonJunior94/devkit-go/pkg/observability"
-	"github.com/JailtonJunior94/devkit-go/pkg/vos"
-
 	"github.com/jailtonjunior94/financial/internal/invoice/domain/entities"
 	"github.com/jailtonjunior94/financial/internal/invoice/infrastructure/repositories"
-	"github.com/jailtonjunior94/financial/pkg/database/uow"
-	pkgDatabase "github.com/jailtonjunior94/financial/pkg/database"
+
+	"github.com/JailtonJunior94/devkit-go/pkg/database"
+	"github.com/JailtonJunior94/devkit-go/pkg/database/uow"
+	"github.com/JailtonJunior94/devkit-go/pkg/observability"
+	"github.com/JailtonJunior94/devkit-go/pkg/vos"
 )
 
 type (
@@ -44,7 +44,7 @@ func (u *deletePurchaseUseCase) Execute(ctx context.Context, itemID string) erro
 		return fmt.Errorf("invalid item ID: %w", err)
 	}
 
-	err = u.uow.Do(ctx, func(ctx context.Context, tx pkgDatabase.DBExecutor) error {
+	err = u.uow.Do(ctx, func(ctx context.Context, tx database.DBTX) error {
 		invoiceRepo := repositories.NewInvoiceRepository(tx, u.o11y)
 
 		// Find the invoice containing this item to get purchase origin details

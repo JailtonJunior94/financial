@@ -7,23 +7,23 @@ import (
 	"strings"
 	"time"
 
-	"github.com/JailtonJunior94/devkit-go/pkg/observability"
-	"github.com/JailtonJunior94/devkit-go/pkg/vos"
-
 	"github.com/jailtonjunior94/financial/internal/budget/domain/entities"
 	"github.com/jailtonjunior94/financial/internal/budget/domain/interfaces"
 	budgetVos "github.com/jailtonjunior94/financial/internal/budget/domain/vos"
-	"github.com/jailtonjunior94/financial/pkg/database"
+
+	"github.com/JailtonJunior94/devkit-go/pkg/database"
+	"github.com/JailtonJunior94/devkit-go/pkg/observability"
+	"github.com/JailtonJunior94/devkit-go/pkg/vos"
 )
 
 type budgetRepository struct {
-	exec database.DBExecutor
+	db   database.DBTX
 	o11y observability.Observability
 }
 
-func NewBudgetRepository(exec database.DBExecutor, o11y observability.Observability) interfaces.BudgetRepository {
+func NewBudgetRepository(db database.DBTX, o11y observability.Observability) interfaces.BudgetRepository {
 	return &budgetRepository{
-		exec: exec,
+		db:   db,
 		o11y: o11y,
 	}
 }
@@ -47,7 +47,7 @@ func (r *budgetRepository) Insert(ctx context.Context, budget *entities.Budget) 
 			  values
 				($1, $2, $3, $4, $5, $6, $7, $8, $9)`
 
-	_, err := r.exec.ExecContext(
+	_, err := r.db.ExecContext(
 		ctx,
 		query,
 		budget.ID.Value,
@@ -115,9 +115,8 @@ func (r *budgetRepository) InsertItems(ctx context.Context, items []*entities.Bu
 				)
 				values %s`, strings.Join(valueStrings, ", "))
 
-	_, err := r.exec.ExecContext(ctx, query, valueArgs...)
+	_, err := r.db.ExecContext(ctx, query, valueArgs...)
 	if err != nil {
-
 		return err
 	}
 
@@ -141,7 +140,7 @@ func (r *budgetRepository) FindByID(ctx context.Context, id vos.UUID) (*entities
 			from budgets b
 			where b.id = $1 and b.deleted_at is null`
 
-	row := r.exec.QueryRowContext(ctx, query, id.Value)
+	row := r.db.QueryRowContext(ctx, query, id.Value)
 
 	var budget entities.Budget
 	var updatedAt, deletedAt *time.Time
@@ -212,7 +211,7 @@ func (r *budgetRepository) FindByUserIDAndReferenceMonth(ctx context.Context, us
 			  and to_char(b.date, 'YYYY-MM') = $2
 			  and b.deleted_at is null`
 
-	row := r.exec.QueryRowContext(ctx, query, userID.Value, referenceMonth.String())
+	row := r.db.QueryRowContext(ctx, query, userID.Value, referenceMonth.String())
 
 	var budget entities.Budget
 	var updatedAt, deletedAt *time.Time
@@ -275,7 +274,7 @@ func (r *budgetRepository) Update(ctx context.Context, budget *entities.Budget) 
 				updated_at = $5
 			where id = $1`
 
-	_, err := r.exec.ExecContext(
+	_, err := r.db.ExecContext(
 		ctx,
 		query,
 		budget.ID.Value,
@@ -299,7 +298,7 @@ func (r *budgetRepository) UpdateItem(ctx context.Context, item *entities.Budget
 				updated_at = $3
 			where id = $1`
 
-	_, err := r.exec.ExecContext(
+	_, err := r.db.ExecContext(
 		ctx,
 		query,
 		item.ID.Value,
@@ -327,7 +326,7 @@ func (r *budgetRepository) findItemsByBudgetID(ctx context.Context, budgetID vos
 			where budget_id = $1 and deleted_at is null
 			order by created_at`
 
-	rows, err := r.exec.QueryContext(ctx, query, budgetID.Value)
+	rows, err := r.db.QueryContext(ctx, query, budgetID.Value)
 	if err != nil {
 		return nil, err
 	}

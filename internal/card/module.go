@@ -3,7 +3,6 @@ package card
 import (
 	"database/sql"
 
-	"github.com/JailtonJunior94/devkit-go/pkg/observability"
 	"github.com/jailtonjunior94/financial/internal/card/application/usecase"
 	"github.com/jailtonjunior94/financial/internal/card/infrastructure/adapters"
 	"github.com/jailtonjunior94/financial/internal/card/infrastructure/http"
@@ -12,6 +11,8 @@ import (
 	"github.com/jailtonjunior94/financial/pkg/api/httperrors"
 	"github.com/jailtonjunior94/financial/pkg/api/middlewares"
 	"github.com/jailtonjunior94/financial/pkg/auth"
+
+	"github.com/JailtonJunior94/devkit-go/pkg/observability"
 )
 
 type CardModule struct {

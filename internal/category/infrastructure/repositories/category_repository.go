@@ -5,18 +5,18 @@ import (
 
 	"github.com/jailtonjunior94/financial/internal/category/domain/entities"
 	"github.com/jailtonjunior94/financial/internal/category/domain/interfaces"
-	"github.com/jailtonjunior94/financial/pkg/database"
 
+	"github.com/JailtonJunior94/devkit-go/pkg/database"
 	"github.com/JailtonJunior94/devkit-go/pkg/observability"
 	"github.com/JailtonJunior94/devkit-go/pkg/vos"
 )
 
 type categoryRepository struct {
-	db   database.DBExecutor
+	db   database.DBTX
 	o11y observability.Observability
 }
 
-func NewCategoryRepository(db database.DBExecutor, o11y observability.Observability) interfaces.CategoryRepository {
+func NewCategoryRepository(db database.DBTX, o11y observability.Observability) interfaces.CategoryRepository {
 	return &categoryRepository{
 		db:   db,
 		o11y: o11y,

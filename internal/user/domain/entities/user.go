@@ -31,11 +31,11 @@ func (u *User) SetPassword(password string) error {
 	if password == "" {
 		return financialErrors.ErrPasswordIsRequired
 	}
-	// Validação adicional: hash bcrypt deve ter no mínimo 20 caracteres
-	// Hash bcrypt típico tem ~60 caracteres (ex: $2a$10$...)
+
 	if len(password) < 20 {
 		return financialErrors.New("invalid password hash format", nil)
 	}
+
 	u.Password = password
 	return nil
 }

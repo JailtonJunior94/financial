@@ -5,16 +5,16 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/JailtonJunior94/devkit-go/pkg/observability"
-	sharedVos "github.com/JailtonJunior94/devkit-go/pkg/vos"
-
 	"github.com/jailtonjunior94/financial/internal/transaction/application/dtos"
 	"github.com/jailtonjunior94/financial/internal/transaction/domain/entities"
 	"github.com/jailtonjunior94/financial/internal/transaction/domain/interfaces"
 	"github.com/jailtonjunior94/financial/internal/transaction/domain/strategies"
 	transactionVos "github.com/jailtonjunior94/financial/internal/transaction/domain/vos"
-	"github.com/jailtonjunior94/financial/pkg/database/uow"
-	pkgDatabase "github.com/jailtonjunior94/financial/pkg/database"
+
+	"github.com/JailtonJunior94/devkit-go/pkg/database"
+	"github.com/JailtonJunior94/devkit-go/pkg/database/uow"
+	"github.com/JailtonJunior94/devkit-go/pkg/observability"
+	sharedVos "github.com/JailtonJunior94/devkit-go/pkg/vos"
 )
 
 type (
@@ -23,21 +23,24 @@ type (
 	}
 
 	registerTransactionUseCase struct {
-		uow  uow.UnitOfWork
-		repo interfaces.TransactionRepository
-		o11y observability.Observability
+		uow                  uow.UnitOfWork
+		repo                 interfaces.TransactionRepository
+		invoiceTotalProvider interfaces.InvoiceTotalProvider
+		o11y                 observability.Observability
 	}
 )
 
 func NewRegisterTransactionUseCase(
 	uow uow.UnitOfWork,
 	repo interfaces.TransactionRepository,
+	invoiceTotalProvider interfaces.InvoiceTotalProvider,
 	o11y observability.Observability,
 ) RegisterTransactionUseCase {
 	return &registerTransactionUseCase{
-		uow:  uow,
-		repo: repo,
-		o11y: o11y,
+		uow:                  uow,
+		repo:                 repo,
+		invoiceTotalProvider: invoiceTotalProvider,
+		o11y:                 o11y,
 	}
 }
 
@@ -91,20 +94,65 @@ func (u *registerTransactionUseCase) Execute(
 		return nil, fmt.Errorf("invalid amount: %w", err)
 	}
 
-	// Get strategy for validation and creation
-	strategy := strategies.GetStrategy(transactionType)
-	if strategy == nil {
-		u.o11y.Logger().Error(ctx, "strategy not found", observability.String("type", input.Type))
-		return nil, fmt.Errorf("unsupported transaction type: %s", input.Type)
-	}
-
 	// Execute within transaction
 	var monthly *dtos.MonthlyTransactionOutput
-	err = u.uow.Do(ctx, func(ctx context.Context, tx pkgDatabase.DBExecutor) error {
+	err = u.uow.Do(ctx, func(ctx context.Context, tx database.DBTX) error {
 		// Find or create monthly aggregate
 		monthlyAggregate, err := u.repo.FindOrCreateMonthly(ctx, tx, user, referenceMonth)
 		if err != nil {
 			return fmt.Errorf("failed to find or create monthly transaction: %w", err)
+		}
+
+		// Special handling for CREDIT_CARD transactions
+		if transactionType == transactionVos.TypeCreditCard {
+			// Get invoice total from invoice module
+			invoiceTotal, err := u.invoiceTotalProvider.GetClosedInvoiceTotal(ctx, user, referenceMonth)
+			if err != nil {
+				return fmt.Errorf("failed to get closed invoice total: %w", err)
+			}
+
+			u.o11y.Logger().Info(ctx, "fetched closed invoice total",
+				observability.String("user_id", user.String()),
+				observability.String("reference_month", referenceMonth.String()),
+				observability.Int64("total_cents", invoiceTotal.Cents()),
+			)
+
+			// Update or create credit card item with invoice total
+			if err := monthlyAggregate.UpdateOrCreateCreditCardItem(categoryID, invoiceTotal, input.IsPaid); err != nil {
+				return fmt.Errorf("failed to update or create credit card item: %w", err)
+			}
+
+			// Find the credit card item to publish event
+			// Loop through items to find the CREDIT_CARD type
+			var creditCardItem *entities.TransactionItem
+			for _, item := range monthlyAggregate.Items {
+				if item.Type == transactionVos.TypeCreditCard && !item.IsDeleted() {
+					creditCardItem = item
+					break
+				}
+			}
+
+			if creditCardItem == nil {
+				return fmt.Errorf("credit card item not found after update/create")
+			}
+
+			// Persist changes (update or insert)
+			// Note: UpdateOrCreateCreditCardItem handles both cases internally
+			if err := u.repo.UpdateMonthly(ctx, tx, monthlyAggregate); err != nil {
+				return fmt.Errorf("failed to update monthly transaction: %w", err)
+			}
+
+			// Convert to DTO
+			monthly = u.toOutput(monthlyAggregate)
+			return nil
+		}
+
+		// Standard flow for non-credit-card transactions
+		// Get strategy for validation and creation
+		strategy := strategies.GetStrategy(transactionType)
+		if strategy == nil {
+			u.o11y.Logger().Error(ctx, "strategy not found", observability.String("type", input.Type))
+			return fmt.Errorf("unsupported transaction type: %s", input.Type)
 		}
 
 		// Create item using strategy

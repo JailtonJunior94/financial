@@ -3,11 +3,12 @@ package payment_method
 import (
 	"database/sql"
 
-	"github.com/JailtonJunior94/devkit-go/pkg/observability"
 	"github.com/jailtonjunior94/financial/internal/payment_method/application/usecase"
 	"github.com/jailtonjunior94/financial/internal/payment_method/infrastructure/http"
 	"github.com/jailtonjunior94/financial/internal/payment_method/infrastructure/repositories"
 	"github.com/jailtonjunior94/financial/pkg/api/httperrors"
+
+	"github.com/JailtonJunior94/devkit-go/pkg/observability"
 )
 
 type PaymentMethodModule struct {

@@ -3,13 +3,14 @@ package category
 import (
 	"database/sql"
 
-	"github.com/JailtonJunior94/devkit-go/pkg/observability"
 	"github.com/jailtonjunior94/financial/internal/category/application/usecase"
 	"github.com/jailtonjunior94/financial/internal/category/infrastructure/http"
 	"github.com/jailtonjunior94/financial/internal/category/infrastructure/repositories"
 	"github.com/jailtonjunior94/financial/pkg/api/httperrors"
 	"github.com/jailtonjunior94/financial/pkg/api/middlewares"
 	"github.com/jailtonjunior94/financial/pkg/auth"
+
+	"github.com/JailtonJunior94/devkit-go/pkg/observability"
 )
 
 type CategoryModule struct {

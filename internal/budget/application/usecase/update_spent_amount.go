@@ -5,14 +5,14 @@ import (
 	"fmt"
 	"strconv"
 
+	"github.com/jailtonjunior94/financial/internal/budget/application/dtos"
+	"github.com/jailtonjunior94/financial/internal/budget/domain"
+	"github.com/jailtonjunior94/financial/internal/budget/infrastructure/repositories"
+
+	"github.com/JailtonJunior94/devkit-go/pkg/database"
+	"github.com/JailtonJunior94/devkit-go/pkg/database/uow"
 	"github.com/JailtonJunior94/devkit-go/pkg/observability"
 	"github.com/JailtonJunior94/devkit-go/pkg/vos"
-
-	"github.com/jailtonjunior94/financial/internal/budget/domain"
-	"github.com/jailtonjunior94/financial/internal/budget/application/dtos"
-	"github.com/jailtonjunior94/financial/internal/budget/infrastructure/repositories"
-	"github.com/jailtonjunior94/financial/pkg/database/uow"
-	pkgDatabase "github.com/jailtonjunior94/financial/pkg/database"
 )
 
 type (
@@ -58,7 +58,7 @@ func (u *updateSpentAmountUseCase) Execute(ctx context.Context, budgetID, itemID
 		return fmt.Errorf("invalid spent amount format: %w", err)
 	}
 
-	err = u.uow.Do(ctx, func(ctx context.Context, tx pkgDatabase.DBExecutor) error {
+	err = u.uow.Do(ctx, func(ctx context.Context, tx database.DBTX) error {
 		// Criar repositório com a transação
 		budgetRepository := repositories.NewBudgetRepository(tx, u.o11y)
 

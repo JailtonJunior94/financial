@@ -5,23 +5,23 @@ import (
 	"database/sql"
 	"time"
 
-	"github.com/JailtonJunior94/devkit-go/pkg/observability"
-	"github.com/JailtonJunior94/devkit-go/pkg/vos"
-
 	"github.com/jailtonjunior94/financial/internal/invoice/domain/entities"
 	"github.com/jailtonjunior94/financial/internal/invoice/domain/interfaces"
 	invoiceVos "github.com/jailtonjunior94/financial/internal/invoice/domain/vos"
-	"github.com/jailtonjunior94/financial/pkg/database"
+
+	"github.com/JailtonJunior94/devkit-go/pkg/database"
+	"github.com/JailtonJunior94/devkit-go/pkg/observability"
+	"github.com/JailtonJunior94/devkit-go/pkg/vos"
 )
 
 type invoiceRepository struct {
-	exec database.DBExecutor
+	db   database.DBTX
 	o11y observability.Observability
 }
 
-func NewInvoiceRepository(exec database.DBExecutor, o11y observability.Observability) interfaces.InvoiceRepository {
+func NewInvoiceRepository(db database.DBTX, o11y observability.Observability) interfaces.InvoiceRepository {
 	return &invoiceRepository{
-		exec: exec,
+		db:   db,
 		o11y: o11y,
 	}
 }
@@ -42,7 +42,7 @@ func (r *invoiceRepository) Insert(ctx context.Context, invoice *entities.Invoic
 		deleted_at
 	) values ($1, $2, $3, $4, $5, $6, $7, $8, $9)`
 
-	_, err := r.exec.ExecContext(
+	_, err := r.db.ExecContext(
 		ctx,
 		query,
 		invoice.ID.Value,
@@ -83,7 +83,7 @@ func (r *invoiceRepository) InsertItems(ctx context.Context, items []*entities.I
 	) values ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)`
 
 	for _, item := range items {
-		_, err := r.exec.ExecContext(
+		_, err := r.db.ExecContext(
 			ctx,
 			query,
 			item.ID.Value,
@@ -124,7 +124,7 @@ func (r *invoiceRepository) FindByID(ctx context.Context, id vos.UUID) (*entitie
 	from invoices
 	where id = $1 and deleted_at is null`
 
-	row := r.exec.QueryRowContext(ctx, query, id.Value)
+	row := r.db.QueryRowContext(ctx, query, id.Value)
 
 	invoice, err := r.scanInvoice(row)
 	if err != nil {
@@ -169,7 +169,7 @@ func (r *invoiceRepository) FindByUserAndCardAndMonth(
 	  and to_char(reference_month, 'YYYY-MM') = $3
 	  and deleted_at is null`
 
-	row := r.exec.QueryRowContext(ctx, query, userID.Value, cardID.Value, referenceMonth.String())
+	row := r.db.QueryRowContext(ctx, query, userID.Value, cardID.Value, referenceMonth.String())
 
 	invoice, err := r.scanInvoice(row)
 	if err != nil {
@@ -213,7 +213,7 @@ func (r *invoiceRepository) FindByUserAndMonth(
 	  and deleted_at is null
 	order by due_date`
 
-	rows, err := r.exec.QueryContext(ctx, query, userID.Value, referenceMonth.String())
+	rows, err := r.db.QueryContext(ctx, query, userID.Value, referenceMonth.String())
 	if err != nil {
 		return nil, err
 	}
@@ -257,7 +257,7 @@ func (r *invoiceRepository) FindByCard(ctx context.Context, cardID vos.UUID) ([]
 	where card_id = $1 and deleted_at is null
 	order by reference_month desc`
 
-	rows, err := r.exec.QueryContext(ctx, query, cardID.Value)
+	rows, err := r.db.QueryContext(ctx, query, cardID.Value)
 	if err != nil {
 		return nil, err
 	}
@@ -292,7 +292,7 @@ func (r *invoiceRepository) Update(ctx context.Context, invoice *entities.Invoic
 		updated_at = $3
 	where id = $1`
 
-	_, err := r.exec.ExecContext(
+	_, err := r.db.ExecContext(
 		ctx,
 		query,
 		invoice.ID.Value,
@@ -315,7 +315,7 @@ func (r *invoiceRepository) UpdateItem(ctx context.Context, item *entities.Invoi
 		updated_at = $6
 	where id = $1`
 
-	_, err := r.exec.ExecContext(
+	_, err := r.db.ExecContext(
 		ctx,
 		query,
 		item.ID.Value,
@@ -337,7 +337,7 @@ func (r *invoiceRepository) DeleteItem(ctx context.Context, itemID vos.UUID) err
 		deleted_at = $2
 	where id = $1`
 
-	_, err := r.exec.ExecContext(ctx, query, itemID.Value, time.Now().UTC())
+	_, err := r.db.ExecContext(ctx, query, itemID.Value, time.Now().UTC())
 	return err
 }
 
@@ -370,7 +370,7 @@ func (r *invoiceRepository) FindItemsByPurchaseOrigin(
 	  and deleted_at is null
 	order by installment_number`
 
-	rows, err := r.exec.QueryContext(ctx, query, purchaseDate, categoryID.Value, description)
+	rows, err := r.db.QueryContext(ctx, query, purchaseDate, categoryID.Value, description)
 	if err != nil {
 		return nil, err
 	}
@@ -406,7 +406,7 @@ func (r *invoiceRepository) findItemsByInvoiceID(ctx context.Context, invoiceID 
 	where invoice_id = $1 and deleted_at is null
 	order by purchase_date, installment_number`
 
-	rows, err := r.exec.QueryContext(ctx, query, invoiceID.Value)
+	rows, err := r.db.QueryContext(ctx, query, invoiceID.Value)
 	if err != nil {
 		return nil, err
 	}

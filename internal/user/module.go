@@ -18,12 +18,11 @@ type UserModule struct {
 }
 
 func NewUserModule(db *sql.DB, cfg *configs.Config, o11y observability.Observability) UserModule {
+	hash := encrypt.NewHashAdapter()
+	jwt := auth.NewJwtAdapter(cfg, o11y)
 	errorHandler := httperrors.NewErrorHandler(o11y)
 
 	userRepository := repositories.NewUserRepository(db, o11y)
-
-	jwt := auth.NewJwtAdapter(cfg, o11y)
-	hash := encrypt.NewHashAdapter()
 
 	authUseCase := usecase.NewTokenUseCase(cfg, o11y, hash, jwt, userRepository)
 	createUserUseCase := usecase.NewCreateUserUseCase(o11y, hash, userRepository)
@@ -33,7 +32,5 @@ func NewUserModule(db *sql.DB, cfg *configs.Config, o11y observability.Observabi
 
 	userRouter := http.NewUserRouter(authHandler, userHandler)
 
-	return UserModule{
-		UserRouter: userRouter,
-	}
+	return UserModule{UserRouter: userRouter}
 }

@@ -6,9 +6,9 @@ import (
 	"github.com/jailtonjunior94/financial/internal/budget/application/dtos"
 	"github.com/jailtonjunior94/financial/internal/budget/domain/factories"
 	"github.com/jailtonjunior94/financial/internal/budget/infrastructure/repositories"
-	"github.com/jailtonjunior94/financial/pkg/database"
-	"github.com/jailtonjunior94/financial/pkg/database/uow"
 
+	"github.com/JailtonJunior94/devkit-go/pkg/database"
+	"github.com/JailtonJunior94/devkit-go/pkg/database/uow"
 	"github.com/JailtonJunior94/devkit-go/pkg/observability"
 )
 
@@ -42,8 +42,7 @@ func (u *createBudgetUseCase) Execute(ctx context.Context, userID string, input 
 		return nil, err
 	}
 
-	err = u.uow.Do(ctx, func(ctx context.Context, tx database.DBExecutor) error {
-		// Criar repositório com a transação
+	err = u.uow.Do(ctx, func(ctx context.Context, tx database.DBTX) error {
 		budgetRepository := repositories.NewBudgetRepository(tx, u.o11y)
 
 		if err := budgetRepository.Insert(ctx, newBudget); err != nil {

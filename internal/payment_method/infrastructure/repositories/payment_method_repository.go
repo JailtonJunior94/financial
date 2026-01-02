@@ -6,18 +6,18 @@ import (
 
 	"github.com/jailtonjunior94/financial/internal/payment_method/domain/entities"
 	"github.com/jailtonjunior94/financial/internal/payment_method/domain/interfaces"
-	"github.com/jailtonjunior94/financial/pkg/database"
 
+	"github.com/JailtonJunior94/devkit-go/pkg/database"
 	"github.com/JailtonJunior94/devkit-go/pkg/observability"
 	"github.com/JailtonJunior94/devkit-go/pkg/vos"
 )
 
 type paymentMethodRepository struct {
-	db   database.DBExecutor
+	db   database.DBTX
 	o11y observability.Observability
 }
 
-func NewPaymentMethodRepository(db database.DBExecutor, o11y observability.Observability) interfaces.PaymentMethodRepository {
+func NewPaymentMethodRepository(db database.DBTX, o11y observability.Observability) interfaces.PaymentMethodRepository {
 	return &paymentMethodRepository{
 		db:   db,
 		o11y: o11y,

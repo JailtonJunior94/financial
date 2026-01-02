@@ -6,17 +6,17 @@ import (
 	"strconv"
 	"time"
 
-	"github.com/JailtonJunior94/devkit-go/pkg/observability"
-	"github.com/JailtonJunior94/devkit-go/pkg/vos"
-
 	"github.com/jailtonjunior94/financial/internal/invoice/application/dtos"
 	"github.com/jailtonjunior94/financial/internal/invoice/domain/entities"
 	"github.com/jailtonjunior94/financial/internal/invoice/domain/factories"
 	"github.com/jailtonjunior94/financial/internal/invoice/domain/interfaces"
 	invoiceVos "github.com/jailtonjunior94/financial/internal/invoice/domain/vos"
 	"github.com/jailtonjunior94/financial/internal/invoice/infrastructure/repositories"
-	"github.com/jailtonjunior94/financial/pkg/database/uow"
-	pkgDatabase "github.com/jailtonjunior94/financial/pkg/database"
+
+	"github.com/JailtonJunior94/devkit-go/pkg/database"
+	"github.com/JailtonJunior94/devkit-go/pkg/database/uow"
+	"github.com/JailtonJunior94/devkit-go/pkg/observability"
+	"github.com/JailtonJunior94/devkit-go/pkg/vos"
 )
 
 type (
@@ -25,10 +25,10 @@ type (
 	}
 
 	createPurchaseUseCase struct {
-		uow              uow.UnitOfWork
-		cardProvider     interfaces.CardProvider // ✅ Injeção de dependência (Port)
+		uow               uow.UnitOfWork
+		cardProvider      interfaces.CardProvider
+		o11y              observability.Observability
 		invoiceCalculator *factories.InvoiceCalculator
-		o11y             observability.Observability
 	}
 )
 
@@ -38,10 +38,10 @@ func NewCreatePurchaseUseCase(
 	o11y observability.Observability,
 ) CreatePurchaseUseCase {
 	return &createPurchaseUseCase{
-		uow:              uow,
-		cardProvider:     cardProvider,
+		uow:               uow,
+		cardProvider:      cardProvider,
+		o11y:              o11y,
 		invoiceCalculator: factories.NewInvoiceCalculator(),
-		o11y:             o11y,
 	}
 }
 
@@ -79,20 +79,7 @@ func (u *createPurchaseUseCase) Execute(ctx context.Context, userID string, inpu
 		return fmt.Errorf("invalid total amount format: %w", err)
 	}
 
-	// Map currency
-	var currency vos.Currency
-	switch input.Currency {
-	case "BRL":
-		currency = vos.CurrencyBRL
-	case "USD":
-		currency = vos.CurrencyUSD
-	case "EUR":
-		currency = vos.CurrencyEUR
-	default:
-		return fmt.Errorf("unsupported currency: %s", input.Currency)
-	}
-
-	totalAmount, err := vos.NewMoneyFromFloat(totalAmountFloat, currency)
+	totalAmount, err := vos.NewMoneyFromFloat(totalAmountFloat, vos.CurrencyBRL)
 	if err != nil {
 		return fmt.Errorf("invalid money value: %w", err)
 	}
@@ -119,9 +106,9 @@ func (u *createPurchaseUseCase) Execute(ctx context.Context, userID string, inpu
 	)
 
 	// Criar os itens de fatura para cada parcela
-	err = u.uow.Do(ctx, func(ctx context.Context, tx pkgDatabase.DBExecutor) error {
+	err = u.uow.Do(ctx, func(ctx context.Context, tx database.DBTX) error {
 		// Criar repositório com transação
-		invoiceRepo := repositories.NewInvoiceRepository(tx, u.o11y)
+		invoiceRepository := repositories.NewInvoiceRepository(tx, u.o11y)
 
 		// Para cada parcela, criar ou buscar a fatura e adicionar o item
 		for i := 0; i < input.InstallmentTotal; i++ {
@@ -131,12 +118,12 @@ func (u *createPurchaseUseCase) Execute(ctx context.Context, userID string, inpu
 			// Buscar ou criar a fatura para este mês
 			invoice, err := u.findOrCreateInvoice(
 				ctx,
-				invoiceRepo,
+				invoiceRepository,
 				user,
 				cardID,
 				referenceMonth,
 				cardBillingInfo.DueDay,
-				currency,
+				vos.CurrencyBRL,
 			)
 			if err != nil {
 				return fmt.Errorf("failed to find or create invoice: %w", err)
@@ -167,14 +154,15 @@ func (u *createPurchaseUseCase) Execute(ctx context.Context, userID string, inpu
 			}
 
 			// Persistir item
-			if err := invoiceRepo.InsertItems(ctx, []*entities.InvoiceItem{item}); err != nil {
+			if err := invoiceRepository.InsertItems(ctx, []*entities.InvoiceItem{item}); err != nil {
 				return err
 			}
 
 			// Atualizar total da fatura
-			if err := invoiceRepo.Update(ctx, invoice); err != nil {
+			if err := invoiceRepository.Update(ctx, invoice); err != nil {
 				return err
 			}
+
 		}
 
 		return nil

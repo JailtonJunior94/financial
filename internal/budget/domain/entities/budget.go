@@ -219,3 +219,9 @@ func (b *Budget) IsFullyAllocated() bool {
 	hundredPercent, _ := vos.NewPercentage(100000)
 	return b.TotalPercentageAllocated().Equals(hundredPercent)
 }
+
+// Delete marca o budget como deletado (soft delete)
+func (b *Budget) Delete() *Budget {
+	b.DeletedAt = vos.NewNullableTime(time.Now().UTC())
+	return b
+}

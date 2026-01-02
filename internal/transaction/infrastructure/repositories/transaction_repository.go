@@ -5,23 +5,23 @@ import (
 	"database/sql"
 	"time"
 
-	"github.com/JailtonJunior94/devkit-go/pkg/observability"
-	sharedVos "github.com/JailtonJunior94/devkit-go/pkg/vos"
-
 	"github.com/jailtonjunior94/financial/internal/transaction/domain/entities"
 	"github.com/jailtonjunior94/financial/internal/transaction/domain/interfaces"
 	transactionVos "github.com/jailtonjunior94/financial/internal/transaction/domain/vos"
-	"github.com/jailtonjunior94/financial/pkg/database"
+
+	"github.com/JailtonJunior94/devkit-go/pkg/database"
+	"github.com/JailtonJunior94/devkit-go/pkg/observability"
+	sharedVos "github.com/JailtonJunior94/devkit-go/pkg/vos"
 )
 
 type transactionRepository struct {
-	db   database.DBExecutor
+	db   database.DBTX
 	o11y observability.Observability
 }
 
 // NewTransactionRepository cria uma nova instância do repositório.
 func NewTransactionRepository(
-	db database.DBExecutor,
+	db database.DBTX,
 	o11y observability.Observability,
 ) interfaces.TransactionRepository {
 	return &transactionRepository{
@@ -33,7 +33,7 @@ func NewTransactionRepository(
 // FindOrCreateMonthly busca ou cria o aggregate do mês.
 func (r *transactionRepository) FindOrCreateMonthly(
 	ctx context.Context,
-	executor database.DBExecutor,
+	executor database.DBTX,
 	userID sharedVos.UUID,
 	referenceMonth transactionVos.ReferenceMonth,
 ) (*entities.MonthlyTransaction, error) {
@@ -78,7 +78,7 @@ func (r *transactionRepository) FindOrCreateMonthly(
 // FindMonthlyByID busca o aggregate por ID com todos os items.
 func (r *transactionRepository) FindMonthlyByID(
 	ctx context.Context,
-	executor database.DBExecutor,
+	executor database.DBTX,
 	userID sharedVos.UUID,
 	monthlyID sharedVos.UUID,
 ) (*entities.MonthlyTransaction, error) {
@@ -149,7 +149,7 @@ func (r *transactionRepository) FindMonthlyByID(
 // UpdateMonthly atualiza o aggregate (totais).
 func (r *transactionRepository) UpdateMonthly(
 	ctx context.Context,
-	executor database.DBExecutor,
+	executor database.DBTX,
 	monthly *entities.MonthlyTransaction,
 ) error {
 	ctx, span := r.o11y.Tracer().Start(ctx, "transaction_repository.update_monthly")
@@ -184,7 +184,7 @@ func (r *transactionRepository) UpdateMonthly(
 // InsertItem insere um novo transaction item.
 func (r *transactionRepository) InsertItem(
 	ctx context.Context,
-	executor database.DBExecutor,
+	executor database.DBTX,
 	item *entities.TransactionItem,
 ) error {
 	ctx, span := r.o11y.Tracer().Start(ctx, "transaction_repository.insert_item")
@@ -221,7 +221,7 @@ func (r *transactionRepository) InsertItem(
 // UpdateItem atualiza um transaction item existente.
 func (r *transactionRepository) UpdateItem(
 	ctx context.Context,
-	executor database.DBExecutor,
+	executor database.DBTX,
 	item *entities.TransactionItem,
 ) error {
 	ctx, span := r.o11y.Tracer().Start(ctx, "transaction_repository.update_item")
@@ -269,7 +269,7 @@ func (r *transactionRepository) UpdateItem(
 // FindItemByID busca um item por ID.
 func (r *transactionRepository) FindItemByID(
 	ctx context.Context,
-	executor database.DBExecutor,
+	executor database.DBTX,
 	userID sharedVos.UUID,
 	itemID sharedVos.UUID,
 ) (*entities.TransactionItem, error) {
@@ -335,7 +335,7 @@ func (r *transactionRepository) FindItemByID(
 // findMonthlyByUserAndMonth busca aggregate por user e mês.
 func (r *transactionRepository) findMonthlyByUserAndMonth(
 	ctx context.Context,
-	executor database.DBExecutor,
+	executor database.DBTX,
 	userID sharedVos.UUID,
 	referenceMonth transactionVos.ReferenceMonth,
 ) (*entities.MonthlyTransaction, error) {
@@ -388,7 +388,7 @@ func (r *transactionRepository) findMonthlyByUserAndMonth(
 // insertMonthly insere um novo aggregate.
 func (r *transactionRepository) insertMonthly(
 	ctx context.Context,
-	executor database.DBExecutor,
+	executor database.DBTX,
 	monthly *entities.MonthlyTransaction,
 ) error {
 	query := `
@@ -420,7 +420,7 @@ func (r *transactionRepository) insertMonthly(
 // findItemsByMonthlyID busca todos os items de um aggregate (exceto deletados).
 func (r *transactionRepository) findItemsByMonthlyID(
 	ctx context.Context,
-	executor database.DBExecutor,
+	executor database.DBTX,
 	monthlyID sharedVos.UUID,
 ) ([]*entities.TransactionItem, error) {
 	query := `

@@ -5,16 +5,16 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/JailtonJunior94/devkit-go/pkg/observability"
-	sharedVos "github.com/JailtonJunior94/devkit-go/pkg/vos"
-
 	"github.com/jailtonjunior94/financial/internal/transaction/application/dtos"
 	"github.com/jailtonjunior94/financial/internal/transaction/domain/entities"
 	"github.com/jailtonjunior94/financial/internal/transaction/domain/interfaces"
 	"github.com/jailtonjunior94/financial/internal/transaction/domain/strategies"
 	transactionVos "github.com/jailtonjunior94/financial/internal/transaction/domain/vos"
-	"github.com/jailtonjunior94/financial/pkg/database/uow"
-	pkgDatabase "github.com/jailtonjunior94/financial/pkg/database"
+
+	"github.com/JailtonJunior94/devkit-go/pkg/database"
+	"github.com/JailtonJunior94/devkit-go/pkg/database/uow"
+	"github.com/JailtonJunior94/devkit-go/pkg/observability"
+	sharedVos "github.com/JailtonJunior94/devkit-go/pkg/vos"
 )
 
 type (
@@ -88,7 +88,7 @@ func (u *updateTransactionItemUseCase) Execute(
 
 	// Execute within transaction
 	var monthly *dtos.MonthlyTransactionOutput
-	err = u.uow.Do(ctx, func(ctx context.Context, tx pkgDatabase.DBExecutor) error {
+	err = u.uow.Do(ctx, func(ctx context.Context, tx database.DBTX) error {
 		// Find item
 		item, err := u.repo.FindItemByID(ctx, tx, user, itemUUID)
 		if err != nil {

@@ -1,0 +1,153 @@
+package usecase
+
+import (
+	"context"
+	"fmt"
+	"time"
+
+	"github.com/jailtonjunior94/financial/internal/budget/application/dtos"
+	"github.com/jailtonjunior94/financial/internal/budget/infrastructure/repositories"
+
+	"github.com/JailtonJunior94/devkit-go/pkg/database"
+	"github.com/JailtonJunior94/devkit-go/pkg/database/uow"
+	"github.com/JailtonJunior94/devkit-go/pkg/observability"
+	"github.com/JailtonJunior94/devkit-go/pkg/vos"
+)
+
+type (
+	UpdateBudgetUseCase interface {
+		Execute(ctx context.Context, budgetID string, input *dtos.BudgetUpdateInput) (*dtos.BudgetOutput, error)
+	}
+
+	updateBudgetUseCase struct {
+		uow  uow.UnitOfWork
+		o11y observability.Observability
+	}
+)
+
+func NewUpdateBudgetUseCase(
+	uow uow.UnitOfWork,
+	o11y observability.Observability,
+) UpdateBudgetUseCase {
+	return &updateBudgetUseCase{
+		uow:  uow,
+		o11y: o11y,
+	}
+}
+
+func (u *updateBudgetUseCase) Execute(ctx context.Context, budgetID string, input *dtos.BudgetUpdateInput) (*dtos.BudgetOutput, error) {
+	ctx, span := u.o11y.Tracer().Start(ctx, "update_budget_usecase.execute")
+	defer span.End()
+
+	// Parse budget ID
+	id, err := vos.NewUUIDFromString(budgetID)
+	if err != nil {
+		return nil, fmt.Errorf("invalid budget_id: %w", err)
+	}
+
+	var updatedBudget *dtos.BudgetOutput
+
+	err = u.uow.Do(ctx, func(ctx context.Context, tx database.DBTX) error {
+		budgetRepository := repositories.NewBudgetRepository(tx, u.o11y)
+
+		// Find budget
+		budget, err := budgetRepository.FindByID(ctx, id)
+		if err != nil {
+			return err
+		}
+
+		if budget == nil {
+			return fmt.Errorf("budget not found")
+		}
+
+		// Parse new total amount
+		newTotalAmount, err := vos.NewMoneyFromString(input.TotalAmount, budget.TotalAmount.Currency())
+		if err != nil {
+			return fmt.Errorf("invalid total_amount: %w", err)
+		}
+
+		// Validate that total amount is positive
+		if newTotalAmount.IsNegative() || newTotalAmount.IsZero() {
+			return fmt.Errorf("total_amount must be positive")
+		}
+
+		// Update budget total amount
+		budget.TotalAmount = newTotalAmount
+		budget.UpdatedAt = vos.NewNullableTime(time.Now().UTC())
+
+		// Recalculate planned amounts for all items (since total changed)
+		for _, item := range budget.Items {
+			// Recalculate PlannedAmount = TotalAmount * PercentageGoal
+			plannedAmount, err := item.PercentageGoal.Apply(budget.TotalAmount)
+			if err != nil {
+				return fmt.Errorf("failed to recalculate planned amount: %w", err)
+			}
+
+			item.PlannedAmount = plannedAmount
+			item.UpdatedAt = vos.NewNullableTime(time.Now().UTC())
+
+			// Update item in database
+			if err := budgetRepository.UpdateItem(ctx, item); err != nil {
+				return err
+			}
+		}
+
+		// Recalculate budget percentage used (spent/total)
+		budget.SpentAmount = budget.SpentAmount // Keep existing spent
+		// Note: recalculatePercentageUsed is private, so we'll do it manually here
+		if !budget.TotalAmount.IsZero() {
+			spentFloat := budget.SpentAmount.Float()
+			totalFloat := budget.TotalAmount.Float()
+			percentageFloat := (spentFloat / totalFloat) * 100.0
+
+			percentageUsed, err := vos.NewPercentageFromFloat(percentageFloat)
+			if err == nil {
+				budget.PercentageUsed = percentageUsed
+			}
+		}
+
+		// Update budget in database
+		if err := budgetRepository.Update(ctx, budget); err != nil {
+			return err
+		}
+
+		// Build items output
+		items := make([]dtos.BudgetItemOutput, len(budget.Items))
+		for i, item := range budget.Items {
+			items[i] = dtos.BudgetItemOutput{
+				ID:              item.ID.String(),
+				BudgetID:        item.BudgetID.String(),
+				CategoryID:      item.CategoryID.String(),
+				PercentageGoal:  item.PercentageGoal.String(),
+				PlannedAmount:   item.PlannedAmount.String(),
+				SpentAmount:     item.SpentAmount.String(),
+				RemainingAmount: item.RemainingAmount().String(),
+				PercentageSpent: item.PercentageSpent().String(),
+				CreatedAt:       item.CreatedAt,
+				UpdatedAt:       item.UpdatedAt.ValueOr(time.Time{}),
+			}
+		}
+
+		// Build output
+		updatedBudget = &dtos.BudgetOutput{
+			ID:             budget.ID.String(),
+			UserID:         budget.UserID.String(),
+			ReferenceMonth: budget.ReferenceMonth.String(),
+			TotalAmount:    budget.TotalAmount.String(),
+			SpentAmount:    budget.SpentAmount.String(),
+			PercentageUsed: budget.PercentageUsed.String(),
+			Currency:       string(budget.TotalAmount.Currency()),
+			Items:          items,
+			CreatedAt:      budget.CreatedAt,
+			UpdatedAt:      budget.UpdatedAt.ValueOr(time.Time{}),
+		}
+
+		return nil
+	})
+
+	if err != nil {
+		return nil, err
+	}
+
+	return updatedBudget, nil
+}

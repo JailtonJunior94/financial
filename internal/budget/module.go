@@ -3,29 +3,43 @@ package budget
 import (
 	"database/sql"
 
-	"github.com/JailtonJunior94/devkit-go/pkg/observability"
-	"github.com/jailtonjunior94/financial/internal/budget/infrastructure/http"
 	"github.com/jailtonjunior94/financial/internal/budget/application/usecase"
+	"github.com/jailtonjunior94/financial/internal/budget/infrastructure/http"
+	"github.com/jailtonjunior94/financial/internal/budget/infrastructure/repositories"
 	"github.com/jailtonjunior94/financial/pkg/api/httperrors"
-	unitOfWork "github.com/jailtonjunior94/financial/pkg/database/uow"
+	"github.com/jailtonjunior94/financial/pkg/api/middlewares"
+	"github.com/jailtonjunior94/financial/pkg/auth"
+
+	"github.com/JailtonJunior94/devkit-go/pkg/database/uow"
+	"github.com/JailtonJunior94/devkit-go/pkg/observability"
 )
 
 type BudgetModule struct {
 	BudgetRouter *http.BudgetRouter
 }
 
-func NewBudgetModule(db *sql.DB, o11y observability.Observability) BudgetModule {
-	// Create error handler once for the module
+func NewBudgetModule(db *sql.DB, o11y observability.Observability, tokenValidator auth.TokenValidator) BudgetModule {
 	errorHandler := httperrors.NewErrorHandler(o11y)
+	authMiddleware := middlewares.NewAuthorization(tokenValidator, o11y, errorHandler)
 
-	uow := unitOfWork.NewUnitOfWork(db)
+	uow := uow.NewUnitOfWork(db)
+	budgetRepository := repositories.NewBudgetRepository(db, o11y)
 
 	createBudgetUseCase := usecase.NewCreateBudgetUseCase(uow, o11y)
-	budgetHandler := http.NewBudgetHandler(o11y, errorHandler, createBudgetUseCase)
+	findBudgetUseCase := usecase.NewFindBudgetUseCase(budgetRepository, o11y)
+	updateBudgetUseCase := usecase.NewUpdateBudgetUseCase(uow, o11y)
+	deleteBudgetUseCase := usecase.NewDeleteBudgetUseCase(uow, o11y)
 
-	budgetRoutes := http.NewBudgetRouter(budgetHandler)
+	budgetHandler := http.NewBudgetHandler(
+		o11y,
+		errorHandler,
+		createBudgetUseCase,
+		findBudgetUseCase,
+		updateBudgetUseCase,
+		deleteBudgetUseCase,
+	)
 
-	return BudgetModule{
-		BudgetRouter: budgetRoutes,
-	}
+	budgetRoutes := http.NewBudgetRouter(budgetHandler, authMiddleware)
+
+	return BudgetModule{BudgetRouter: budgetRoutes}
 }

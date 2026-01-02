@@ -58,7 +58,7 @@ check: lint test-all
 	@echo "All checks passed successfully"
 
 start_minimal:
-	docker compose -f deployment/docker-compose.yml up --build -d financial_migration cockroachdb rabbitmq otel-lgtm
+	docker compose -f deployment/docker-compose.yml up --build -d cockroachdb rabbitmq otel-lgtm
 	
 start_docker:
 	docker compose -f deployment/docker-compose.yml up --build -d

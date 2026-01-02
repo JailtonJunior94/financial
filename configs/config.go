@@ -9,11 +9,14 @@ import (
 
 type (
 	Config struct {
-		Environment string     `mapstructure:"ENVIRONMENT"`
-		DBConfig    DBConfig   `mapstructure:",squash"`
-		HTTPConfig  HTTPConfig `mapstructure:",squash"`
-		O11yConfig  O11yConfig `mapstructure:",squash"`
-		AuthConfig  AuthConfig `mapstructure:",squash"`
+		Environment    string         `mapstructure:"ENVIRONMENT"`
+		DBConfig       DBConfig       `mapstructure:",squash"`
+		HTTPConfig     HTTPConfig     `mapstructure:",squash"`
+		O11yConfig     O11yConfig     `mapstructure:",squash"`
+		AuthConfig     AuthConfig     `mapstructure:",squash"`
+		RabbitMQConfig RabbitMQConfig `mapstructure:",squash"`
+		OutboxConfig   OutboxConfig   `mapstructure:",squash"`
+		ConsumerConfig ConsumerConfig `mapstructure:",squash"`
 	}
 
 	DBConfig struct {
@@ -31,11 +34,15 @@ type (
 	}
 
 	HTTPConfig struct {
-		Port string `mapstructure:"HTTP_PORT"`
+		Port        string `mapstructure:"HTTP_PORT"`
+		ServiceName string `mapstructure:"SERVICE_NAME_API"`
+	}
+
+	ConsumerConfig struct {
+		ServiceName string `mapstructure:"SERVICE_NAME_CONSUMER"`
 	}
 
 	O11yConfig struct {
-		ServiceName      string  `mapstructure:"OTEL_SERVICE_NAME"`
 		ServiceVersion   string  `mapstructure:"OTEL_SERVICE_VERSION"`
 		ExporterEndpoint string  `mapstructure:"OTEL_EXPORTER_OTLP_ENDPOINT"`
 		ExporterProtocol string  `mapstructure:"OTEL_EXPORTER_OTLP_PROTOCOL"`
@@ -48,6 +55,17 @@ type (
 	AuthConfig struct {
 		AuthSecretKey     string `mapstructure:"AUTH_SECRET_KEY"`
 		AuthTokenDuration int    `mapstructure:"AUTH_TOKEN_DURATION"`
+	}
+
+	RabbitMQConfig struct {
+		URL      string `mapstructure:"RABBITMQ_URL"`
+		Exchange string `mapstructure:"RABBITMQ_EXCHANGE"`
+	}
+
+	OutboxConfig struct {
+		PollIntervalSeconds int `mapstructure:"OUTBOX_POLL_INTERVAL_SECONDS"`
+		BatchSize           int `mapstructure:"OUTBOX_BATCH_SIZE"`
+		MaxRetries          int `mapstructure:"OUTBOX_MAX_RETRIES"`
 	}
 )
 

@@ -7,18 +7,17 @@ import (
 
 	"github.com/jailtonjunior94/financial/internal/user/domain/entities"
 	"github.com/jailtonjunior94/financial/internal/user/domain/interfaces"
-	"github.com/jailtonjunior94/financial/pkg/database"
-	dberrors "github.com/jailtonjunior94/financial/pkg/database"
 
+	"github.com/JailtonJunior94/devkit-go/pkg/database"
 	"github.com/JailtonJunior94/devkit-go/pkg/observability"
 )
 
 type userRepository struct {
-	db   database.DBExecutor
+	db   database.DBTX
 	o11y observability.Observability
 }
 
-func NewUserRepository(db database.DBExecutor, o11y observability.Observability) interfaces.UserRepository {
+func NewUserRepository(db database.DBTX, o11y observability.Observability) interfaces.UserRepository {
 	return &userRepository{
 		db:   db,
 		o11y: o11y,
@@ -26,15 +25,10 @@ func NewUserRepository(db database.DBExecutor, o11y observability.Observability)
 }
 
 func (r *userRepository) Insert(ctx context.Context, user *entities.User) (*entities.User, error) {
-	// Removido WithTimeout: confiar no timeout do contexto pai (HTTP request ou transação)
-	// para evitar goroutine leaks em queries lentas
 	ctx, span := r.o11y.Tracer().Start(ctx, "user_repository.insert")
 	defer span.End()
 
-	span.AddEvent("inserting user",
-		observability.Field{Key: "user.id", Value: user.ID.String()},
-		observability.Field{Key: "user.email", Value: user.Email.String()},
-	)
+	span.AddEvent("inserting user", observability.String("id", user.ID.String()))
 
 	query := `insert into
 				users (
@@ -68,21 +62,17 @@ func (r *userRepository) Insert(ctx context.Context, user *entities.User) (*enti
 	)
 	if err != nil {
 		span.RecordError(err)
-		return nil, dberrors.ConvertDBError(err, "users")
+		return nil, fmt.Errorf("executing insert user statement: %w", err)
 	}
 
 	return user, nil
 }
 
 func (r *userRepository) FindByEmail(ctx context.Context, email string) (*entities.User, error) {
-	// Removido WithTimeout: confiar no timeout do contexto pai (HTTP request ou transação)
-	// para evitar goroutine leaks em queries lentas
 	ctx, span := r.o11y.Tracer().Start(ctx, "user_repository.find_by_email")
 	defer span.End()
 
-	span.AddEvent("finding user by email",
-		observability.Field{Key: "user.email", Value: email},
-	)
+	span.AddEvent("finding user by email", observability.String("email", email))
 
 	query := `select
 				id,
