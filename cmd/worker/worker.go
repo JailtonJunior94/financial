@@ -9,11 +9,12 @@ import (
 	"time"
 
 	"github.com/jailtonjunior94/financial/configs"
-	"github.com/jailtonjunior94/financial/internal/worker/jobs"
 	pkgjobs "github.com/jailtonjunior94/financial/pkg/jobs"
+	"github.com/jailtonjunior94/financial/pkg/outbox"
 	"github.com/jailtonjunior94/financial/pkg/scheduler"
 
 	"github.com/JailtonJunior94/devkit-go/pkg/database/postgres"
+	"github.com/JailtonJunior94/devkit-go/pkg/database/uow"
 	"github.com/JailtonJunior94/devkit-go/pkg/messaging/rabbitmq"
 	"github.com/JailtonJunior94/devkit-go/pkg/observability"
 	"github.com/JailtonJunior94/devkit-go/pkg/observability/otel"
@@ -105,30 +106,27 @@ func Run() error {
 	}
 
 	// Criar scheduler
-	sched := scheduler.New(ctx, o11y, jobConfig)
+	scheduler := scheduler.New(ctx, o11y, jobConfig)
 
-	// Registrar jobs
-	// IMPORTANTE: Adicione seus jobs customizados aqui
+	uow := uow.NewUnitOfWork(dbManager.DB())
+	outboxDispatcher := outbox.NewDispatcher(uow, rabbitClient, outbox.DefaultDispatcherConfig(cfg.RabbitMQConfig.Exchange), o11y)
+	outboxCleanup := outbox.NewCleaner(uow, outbox.DefaultCleanupConfig(), o11y)
+
 	jobsToRegister := []pkgjobs.Job{
-		// Exemplo 1: Job que usa banco de dados
-		jobs.NewDatabaseCleanupJob(dbManager.DB(), o11y),
-
-		// Exemplo 2: Job que publica mensagens no RabbitMQ
-		jobs.NewReportGeneratorJob(dbManager.DB(), rabbitClient, cfg.RabbitMQConfig.Exchange, o11y),
+		outbox.NewDispatcherJob(outboxDispatcher, "@every 5s", o11y),
+		outbox.NewCleanupJob(outboxCleanup, "@daily", o11y),
 	}
 
 	for _, job := range jobsToRegister {
-		if err := sched.Register(job); err != nil {
+		if err := scheduler.Register(job); err != nil {
 			return fmt.Errorf("worker: failed to register job %s: %v", job.Name(), err)
 		}
 	}
 
 	// Iniciar scheduler
-	sched.Start()
+	scheduler.Start()
 
-	o11y.Logger().Info(ctx, "worker started successfully",
-		observability.Int("jobs_registered", len(jobsToRegister)),
-	)
+	o11y.Logger().Info(ctx, "worker started successfully", observability.Int("jobs_registered", len(jobsToRegister)))
 
 	// Aguardar sinal de shutdown
 	<-ctx.Done()
@@ -140,7 +138,7 @@ func Run() error {
 	defer cancel()
 
 	// 1. Parar scheduler (aguarda jobs em execução)
-	if err := sched.Shutdown(shutdownCtx); err != nil {
+	if err := scheduler.Shutdown(shutdownCtx); err != nil {
 		o11y.Logger().Error(context.Background(), "error during scheduler shutdown", observability.Error(err))
 	}
 
