@@ -20,21 +20,15 @@ import (
 	"github.com/JailtonJunior94/devkit-go/pkg/observability/otel"
 )
 
-// Run inicia o worker de cron jobs.
-// Inicializa todas as dependências necessárias (DB, RabbitMQ, Observability),
-// registra os jobs configurados e inicia o scheduler.
-// Implementa graceful shutdown aguardando jobs em execução finalizarem.
 func Run() error {
 	cfg, err := configs.LoadConfig(".")
 	if err != nil {
 		return fmt.Errorf("worker: failed to load config: %v", err)
 	}
 
-	// Context principal com captura de sinais de shutdown
 	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
 	defer stop()
 
-	// Inicializar Observability (OpenTelemetry)
 	o11yConfig := &otel.Config{
 		Environment:     cfg.Environment,
 		ServiceName:     cfg.WorkerConfig.ServiceName,
@@ -52,20 +46,8 @@ func Run() error {
 		return fmt.Errorf("worker: failed to create observability provider: %v", err)
 	}
 
-	o11y.Logger().Info(ctx, "initializing worker",
-		observability.String("service", cfg.WorkerConfig.ServiceName),
-		observability.String("environment", cfg.Environment),
-	)
-
-	// Inicializar Database Manager (reutiliza conexão existente)
 	dbManager, err := postgres.New(
-		fmt.Sprintf("host=%s port=%s user=%s password=%s dbname=%s sslmode=disable",
-			cfg.DBConfig.Host,
-			cfg.DBConfig.Port,
-			cfg.DBConfig.User,
-			cfg.DBConfig.Password,
-			cfg.DBConfig.Name,
-		),
+		cfg.DBConfig.DSN(),
 		postgres.WithConnMaxLifetime(5*time.Minute),
 		postgres.WithConnMaxIdleTime(2*time.Minute),
 		postgres.WithMaxOpenConns(cfg.DBConfig.DBMaxOpenConns),
@@ -74,21 +56,18 @@ func Run() error {
 	if err != nil {
 		return fmt.Errorf("worker: failed to connect to database: %v", err)
 	}
-
 	o11y.Logger().Info(ctx, "database connection established")
 
-	// Inicializar RabbitMQ Client (reutiliza configuração existente)
 	rabbitClient, err := rabbitmq.New(
 		o11y,
-		rabbitmq.WithCloudConnection(cfg.RabbitMQConfig.URL),
-		rabbitmq.WithPublisherConfirms(true),
 		rabbitmq.WithAutoReconnect(true),
+		rabbitmq.WithPublisherConfirms(true),
+		rabbitmq.WithCloudConnection(cfg.RabbitMQConfig.URL),
 	)
 	if err != nil {
 		return fmt.Errorf("worker: failed to create rabbitmq client: %v", err)
 	}
 
-	// Declarar exchange (idempotente - não recria se já existir)
 	if err := rabbitClient.DeclareExchange(ctx, cfg.RabbitMQConfig.Exchange, "topic", true, false, nil); err != nil {
 		return fmt.Errorf("worker: failed to declare exchange: %v", err)
 	}
@@ -97,16 +76,6 @@ func Run() error {
 		observability.String("exchange", cfg.RabbitMQConfig.Exchange),
 		observability.String("url", cfg.RabbitMQConfig.URL),
 	)
-
-	// Configuração de jobs (timeout, recovery, concorrência)
-	jobConfig := &pkgjobs.Config{
-		DefaultTimeout:    time.Duration(cfg.WorkerConfig.DefaultTimeoutSeconds) * time.Second,
-		EnableRecovery:    true,
-		MaxConcurrentJobs: cfg.WorkerConfig.MaxConcurrentJobs,
-	}
-
-	// Criar scheduler
-	scheduler := scheduler.New(ctx, o11y, jobConfig)
 
 	uow := uow.NewUnitOfWork(dbManager.DB())
 	outboxDispatcher := outbox.NewDispatcher(uow, rabbitClient, outbox.DefaultDispatcherConfig(cfg.RabbitMQConfig.Exchange), o11y)
@@ -117,13 +86,14 @@ func Run() error {
 		outbox.NewCleanupJob(outboxCleanup, "@daily", o11y),
 	}
 
+	scheduler := scheduler.New(ctx, o11y, pkgjobs.DefaultConfig())
+
 	for _, job := range jobsToRegister {
 		if err := scheduler.Register(job); err != nil {
 			return fmt.Errorf("worker: failed to register job %s: %v", job.Name(), err)
 		}
 	}
 
-	// Iniciar scheduler
 	scheduler.Start()
 
 	o11y.Logger().Info(ctx, "worker started successfully", observability.Int("jobs_registered", len(jobsToRegister)))

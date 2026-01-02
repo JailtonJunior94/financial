@@ -10,6 +10,7 @@ import (
 	"github.com/jailtonjunior94/financial/pkg/jobs"
 
 	"github.com/JailtonJunior94/devkit-go/pkg/observability"
+
 	"github.com/robfig/cron/v3"
 )
 

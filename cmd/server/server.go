@@ -20,7 +20,6 @@ import (
 
 	"github.com/JailtonJunior94/devkit-go/pkg/database/postgres"
 	httpserver "github.com/JailtonJunior94/devkit-go/pkg/http_server/chi_server"
-	"github.com/JailtonJunior94/devkit-go/pkg/messaging/rabbitmq"
 	"github.com/JailtonJunior94/devkit-go/pkg/observability"
 	"github.com/JailtonJunior94/devkit-go/pkg/observability/otel"
 )
@@ -52,13 +51,7 @@ func Run() error {
 	}
 
 	dbManager, err := postgres.New(
-		fmt.Sprintf("host=%s port=%s user=%s password=%s dbname=%s sslmode=disable",
-			cfg.DBConfig.Host,
-			cfg.DBConfig.Port,
-			cfg.DBConfig.User,
-			cfg.DBConfig.Password,
-			cfg.DBConfig.Name,
-		),
+		cfg.DBConfig.DSN(),
 		postgres.WithConnMaxLifetime(5*time.Minute),
 		postgres.WithConnMaxIdleTime(2*time.Minute),
 		postgres.WithMaxOpenConns(cfg.DBConfig.DBMaxOpenConns),
@@ -67,33 +60,14 @@ func Run() error {
 	if err != nil {
 		return fmt.Errorf("run: failed to connect to database: %v", err)
 	}
-
-	rabbitClient, err := rabbitmq.New(
-		o11y,
-		rabbitmq.WithCloudConnection(cfg.RabbitMQConfig.URL),
-		rabbitmq.WithPublisherConfirms(true),
-		rabbitmq.WithAutoReconnect(true),
-	)
-	if err != nil {
-		return fmt.Errorf("run: failed to create rabbitmq client: %v", err)
-	}
-
-	if err := rabbitClient.DeclareExchange(ctx, cfg.RabbitMQConfig.Exchange, "topic", true, false, nil); err != nil {
-		return fmt.Errorf("run: failed to declare exchange: %v", err)
-	}
-
-	o11y.Logger().Info(ctx, "rabbitmq initialized",
-		observability.String("exchange", cfg.RabbitMQConfig.Exchange),
-		observability.String("url", cfg.RabbitMQConfig.URL),
-	)
+	o11y.Logger().Info(ctx, "database connection established")
 
 	jwtAdapter := auth.NewJwtAdapter(cfg, o11y)
-
 	userModule := user.NewUserModule(dbManager.DB(), cfg, o11y)
-	categoryModule := category.NewCategoryModule(dbManager.DB(), o11y, jwtAdapter)
 	cardModule := card.NewCardModule(dbManager.DB(), o11y, jwtAdapter)
-	paymentMethodModule := payment_method.NewPaymentMethodModule(dbManager.DB(), o11y)
 	budgetModule := budget.NewBudgetModule(dbManager.DB(), o11y, jwtAdapter)
+	categoryModule := category.NewCategoryModule(dbManager.DB(), o11y, jwtAdapter)
+	paymentMethodModule := payment_method.NewPaymentMethodModule(dbManager.DB(), o11y)
 	invoiceModule := invoice.NewInvoiceModule(dbManager.DB(), o11y, jwtAdapter, cardModule.CardProvider)
 	transactionModule := transaction.NewTransactionModule(dbManager.DB(), o11y, jwtAdapter, invoiceModule.InvoiceTotalProvider)
 
@@ -121,10 +95,6 @@ func Run() error {
 
 		shutdownCtx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 		defer cancel()
-
-		if err := rabbitClient.Shutdown(shutdownCtx); err != nil {
-			o11y.Logger().Error(context.Background(), "error during rabbitmq shutdown", observability.Error(err))
-		}
 
 		if err := o11y.Shutdown(shutdownCtx); err != nil {
 			o11y.Logger().Error(context.Background(), "error during o11y shutdown", observability.Error(err))
