@@ -40,7 +40,19 @@ type (
 	}
 
 	ConsumerConfig struct {
-		ServiceName string `mapstructure:"SERVICE_NAME_CONSUMER"`
+		ServiceName   string `mapstructure:"SERVICE_NAME_CONSUMER"`
+		BrokerType    string `mapstructure:"CONSUMER_BROKER_TYPE"` // rabbitmq, kafka, sqs
+		Exchange      string `mapstructure:"CONSUMER_EXCHANGE"`
+		WorkerCount   int    `mapstructure:"CONSUMER_WORKER_COUNT"`
+		PrefetchCount int    `mapstructure:"CONSUMER_PREFETCH_COUNT"`
+
+		// Kafka specific (futuro)
+		KafkaBrokers string `mapstructure:"CONSUMER_KAFKA_BROKERS"`
+		KafkaGroupID string `mapstructure:"CONSUMER_KAFKA_GROUP_ID"`
+
+		// SQS specific (futuro)
+		SQSRegion   string `mapstructure:"CONSUMER_SQS_REGION"`
+		SQSQueueURL string `mapstructure:"CONSUMER_SQS_QUEUE_URL"`
 	}
 
 	O11yConfig struct {
