@@ -72,6 +72,7 @@ type (
 
 	RabbitMQConfig struct {
 		URL      string `mapstructure:"RABBITMQ_URL"`
+		Queue    string `mapstructure:"RABBITMQ_QUEUE"`
 		Exchange string `mapstructure:"RABBITMQ_EXCHANGE"`
 	}
 
@@ -105,13 +106,66 @@ func LoadConfig(path string) (*Config, error) {
 		return nil, fmt.Errorf("config: unable to decode into struct, %v", err)
 	}
 
+	// Validar configuração para evitar valores inseguros em produção
+	if err := config.Validate(); err != nil {
+		return nil, fmt.Errorf("config: validation failed, %v", err)
+	}
+
 	return config, nil
+}
+
+// Validate verifica se a configuração contém valores seguros.
+// Retorna erro se valores default/inseguros forem detectados em produção.
+func (c *Config) Validate() error {
+	// Validar apenas em ambientes de produção
+	if c.Environment == "production" || c.Environment == "prod" {
+		// Verificar senha de banco insegura
+		if c.DBConfig.Password == "CHANGE_ME_USE_STRONG_PASSWORD" ||
+			c.DBConfig.Password == "financial@password" ||
+			len(c.DBConfig.Password) < 16 {
+			return fmt.Errorf("insecure database password detected in production (must be at least 16 characters)")
+		}
+
+		// Verificar secret key insegura
+		if c.AuthConfig.AuthSecretKey == "CHANGE_ME_GENERATE_SECURE_SECRET_KEY_MIN_64_CHARS" ||
+			c.AuthConfig.AuthSecretKey == "your_secret_key" ||
+			len(c.AuthConfig.AuthSecretKey) < 64 {
+			return fmt.Errorf("insecure auth secret key detected in production (must be at least 64 characters)")
+		}
+
+		// Verificar credenciais default do RabbitMQ
+		if strings.Contains(c.RabbitMQConfig.URL, "guest:guest") ||
+			strings.Contains(c.RabbitMQConfig.URL, "guest:pass") {
+			return fmt.Errorf("default rabbitmq credentials detected in production")
+		}
+	}
+
+	// Validar duração do token (sempre, independente do ambiente)
+	if c.AuthConfig.AuthTokenDuration > 24 {
+		return fmt.Errorf("token duration too long: %d hours (max: 24)", c.AuthConfig.AuthTokenDuration)
+	}
+	if c.AuthConfig.AuthTokenDuration < 1 {
+		return fmt.Errorf("token duration too short: %d hours (min: 1)", c.AuthConfig.AuthTokenDuration)
+	}
+
+	return nil
 }
 
 func (c *DBConfig) DSN() string {
 	return fmt.Sprintf("postgres://%s:%s@%s:%s/%s?sslmode=disable",
 		c.User,
 		c.Password,
+		c.Host,
+		c.Port,
+		c.Name,
+	)
+}
+
+// SafeDSN retorna a DSN sem a senha para uso em logs.
+// NUNCA logue DSN() diretamente - use SafeDSN() para evitar exposição de credenciais.
+func (c *DBConfig) SafeDSN() string {
+	return fmt.Sprintf("postgres://%s:***@%s:%s/%s?sslmode=disable",
+		c.User,
 		c.Host,
 		c.Port,
 		c.Name,
