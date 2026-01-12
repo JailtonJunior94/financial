@@ -31,7 +31,7 @@
             "program": "${workspaceFolder}/cmd/main.go",
             "envFile": "${workspaceFolder}/cmd/.env",
             "args": [
-                "consumers"
+                "consumer"
             ]
         },
         {
