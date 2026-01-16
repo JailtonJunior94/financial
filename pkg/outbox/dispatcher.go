@@ -152,6 +152,8 @@ func (d *dispatcher) processEvent(ctx context.Context, repository Repository, ev
 	// Marcar como publicado
 	event.MarkAsPublished()
 	if err := repository.UpdateStatus(ctx, event); err != nil {
+		// Reverter estado em memória se persistência falhar
+		event.MarkAsPending()
 		return fmt.Errorf("update status to published: %w", err)
 	}
 

@@ -48,9 +48,11 @@ func (b *Budget) AddItems(items []*BudgetItem) error {
 	// Calcula soma total das porcentagens incluindo os novos itens
 	var totalPercentage vos.Percentage
 	for _, existingItem := range b.Items {
-		if sum, err := totalPercentage.Add(existingItem.PercentageGoal); err == nil {
-			totalPercentage = sum
+		sum, err := totalPercentage.Add(existingItem.PercentageGoal)
+		if err != nil {
+			return err
 		}
+		totalPercentage = sum
 	}
 
 	for _, newItem := range items {
@@ -59,13 +61,18 @@ func (b *Budget) AddItems(items []*BudgetItem) error {
 			return domain.ErrDuplicateCategory
 		}
 
-		if sum, err := totalPercentage.Add(newItem.PercentageGoal); err == nil {
-			totalPercentage = sum
+		sum, err := totalPercentage.Add(newItem.PercentageGoal)
+		if err != nil {
+			return err
 		}
+		totalPercentage = sum
 	}
 
 	// Valida que soma seja exatamente 100%
-	hundredPercent, _ := vos.NewPercentage(100000) // 100.000% with scale 3
+	hundredPercent, err := vos.NewPercentage(100000) // 100.000% with scale 3
+	if err != nil {
+		return err
+	}
 	if totalPercentage.GreaterThan(hundredPercent) {
 		return domain.ErrBudgetPercentageExceeds100
 	}
@@ -91,17 +98,24 @@ func (b *Budget) AddItem(item *BudgetItem) error {
 	// Calcula soma total das porcentagens incluindo o novo item
 	var totalPercentage vos.Percentage
 	for _, existingItem := range b.Items {
-		if sum, err := totalPercentage.Add(existingItem.PercentageGoal); err == nil {
-			totalPercentage = sum
+		sum, err := totalPercentage.Add(existingItem.PercentageGoal)
+		if err != nil {
+			return err
 		}
-	}
-
-	if sum, err := totalPercentage.Add(item.PercentageGoal); err == nil {
 		totalPercentage = sum
 	}
 
+	sum, err := totalPercentage.Add(item.PercentageGoal)
+	if err != nil {
+		return err
+	}
+	totalPercentage = sum
+
 	// Valida que soma não exceda 100%
-	hundredPercent, _ := vos.NewPercentage(100000) // 100.000% with scale 3
+	hundredPercent, err := vos.NewPercentage(100000) // 100.000% with scale 3
+	if err != nil {
+		return err
+	}
 	if totalPercentage.GreaterThan(hundredPercent) {
 		return domain.ErrBudgetPercentageExceeds100
 	}

@@ -75,7 +75,8 @@ func (s *Scheduler) Register(job jobs.Job) error {
 		return fmt.Errorf("failed to register job %s: %w", job.Name(), err)
 	}
 
-	s.o11y.Logger().Info(s.ctx,
+	s.o11y.Logger().Info(
+		s.ctx,
 		fmt.Sprintf("job registered: %s", job.Name()),
 		observability.String("schedule", job.Schedule()),
 		observability.String("job", job.Name()),
@@ -88,7 +89,8 @@ func (s *Scheduler) Register(job jobs.Job) error {
 // Jobs serão executados de acordo com seus agendamentos.
 // Não bloqueia - retorna imediatamente após iniciar.
 func (s *Scheduler) Start() {
-	s.o11y.Logger().Info(s.ctx,
+	s.o11y.Logger().Info(
+		s.ctx,
 		"starting scheduler",
 		observability.Int("jobs_count", len(s.jobs)),
 		observability.Int64("default_timeout_seconds", int64(s.config.DefaultTimeout.Seconds())),
@@ -136,7 +138,8 @@ func (s *Scheduler) Shutdown(ctx context.Context) error {
 		}
 		s.runningMux.Unlock()
 
-		s.o11y.Logger().Warn(ctx,
+		s.o11y.Logger().Warn(
+			ctx,
 			"shutdown timeout exceeded with jobs still running",
 			observability.Int("running_jobs", runningCount),
 		)
@@ -152,7 +155,8 @@ func (s *Scheduler) wrapJob(job jobs.Job) func() {
 		// Verifica se deve executar (scheduler ainda ativo)
 		select {
 		case <-s.ctx.Done():
-			s.o11y.Logger().Info(context.Background(),
+			s.o11y.Logger().Info(
+				context.Background(),
 				"skipping job execution (scheduler shutting down)",
 				observability.String("job", jobName),
 			)
@@ -166,7 +170,8 @@ func (s *Scheduler) wrapJob(job jobs.Job) func() {
 			currentRunning := s.running[jobName]
 			if currentRunning >= s.config.MaxConcurrentJobs {
 				s.runningMux.Unlock()
-				s.o11y.Logger().Warn(s.ctx,
+				s.o11y.Logger().Warn(
+					s.ctx,
 					"job skipped (max concurrent executions reached)",
 					observability.String("job", jobName),
 					observability.Int("max_concurrent", s.config.MaxConcurrentJobs),

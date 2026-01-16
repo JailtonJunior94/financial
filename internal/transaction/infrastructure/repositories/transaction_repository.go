@@ -126,9 +126,20 @@ func (r *transactionRepository) FindMonthlyByID(
 	}
 
 	// Parse money values
-	monthly.TotalIncome, _ = sharedVos.NewMoney(totalIncomeInt, sharedVos.CurrencyBRL)
-	monthly.TotalExpense, _ = sharedVos.NewMoney(totalExpenseInt, sharedVos.CurrencyBRL)
-	monthly.TotalAmount, _ = sharedVos.NewMoney(totalAmountInt, sharedVos.CurrencyBRL)
+	monthly.TotalIncome, err = sharedVos.NewMoney(totalIncomeInt, sharedVos.CurrencyBRL)
+	if err != nil {
+		return nil, err
+	}
+
+	monthly.TotalExpense, err = sharedVos.NewMoney(totalExpenseInt, sharedVos.CurrencyBRL)
+	if err != nil {
+		return nil, err
+	}
+
+	monthly.TotalAmount, err = sharedVos.NewMoney(totalAmountInt, sharedVos.CurrencyBRL)
+	if err != nil {
+		return nil, err
+	}
 
 	// Parse timestamps
 	monthly.CreatedAt = sharedVos.NewNullableTime(createdAt)
@@ -316,9 +327,21 @@ func (r *transactionRepository) FindItemByID(
 	}
 
 	// Parse values
-	item.Amount, _ = sharedVos.NewMoney(amountInt, sharedVos.CurrencyBRL)
-	item.Direction, _ = transactionVos.NewTransactionDirection(direction)
-	item.Type, _ = transactionVos.NewTransactionType(itemType)
+	item.Amount, err = sharedVos.NewMoney(amountInt, sharedVos.CurrencyBRL)
+	if err != nil {
+		return nil, err
+	}
+
+	item.Direction, err = transactionVos.NewTransactionDirection(direction)
+	if err != nil {
+		return nil, err
+	}
+
+	item.Type, err = transactionVos.NewTransactionType(itemType)
+	if err != nil {
+		return nil, err
+	}
+
 	item.CreatedAt = sharedVos.NewNullableTime(createdAt)
 	if updatedAt.Valid {
 		item.UpdatedAt = sharedVos.NewNullableTime(updatedAt.Time)
@@ -373,10 +396,26 @@ func (r *transactionRepository) findMonthlyByUserAndMonth(
 	}
 
 	// Parse values
-	monthly.ReferenceMonth, _ = transactionVos.NewReferenceMonthFromString(refMonthStr)
-	monthly.TotalIncome, _ = sharedVos.NewMoney(totalIncomeInt, sharedVos.CurrencyBRL)
-	monthly.TotalExpense, _ = sharedVos.NewMoney(totalExpenseInt, sharedVos.CurrencyBRL)
-	monthly.TotalAmount, _ = sharedVos.NewMoney(totalAmountInt, sharedVos.CurrencyBRL)
+	monthly.ReferenceMonth, err = transactionVos.NewReferenceMonthFromString(refMonthStr)
+	if err != nil {
+		return nil, err
+	}
+
+	monthly.TotalIncome, err = sharedVos.NewMoney(totalIncomeInt, sharedVos.CurrencyBRL)
+	if err != nil {
+		return nil, err
+	}
+
+	monthly.TotalExpense, err = sharedVos.NewMoney(totalExpenseInt, sharedVos.CurrencyBRL)
+	if err != nil {
+		return nil, err
+	}
+
+	monthly.TotalAmount, err = sharedVos.NewMoney(totalAmountInt, sharedVos.CurrencyBRL)
+	if err != nil {
+		return nil, err
+	}
+
 	monthly.CreatedAt = sharedVos.NewNullableTime(createdAt)
 	if updatedAt.Valid {
 		monthly.UpdatedAt = sharedVos.NewNullableTime(updatedAt.Time)
@@ -467,9 +506,21 @@ func (r *transactionRepository) findItemsByMonthlyID(
 		}
 
 		// Parse values
-		item.Amount, _ = sharedVos.NewMoney(amountInt, sharedVos.CurrencyBRL)
-		item.Direction, _ = transactionVos.NewTransactionDirection(direction)
-		item.Type, _ = transactionVos.NewTransactionType(itemType)
+		item.Amount, err = sharedVos.NewMoney(amountInt, sharedVos.CurrencyBRL)
+		if err != nil {
+			return nil, err
+		}
+
+		item.Direction, err = transactionVos.NewTransactionDirection(direction)
+		if err != nil {
+			return nil, err
+		}
+
+		item.Type, err = transactionVos.NewTransactionType(itemType)
+		if err != nil {
+			return nil, err
+		}
+
 		item.CreatedAt = sharedVos.NewNullableTime(createdAt)
 		if updatedAt.Valid {
 			item.UpdatedAt = sharedVos.NewNullableTime(updatedAt.Time)

@@ -5,6 +5,7 @@ import (
 	"database/sql"
 	"fmt"
 	"strconv"
+	"strings"
 	"time"
 
 	"github.com/jailtonjunior94/financial/internal/invoice/domain/entities"
@@ -69,25 +70,19 @@ func (r *invoiceRepository) InsertItems(ctx context.Context, items []*entities.I
 		return nil
 	}
 
-	query := `insert into invoice_items (
-		id,
-		invoice_id,
-		category_id,
-		purchase_date,
-		description,
-		total_amount,
-		installment_number,
-		installment_total,
-		installment_amount,
-		created_at,
-		updated_at,
-		deleted_at
-	) values ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)`
+	const numColumns = 12
+	valueStrings := make([]string, 0, len(items))
+	valueArgs := make([]any, 0, len(items)*numColumns)
 
-	for _, item := range items {
-		_, err := r.db.ExecContext(
-			ctx,
-			query,
+	for i, item := range items {
+		placeholderStart := i*numColumns + 1
+		placeholders := make([]string, numColumns)
+		for j := range numColumns {
+			placeholders[j] = fmt.Sprintf("$%d", placeholderStart+j)
+		}
+		valueStrings = append(valueStrings, fmt.Sprintf("(%s)", strings.Join(placeholders, ", ")))
+
+		valueArgs = append(valueArgs,
 			item.ID.Value,
 			item.InvoiceID.Value,
 			item.CategoryID.Value,
@@ -101,9 +96,26 @@ func (r *invoiceRepository) InsertItems(ctx context.Context, items []*entities.I
 			item.UpdatedAt.Ptr(),
 			item.DeletedAt.Ptr(),
 		)
-		if err != nil {
-			return err
-		}
+	}
+
+	query := fmt.Sprintf(`insert into invoice_items (
+		id,
+		invoice_id,
+		category_id,
+		purchase_date,
+		description,
+		total_amount,
+		installment_number,
+		installment_total,
+		installment_amount,
+		created_at,
+		updated_at,
+		deleted_at
+	) values %s`, strings.Join(valueStrings, ", "))
+
+	_, err := r.db.ExecContext(ctx, query, valueArgs...)
+	if err != nil {
+		return err
 	}
 
 	return nil
@@ -545,8 +557,15 @@ func (r *invoiceRepository) scanInvoiceItemFromRows(rows *sql.Rows) (*entities.I
 		return nil, fmt.Errorf("failed to parse installment_amount: %w", err)
 	}
 
-	item.TotalAmount, _ = vos.NewMoneyFromFloat(totalAmountFloat, "BRL")
-	item.InstallmentAmount, _ = vos.NewMoneyFromFloat(installmentAmountFloat, "BRL")
+	item.TotalAmount, err = vos.NewMoneyFromFloat(totalAmountFloat, "BRL")
+	if err != nil {
+		return nil, fmt.Errorf("failed to create Money from total_amount: %w", err)
+	}
+
+	item.InstallmentAmount, err = vos.NewMoneyFromFloat(installmentAmountFloat, "BRL")
+	if err != nil {
+		return nil, fmt.Errorf("failed to create Money from installment_amount: %w", err)
+	}
 
 	if updatedAt != nil {
 		item.UpdatedAt = vos.NewNullableTime(*updatedAt)

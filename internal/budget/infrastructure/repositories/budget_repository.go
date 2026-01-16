@@ -181,9 +181,21 @@ func (r *budgetRepository) FindByID(ctx context.Context, id vos.UUID) (*entities
 		return nil, fmt.Errorf("failed to parse percentage_used: %w", err)
 	}
 
-	budget.TotalAmount, _ = vos.NewMoneyFromFloat(amountGoalFloat, "BRL")
-	budget.SpentAmount, _ = vos.NewMoneyFromFloat(amountUsedFloat, "BRL")
-	budget.PercentageUsed, _ = vos.NewPercentageFromFloat(percentageUsedFloat)
+	budget.TotalAmount, err = vos.NewMoneyFromFloat(amountGoalFloat, "BRL")
+	if err != nil {
+		return nil, fmt.Errorf("failed to create Money from amount_goal: %w", err)
+	}
+
+	budget.SpentAmount, err = vos.NewMoneyFromFloat(amountUsedFloat, "BRL")
+	if err != nil {
+		return nil, fmt.Errorf("failed to create Money from amount_used: %w", err)
+	}
+
+	budget.PercentageUsed, err = vos.NewPercentageFromFloat(percentageUsedFloat)
+	if err != nil {
+		return nil, fmt.Errorf("failed to create Percentage from percentage_used: %w", err)
+	}
+
 	budget.ReferenceMonth = budgetVos.NewReferenceMonthFromDate(referenceDate)
 
 	if updatedAt != nil {
@@ -263,9 +275,21 @@ func (r *budgetRepository) FindByUserIDAndReferenceMonth(ctx context.Context, us
 		return nil, fmt.Errorf("failed to parse percentage_used: %w", err)
 	}
 
-	budget.TotalAmount, _ = vos.NewMoneyFromFloat(amountGoalFloat, "BRL")
-	budget.SpentAmount, _ = vos.NewMoneyFromFloat(amountUsedFloat, "BRL")
-	budget.PercentageUsed, _ = vos.NewPercentageFromFloat(percentageUsedFloat)
+	budget.TotalAmount, err = vos.NewMoneyFromFloat(amountGoalFloat, "BRL")
+	if err != nil {
+		return nil, fmt.Errorf("failed to create Money from amount_goal: %w", err)
+	}
+
+	budget.SpentAmount, err = vos.NewMoneyFromFloat(amountUsedFloat, "BRL")
+	if err != nil {
+		return nil, fmt.Errorf("failed to create Money from amount_used: %w", err)
+	}
+
+	budget.PercentageUsed, err = vos.NewPercentageFromFloat(percentageUsedFloat)
+	if err != nil {
+		return nil, fmt.Errorf("failed to create Percentage from percentage_used: %w", err)
+	}
+
 	budget.ReferenceMonth = budgetVos.NewReferenceMonthFromDate(referenceDate)
 
 	if updatedAt != nil {
@@ -391,9 +415,20 @@ func (r *budgetRepository) findItemsByBudgetID(ctx context.Context, budgetID vos
 			return nil, fmt.Errorf("failed to parse amount_used: %w", err)
 		}
 
-		item.PlannedAmount, _ = vos.NewMoneyFromFloat(amountGoalFloat, "BRL")
-		item.SpentAmount, _ = vos.NewMoneyFromFloat(amountUsedFloat, "BRL")
-		item.PercentageGoal, _ = vos.NewPercentageFromFloat(percentageGoalFloat)
+		item.PlannedAmount, err = vos.NewMoneyFromFloat(amountGoalFloat, "BRL")
+		if err != nil {
+			return nil, fmt.Errorf("failed to create Money from amount_goal: %w", err)
+		}
+
+		item.SpentAmount, err = vos.NewMoneyFromFloat(amountUsedFloat, "BRL")
+		if err != nil {
+			return nil, fmt.Errorf("failed to create Money from amount_used: %w", err)
+		}
+
+		item.PercentageGoal, err = vos.NewPercentageFromFloat(percentageGoalFloat)
+		if err != nil {
+			return nil, fmt.Errorf("failed to create Percentage from percentage_goal: %w", err)
+		}
 
 		if updatedAt != nil {
 			item.UpdatedAt = vos.NewNullableTime(*updatedAt)
