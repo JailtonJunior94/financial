@@ -5,7 +5,7 @@ go 1.25.0
 require (
 	github.com/JailtonJunior94/devkit-go v1.7.7
 	github.com/go-chi/chi/v5 v5.2.4
-	github.com/golang-jwt/jwt v3.2.2+incompatible
+	github.com/golang-jwt/jwt/v5 v5.3.0
 	github.com/google/uuid v1.6.0
 	github.com/robfig/cron/v3 v3.0.1
 	github.com/spf13/cobra v1.10.2

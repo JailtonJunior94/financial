@@ -11,7 +11,7 @@ import (
 
 	"github.com/JailtonJunior94/devkit-go/pkg/observability"
 
-	"github.com/golang-jwt/jwt"
+	"github.com/golang-jwt/jwt/v5"
 )
 
 var (
@@ -105,12 +105,10 @@ func (j *jwtAdapter) Validate(ctx context.Context, token string) (*Authenticated
 	})
 
 	if err != nil {
-		// Verifica se é erro de expiração
-		if ve, ok := err.(*jwt.ValidationError); ok {
-			if ve.Errors&jwt.ValidationErrorExpired != 0 {
-				j.obs.Logger().Error(ctx, "token expired", observability.Error(customerrors.ErrTokenExpired))
-				return nil, customerrors.ErrTokenExpired
-			}
+		// Verifica se é erro de expiração usando errors.Is (v5 API)
+		if errors.Is(err, jwt.ErrTokenExpired) {
+			j.obs.Logger().Error(ctx, "token expired", observability.Error(customerrors.ErrTokenExpired))
+			return nil, customerrors.ErrTokenExpired
 		}
 		j.obs.Logger().Error(ctx, "invalid token", observability.Error(customerrors.ErrInvalidToken))
 		return nil, customerrors.ErrInvalidToken
