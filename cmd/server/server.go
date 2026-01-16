@@ -65,13 +65,26 @@ func Run() error {
 	jwtAdapter := auth.NewJwtAdapter(cfg, o11y)
 	userModule := user.NewUserModule(dbManager.DB(), cfg, o11y)
 	cardModule := card.NewCardModule(dbManager.DB(), o11y, jwtAdapter)
-	budgetModule := budget.NewBudgetModule(dbManager.DB(), o11y, jwtAdapter)
+
+	budgetModule, err := budget.NewBudgetModule(dbManager.DB(), o11y, jwtAdapter)
+	if err != nil {
+		return fmt.Errorf("run: failed to create budget module: %v", err)
+	}
+
 	categoryModule := category.NewCategoryModule(dbManager.DB(), o11y, jwtAdapter)
 	paymentMethodModule := payment_method.NewPaymentMethodModule(dbManager.DB(), o11y)
-	invoiceModule := invoice.NewInvoiceModule(dbManager.DB(), o11y, jwtAdapter, cardModule.CardProvider)
-	transactionModule := transaction.NewTransactionModule(dbManager.DB(), o11y, jwtAdapter, invoiceModule.InvoiceTotalProvider)
 
-	srv := httpserver.New(
+	invoiceModule, err := invoice.NewInvoiceModule(dbManager.DB(), o11y, jwtAdapter, cardModule.CardProvider)
+	if err != nil {
+		return fmt.Errorf("run: failed to create invoice module: %v", err)
+	}
+
+	transactionModule, err := transaction.NewTransactionModule(dbManager.DB(), o11y, jwtAdapter, invoiceModule.InvoiceTotalProvider)
+	if err != nil {
+		return fmt.Errorf("run: failed to create transaction module: %v", err)
+	}
+
+	srv, err := httpserver.New(
 		o11y,
 		httpserver.WithMetrics(),
 		httpserver.WithCORS("*"),

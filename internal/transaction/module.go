@@ -2,6 +2,7 @@ package transaction
 
 import (
 	"database/sql"
+	"fmt"
 
 	"github.com/jailtonjunior94/financial/internal/transaction/application/usecase"
 	"github.com/jailtonjunior94/financial/internal/transaction/domain/interfaces"
@@ -24,10 +25,13 @@ func NewTransactionModule(
 	o11y observability.Observability,
 	tokenValidator auth.TokenValidator,
 	invoiceTotalProvider interfaces.InvoiceTotalProvider,
-) TransactionModule {
+) (TransactionModule, error) {
 	errorHandler := httperrors.NewErrorHandler(o11y)
 	authMiddleware := middlewares.NewAuthorization(tokenValidator, o11y, errorHandler)
-	unitOfWork := uow.NewUnitOfWork(db)
+	unitOfWork, err := uow.NewUnitOfWork(db)
+	if err != nil {
+		return TransactionModule{}, fmt.Errorf("transaction module: failed to create unit of work: %v", err)
+	}
 
 	// Repository
 	transactionRepository := repositories.NewTransactionRepository(db, o11y)
@@ -49,5 +53,5 @@ func NewTransactionModule(
 	// Router
 	transactionRouter := http.NewTransactionRouter(transactionHandler, authMiddleware)
 
-	return TransactionModule{TransactionRouter: transactionRouter}
+	return TransactionModule{TransactionRouter: transactionRouter}, nil
 }

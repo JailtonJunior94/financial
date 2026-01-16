@@ -9,11 +9,12 @@ import (
 	"syscall"
 	"time"
 
+	"github.com/jailtonjunior94/financial/configs"
+
 	"github.com/JailtonJunior94/devkit-go/pkg/database/postgres"
 	"github.com/JailtonJunior94/devkit-go/pkg/messaging/rabbitmq"
 	"github.com/JailtonJunior94/devkit-go/pkg/observability"
 	"github.com/JailtonJunior94/devkit-go/pkg/observability/otel"
-	"github.com/jailtonjunior94/financial/configs"
 )
 
 type application struct {
@@ -125,13 +126,11 @@ func NewApplication() (*application, error) {
 func (app *application) Start() error {
 	app.o11y.Logger().Info(app.ctx, "starting consumer...")
 
-	app.wg.Add(1)
-	go func() {
-		defer app.wg.Done()
+	app.wg.Go(func() {
 		if err := app.consumer.Consume(app.ctx); err != nil {
 			app.o11y.Logger().Error(app.ctx, "consumer stopped with error", observability.Error(err))
 		}
-	}()
+	})
 
 	app.o11y.Logger().Info(app.ctx, "consumer started successfully")
 	return nil

@@ -77,7 +77,10 @@ func Run() error {
 		observability.String("url", cfg.RabbitMQConfig.URL),
 	)
 
-	uow := uow.NewUnitOfWork(dbManager.DB())
+	uow, err := uow.NewUnitOfWork(dbManager.DB())
+	if err != nil {
+		return fmt.Errorf("worker: failed to create unit of work: %v", err)
+	}
 	outboxDispatcher := outbox.NewDispatcher(uow, rabbitClient, outbox.DefaultDispatcherConfig(cfg.RabbitMQConfig.Exchange), o11y)
 	outboxCleanup := outbox.NewCleaner(uow, outbox.DefaultCleanupConfig(), o11y)
 

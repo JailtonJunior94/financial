@@ -4,3 +4,4 @@ bin
 coverage.out
 cockroachdb_data
 __debug*
+.claude
