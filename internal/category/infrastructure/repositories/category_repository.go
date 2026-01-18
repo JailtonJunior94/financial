@@ -51,12 +51,7 @@ func (r *categoryRepository) List(ctx context.Context, userID vos.UUID) ([]*enti
 
 		return nil, err
 	}
-	defer func() {
-		if closeErr := rows.Close(); closeErr != nil {
-			span.RecordError(closeErr)
-
-		}
-	}()
+	defer rows.Close()
 
 	var categories []*entities.Category
 	for rows.Next() {
@@ -72,11 +67,16 @@ func (r *categoryRepository) List(ctx context.Context, userID vos.UUID) ([]*enti
 		)
 		if err != nil {
 			span.RecordError(err)
-
 			return nil, err
 		}
 		categories = append(categories, &category)
 	}
+
+	if err := rows.Err(); err != nil {
+		span.RecordError(err)
+		return nil, err
+	}
+
 	return categories, nil
 }
 
@@ -117,12 +117,7 @@ func (r *categoryRepository) FindByID(ctx context.Context, userID, id vos.UUID) 
 
 		return nil, err
 	}
-	defer func() {
-		if closeErr := rows.Close(); closeErr != nil {
-			span.RecordError(closeErr)
-
-		}
-	}()
+	defer rows.Close()
 
 	var category entities.Category
 	var subCategory entities.Category
@@ -167,7 +162,16 @@ func (r *categoryRepository) FindByID(ctx context.Context, userID, id vos.UUID) 
 	}
 
 	if !hasRows {
+		if err := rows.Err(); err != nil {
+			span.RecordError(err)
+			return nil, err
+		}
 		return nil, nil
+	}
+
+	if err := rows.Err(); err != nil {
+		span.RecordError(err)
+		return nil, err
 	}
 
 	category.AddChildrens(subCategories[category.ID])
@@ -203,7 +207,7 @@ func (r *categoryRepository) Save(ctx context.Context, category *entities.Catego
 
 		return err
 	}
-	defer stmt.Close()
+	defer func() { _ = stmt.Close() }()
 
 	_, err = stmt.ExecContext(
 		ctx,
@@ -255,7 +259,7 @@ func (r *categoryRepository) Update(ctx context.Context, category *entities.Cate
 
 		return err
 	}
-	defer stmt.Close()
+	defer func() { _ = stmt.Close() }()
 
 	_, err = stmt.ExecContext(
 		ctx,

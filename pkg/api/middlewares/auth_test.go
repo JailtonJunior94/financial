@@ -278,9 +278,7 @@ func (s *AuthorizationMiddlewareSuite) TestGetUserFromContext() {
 	}{
 		{
 			name: "deve retornar erro quando o usuário não está no contexto",
-			setup: func() context.Context {
-				return context.Background()
-			},
+			setup: context.Background,
 			expect: func(user *auth.AuthenticatedUser, err error) {
 				s.Error(err)
 				s.Nil(user)

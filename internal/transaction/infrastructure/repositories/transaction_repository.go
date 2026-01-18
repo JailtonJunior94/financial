@@ -3,6 +3,7 @@ package repositories
 import (
 	"context"
 	"database/sql"
+	"fmt"
 	"time"
 
 	"github.com/jailtonjunior94/financial/internal/transaction/domain/entities"
@@ -64,7 +65,10 @@ func (r *transactionRepository) FindOrCreateMonthly(
 	}
 
 	// Gera ID
-	id, _ := sharedVos.NewUUID()
+	id, err := sharedVos.NewUUID()
+	if err != nil {
+		return nil, fmt.Errorf("failed to generate UUID: %w", err)
+	}
 	monthly.SetID(id)
 
 	// Persiste
@@ -252,7 +256,7 @@ func (r *transactionRepository) UpdateItem(
 		WHERE id = $9
 	`
 
-	var deletedAt interface{}
+	var deletedAt any
 	if item.IsDeleted() {
 		deletedAt = item.DeletedAt.ValueOr(time.Now().UTC())
 	}
@@ -476,7 +480,13 @@ func (r *transactionRepository) findItemsByMonthlyID(
 	if err != nil {
 		return nil, err
 	}
-	defer rows.Close()
+	defer func() {
+		if closeErr := rows.Close(); closeErr != nil {
+			r.o11y.Logger().Error(ctx, "failed to close rows in findItemsByMonthlyID",
+				observability.Error(closeErr),
+			)
+		}
+	}()
 
 	items := make([]*entities.TransactionItem, 0)
 

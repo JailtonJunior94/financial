@@ -32,7 +32,7 @@ type (
 	}
 
 	// User representa um usuário (mantido para compatibilidade com código existente).
-	// DEPRECATED: Use AuthenticatedUser da interface TokenValidator.
+	// Deprecated: Use AuthenticatedUser da interface TokenValidator.
 	User struct {
 		ID    string `json:"id"`
 		Email string `json:"email"`
@@ -40,7 +40,7 @@ type (
 )
 
 // NewUser cria uma nova instância de User.
-// DEPRECATED: Use NewAuthenticatedUser.
+// Deprecated: Use NewAuthenticatedUser.
 func NewUser(id, email string) *User {
 	return &User{ID: id, Email: email}
 }
@@ -144,7 +144,7 @@ func (j *jwtAdapter) Validate(ctx context.Context, token string) (*Authenticated
 	// Extrai roles (opcional, pode não existir em tokens antigos)
 	var roles []string
 	if rolesInterface, ok := claims["roles"]; ok {
-		if rolesList, ok := rolesInterface.([]interface{}); ok {
+		if rolesList, ok := rolesInterface.([]any); ok {
 			for _, r := range rolesList {
 				if roleStr, ok := r.(string); ok {
 					roles = append(roles, roleStr)

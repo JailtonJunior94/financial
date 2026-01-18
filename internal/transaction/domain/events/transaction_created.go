@@ -87,8 +87,8 @@ func (e *TransactionCreatedEvent) OccurredAt() time.Time {
 }
 
 // Payload retorna os dados do evento como map para serialização JSON.
-func (e *TransactionCreatedEvent) Payload() map[string]interface{} {
-	return map[string]interface{}{
+func (e *TransactionCreatedEvent) Payload() map[string]any {
+	return map[string]any{
 		"transaction_id":  e.transactionID.String(),
 		"user_id":         e.userID.String(),
 		"category_id":     e.categoryID.String(),

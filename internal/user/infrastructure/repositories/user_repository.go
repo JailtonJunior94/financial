@@ -48,7 +48,7 @@ func (r *userRepository) Insert(ctx context.Context, user *entities.User) (*enti
 		span.RecordError(err)
 		return nil, fmt.Errorf("preparing insert user statement: %w", err)
 	}
-	defer stmt.Close()
+	defer func() { _ = stmt.Close() }()
 
 	_, err = stmt.ExecContext(
 		ctx,

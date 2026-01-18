@@ -18,9 +18,9 @@ var (
 // CreditCardStrategy implementa validações específicas para faturas de cartão.
 //
 // REGRA CRÍTICA:
-// - Faturas são sempre despesas
-// - Devem ser únicas por mês
-// - Atualizadas automaticamente quando a fatura muda
+// - Faturas são sempre despesas.
+// - Devem ser únicas por mês.
+// - Atualizadas automaticamente quando a fatura muda.
 type CreditCardStrategy struct{}
 
 // Validate valida uma transação de cartão de crédito.

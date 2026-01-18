@@ -104,17 +104,19 @@ func Run() error {
 
 	go func() {
 		<-ctx.Done()
-		o11y.Logger().Info(context.Background(), "shutting down gracefully...")
 
-		shutdownCtx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+		// Derive shutdown context from parent to maintain trace context
+		shutdownCtx, cancel := context.WithTimeout(ctx, 10*time.Second)
 		defer cancel()
 
+		o11y.Logger().Info(shutdownCtx, "shutting down gracefully...")
+
 		if err := o11y.Shutdown(shutdownCtx); err != nil {
-			o11y.Logger().Error(context.Background(), "error during o11y shutdown", observability.Error(err))
+			o11y.Logger().Error(shutdownCtx, "error during o11y shutdown", observability.Error(err))
 		}
 
 		if err := dbManager.Shutdown(shutdownCtx); err != nil {
-			o11y.Logger().Error(context.Background(), "error during database shutdown", observability.Error(err))
+			o11y.Logger().Error(shutdownCtx, "error during database shutdown", observability.Error(err))
 		}
 	}()
 

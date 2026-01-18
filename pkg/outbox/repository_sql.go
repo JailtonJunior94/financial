@@ -73,7 +73,13 @@ func (r *sqlRepository) FindPendingBatch(ctx context.Context, limit int) ([]*Out
 	if err != nil {
 		return nil, fmt.Errorf("failed to query pending events: %w", err)
 	}
-	defer rows.Close()
+	defer func() {
+		if closeErr := rows.Close(); closeErr != nil {
+			r.o11y.Logger().Error(ctx, "failed to close rows in FindPendingBatch",
+				observability.Error(closeErr),
+			)
+		}
+	}()
 
 	events := make([]*OutboxEvent, 0, limit)
 	for rows.Next() {

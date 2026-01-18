@@ -7,7 +7,9 @@ package repositoryMock
 import (
 	"context"
 
+	"github.com/JailtonJunior94/devkit-go/pkg/vos"
 	"github.com/jailtonjunior94/financial/internal/budget/domain/entities"
+	vos0 "github.com/jailtonjunior94/financial/internal/budget/domain/vos"
 	mock "github.com/stretchr/testify/mock"
 )
 
@@ -36,6 +38,148 @@ type BudgetRepository_Expecter struct {
 
 func (_m *BudgetRepository) EXPECT() *BudgetRepository_Expecter {
 	return &BudgetRepository_Expecter{mock: &_m.Mock}
+}
+
+// FindByID provides a mock function for the type BudgetRepository
+func (_mock *BudgetRepository) FindByID(ctx context.Context, id vos.UUID) (*entities.Budget, error) {
+	ret := _mock.Called(ctx, id)
+
+	if len(ret) == 0 {
+		panic("no return value specified for FindByID")
+	}
+
+	var r0 *entities.Budget
+	var r1 error
+	if returnFunc, ok := ret.Get(0).(func(context.Context, vos.UUID) (*entities.Budget, error)); ok {
+		return returnFunc(ctx, id)
+	}
+	if returnFunc, ok := ret.Get(0).(func(context.Context, vos.UUID) *entities.Budget); ok {
+		r0 = returnFunc(ctx, id)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).(*entities.Budget)
+		}
+	}
+	if returnFunc, ok := ret.Get(1).(func(context.Context, vos.UUID) error); ok {
+		r1 = returnFunc(ctx, id)
+	} else {
+		r1 = ret.Error(1)
+	}
+	return r0, r1
+}
+
+// BudgetRepository_FindByID_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'FindByID'
+type BudgetRepository_FindByID_Call struct {
+	*mock.Call
+}
+
+// FindByID is a helper method to define mock.On call
+//   - ctx context.Context
+//   - id vos.UUID
+func (_e *BudgetRepository_Expecter) FindByID(ctx interface{}, id interface{}) *BudgetRepository_FindByID_Call {
+	return &BudgetRepository_FindByID_Call{Call: _e.mock.On("FindByID", ctx, id)}
+}
+
+func (_c *BudgetRepository_FindByID_Call) Run(run func(ctx context.Context, id vos.UUID)) *BudgetRepository_FindByID_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		var arg0 context.Context
+		if args[0] != nil {
+			arg0 = args[0].(context.Context)
+		}
+		var arg1 vos.UUID
+		if args[1] != nil {
+			arg1 = args[1].(vos.UUID)
+		}
+		run(
+			arg0,
+			arg1,
+		)
+	})
+	return _c
+}
+
+func (_c *BudgetRepository_FindByID_Call) Return(budget *entities.Budget, err error) *BudgetRepository_FindByID_Call {
+	_c.Call.Return(budget, err)
+	return _c
+}
+
+func (_c *BudgetRepository_FindByID_Call) RunAndReturn(run func(ctx context.Context, id vos.UUID) (*entities.Budget, error)) *BudgetRepository_FindByID_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
+// FindByUserIDAndReferenceMonth provides a mock function for the type BudgetRepository
+func (_mock *BudgetRepository) FindByUserIDAndReferenceMonth(ctx context.Context, userID vos.UUID, referenceMonth vos0.ReferenceMonth) (*entities.Budget, error) {
+	ret := _mock.Called(ctx, userID, referenceMonth)
+
+	if len(ret) == 0 {
+		panic("no return value specified for FindByUserIDAndReferenceMonth")
+	}
+
+	var r0 *entities.Budget
+	var r1 error
+	if returnFunc, ok := ret.Get(0).(func(context.Context, vos.UUID, vos0.ReferenceMonth) (*entities.Budget, error)); ok {
+		return returnFunc(ctx, userID, referenceMonth)
+	}
+	if returnFunc, ok := ret.Get(0).(func(context.Context, vos.UUID, vos0.ReferenceMonth) *entities.Budget); ok {
+		r0 = returnFunc(ctx, userID, referenceMonth)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).(*entities.Budget)
+		}
+	}
+	if returnFunc, ok := ret.Get(1).(func(context.Context, vos.UUID, vos0.ReferenceMonth) error); ok {
+		r1 = returnFunc(ctx, userID, referenceMonth)
+	} else {
+		r1 = ret.Error(1)
+	}
+	return r0, r1
+}
+
+// BudgetRepository_FindByUserIDAndReferenceMonth_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'FindByUserIDAndReferenceMonth'
+type BudgetRepository_FindByUserIDAndReferenceMonth_Call struct {
+	*mock.Call
+}
+
+// FindByUserIDAndReferenceMonth is a helper method to define mock.On call
+//   - ctx context.Context
+//   - userID vos.UUID
+//   - referenceMonth vos0.ReferenceMonth
+func (_e *BudgetRepository_Expecter) FindByUserIDAndReferenceMonth(ctx interface{}, userID interface{}, referenceMonth interface{}) *BudgetRepository_FindByUserIDAndReferenceMonth_Call {
+	return &BudgetRepository_FindByUserIDAndReferenceMonth_Call{Call: _e.mock.On("FindByUserIDAndReferenceMonth", ctx, userID, referenceMonth)}
+}
+
+func (_c *BudgetRepository_FindByUserIDAndReferenceMonth_Call) Run(run func(ctx context.Context, userID vos.UUID, referenceMonth vos0.ReferenceMonth)) *BudgetRepository_FindByUserIDAndReferenceMonth_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		var arg0 context.Context
+		if args[0] != nil {
+			arg0 = args[0].(context.Context)
+		}
+		var arg1 vos.UUID
+		if args[1] != nil {
+			arg1 = args[1].(vos.UUID)
+		}
+		var arg2 vos0.ReferenceMonth
+		if args[2] != nil {
+			arg2 = args[2].(vos0.ReferenceMonth)
+		}
+		run(
+			arg0,
+			arg1,
+			arg2,
+		)
+	})
+	return _c
+}
+
+func (_c *BudgetRepository_FindByUserIDAndReferenceMonth_Call) Return(budget *entities.Budget, err error) *BudgetRepository_FindByUserIDAndReferenceMonth_Call {
+	_c.Call.Return(budget, err)
+	return _c
+}
+
+func (_c *BudgetRepository_FindByUserIDAndReferenceMonth_Call) RunAndReturn(run func(ctx context.Context, userID vos.UUID, referenceMonth vos0.ReferenceMonth) (*entities.Budget, error)) *BudgetRepository_FindByUserIDAndReferenceMonth_Call {
+	_c.Call.Return(run)
+	return _c
 }
 
 // Insert provides a mock function for the type BudgetRepository
@@ -148,6 +292,120 @@ func (_c *BudgetRepository_InsertItems_Call) Return(err error) *BudgetRepository
 }
 
 func (_c *BudgetRepository_InsertItems_Call) RunAndReturn(run func(ctx context.Context, items []*entities.BudgetItem) error) *BudgetRepository_InsertItems_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
+// Update provides a mock function for the type BudgetRepository
+func (_mock *BudgetRepository) Update(ctx context.Context, budget *entities.Budget) error {
+	ret := _mock.Called(ctx, budget)
+
+	if len(ret) == 0 {
+		panic("no return value specified for Update")
+	}
+
+	var r0 error
+	if returnFunc, ok := ret.Get(0).(func(context.Context, *entities.Budget) error); ok {
+		r0 = returnFunc(ctx, budget)
+	} else {
+		r0 = ret.Error(0)
+	}
+	return r0
+}
+
+// BudgetRepository_Update_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'Update'
+type BudgetRepository_Update_Call struct {
+	*mock.Call
+}
+
+// Update is a helper method to define mock.On call
+//   - ctx context.Context
+//   - budget *entities.Budget
+func (_e *BudgetRepository_Expecter) Update(ctx interface{}, budget interface{}) *BudgetRepository_Update_Call {
+	return &BudgetRepository_Update_Call{Call: _e.mock.On("Update", ctx, budget)}
+}
+
+func (_c *BudgetRepository_Update_Call) Run(run func(ctx context.Context, budget *entities.Budget)) *BudgetRepository_Update_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		var arg0 context.Context
+		if args[0] != nil {
+			arg0 = args[0].(context.Context)
+		}
+		var arg1 *entities.Budget
+		if args[1] != nil {
+			arg1 = args[1].(*entities.Budget)
+		}
+		run(
+			arg0,
+			arg1,
+		)
+	})
+	return _c
+}
+
+func (_c *BudgetRepository_Update_Call) Return(err error) *BudgetRepository_Update_Call {
+	_c.Call.Return(err)
+	return _c
+}
+
+func (_c *BudgetRepository_Update_Call) RunAndReturn(run func(ctx context.Context, budget *entities.Budget) error) *BudgetRepository_Update_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
+// UpdateItem provides a mock function for the type BudgetRepository
+func (_mock *BudgetRepository) UpdateItem(ctx context.Context, item *entities.BudgetItem) error {
+	ret := _mock.Called(ctx, item)
+
+	if len(ret) == 0 {
+		panic("no return value specified for UpdateItem")
+	}
+
+	var r0 error
+	if returnFunc, ok := ret.Get(0).(func(context.Context, *entities.BudgetItem) error); ok {
+		r0 = returnFunc(ctx, item)
+	} else {
+		r0 = ret.Error(0)
+	}
+	return r0
+}
+
+// BudgetRepository_UpdateItem_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'UpdateItem'
+type BudgetRepository_UpdateItem_Call struct {
+	*mock.Call
+}
+
+// UpdateItem is a helper method to define mock.On call
+//   - ctx context.Context
+//   - item *entities.BudgetItem
+func (_e *BudgetRepository_Expecter) UpdateItem(ctx interface{}, item interface{}) *BudgetRepository_UpdateItem_Call {
+	return &BudgetRepository_UpdateItem_Call{Call: _e.mock.On("UpdateItem", ctx, item)}
+}
+
+func (_c *BudgetRepository_UpdateItem_Call) Run(run func(ctx context.Context, item *entities.BudgetItem)) *BudgetRepository_UpdateItem_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		var arg0 context.Context
+		if args[0] != nil {
+			arg0 = args[0].(context.Context)
+		}
+		var arg1 *entities.BudgetItem
+		if args[1] != nil {
+			arg1 = args[1].(*entities.BudgetItem)
+		}
+		run(
+			arg0,
+			arg1,
+		)
+	})
+	return _c
+}
+
+func (_c *BudgetRepository_UpdateItem_Call) Return(err error) *BudgetRepository_UpdateItem_Call {
+	_c.Call.Return(err)
+	return _c
+}
+
+func (_c *BudgetRepository_UpdateItem_Call) RunAndReturn(run func(ctx context.Context, item *entities.BudgetItem) error) *BudgetRepository_UpdateItem_Call {
 	_c.Call.Return(run)
 	return _c
 }

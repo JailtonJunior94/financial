@@ -1,7 +1,10 @@
 package entities
 
 import (
+	"errors"
 	"time"
+
+	"github.com/google/uuid"
 
 	sharedVos "github.com/JailtonJunior94/devkit-go/pkg/vos"
 	"github.com/jailtonjunior94/financial/internal/category/domain/vos"
@@ -34,6 +37,9 @@ func (c *Category) AddChildrens(childrens []Category) {
 	c.Children = childrens
 }
 
+// Update atualiza os dados da categoria.
+// parentID pode ser nil para categorias raiz (sem pai).
+// Se parentID for fornecido, não pode ser um UUID vazio (uuid.Nil).
 func (c *Category) Update(name string, sequence uint, parentID *sharedVos.UUID) error {
 	categoryName, err := vos.NewCategoryName(name)
 	if err != nil {
@@ -43,6 +49,11 @@ func (c *Category) Update(name string, sequence uint, parentID *sharedVos.UUID) 
 	categorySequence, err := vos.NewCategorySequence(sequence)
 	if err != nil {
 		return err
+	}
+
+	// Validar parentID: nil é válido (categoria raiz), mas se fornecido não pode ser UUID vazio
+	if parentID != nil && parentID.Value == uuid.Nil {
+		return errors.New("parent ID cannot be empty UUID")
 	}
 
 	c.Name = categoryName

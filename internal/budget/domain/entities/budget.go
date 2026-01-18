@@ -10,6 +10,29 @@ import (
 	budgetVos "github.com/jailtonjunior94/financial/internal/budget/domain/vos"
 )
 
+// Constantes de porcentagem usadas em validações e cálculos
+var (
+	// hundredPercent representa 100% com scale 3 (100.000)
+	hundredPercent = mustNewPercentage(100000)
+	// zeroPercentage representa 0%
+	zeroPercentage = mustNewPercentage(0)
+)
+
+const (
+	// percentageScale é usado para converter decimal para porcentagem (0.XX * 100 = XX%)
+	percentageScale = 100.0
+)
+
+// mustNewPercentage cria uma Percentage ou entra em panic se falhar.
+// Usado apenas para constantes package-level que devem sempre funcionar.
+func mustNewPercentage(value int64) vos.Percentage {
+	p, err := vos.NewPercentage(value)
+	if err != nil {
+		panic("failed to create percentage constant: " + err.Error())
+	}
+	return p
+}
+
 // Budget é o Aggregate Root que garante a integridade do orçamento
 type Budget struct {
 	entity.Base
@@ -23,7 +46,6 @@ type Budget struct {
 
 func NewBudget(userID vos.UUID, totalAmount vos.Money, referenceMonth budgetVos.ReferenceMonth) *Budget {
 	zeroMoney, _ := vos.NewMoney(0, totalAmount.Currency())
-	zeroPercentage, _ := vos.NewPercentage(0)
 
 	return &Budget{
 		UserID:         userID,
@@ -69,10 +91,6 @@ func (b *Budget) AddItems(items []*BudgetItem) error {
 	}
 
 	// Valida que soma seja exatamente 100%
-	hundredPercent, err := vos.NewPercentage(100000) // 100.000% with scale 3
-	if err != nil {
-		return err
-	}
 	if totalPercentage.GreaterThan(hundredPercent) {
 		return domain.ErrBudgetPercentageExceeds100
 	}
@@ -112,10 +130,6 @@ func (b *Budget) AddItem(item *BudgetItem) error {
 	totalPercentage = sum
 
 	// Valida que soma não exceda 100%
-	hundredPercent, err := vos.NewPercentage(100000) // 100.000% with scale 3
-	if err != nil {
-		return err
-	}
 	if totalPercentage.GreaterThan(hundredPercent) {
 		return domain.ErrBudgetPercentageExceeds100
 	}
@@ -197,7 +211,6 @@ func (b *Budget) recalculateSpentAmount() {
 func (b *Budget) recalculatePercentageUsed() {
 	// Evita divisão por zero
 	if b.TotalAmount.IsZero() {
-		zeroPercentage, _ := vos.NewPercentage(0)
 		b.PercentageUsed = zeroPercentage
 		return
 	}
@@ -205,11 +218,10 @@ func (b *Budget) recalculatePercentageUsed() {
 	// Calcula: (SpentAmount / TotalAmount) * 100
 	spentFloat := b.SpentAmount.Float()
 	totalFloat := b.TotalAmount.Float()
-	percentageFloat := (spentFloat / totalFloat) * 100.0
+	percentageFloat := (spentFloat / totalFloat) * percentageScale
 
 	percentageUsed, err := vos.NewPercentageFromFloat(percentageFloat)
 	if err != nil {
-		zeroPercentage, _ := vos.NewPercentage(0)
 		b.PercentageUsed = zeroPercentage
 		return
 	}
@@ -217,20 +229,24 @@ func (b *Budget) recalculatePercentageUsed() {
 	b.PercentageUsed = percentageUsed
 }
 
-// TotalPercentageAllocated retorna a porcentagem total alocada nos itens
+// TotalPercentageAllocated retorna a porcentagem total alocada nos itens.
+// Se ocorrer erro ao somar (overflow), retorna o total calculado até aquele ponto.
 func (b *Budget) TotalPercentageAllocated() vos.Percentage {
 	var total vos.Percentage
 	for _, item := range b.Items {
-		if sum, err := total.Add(item.PercentageGoal); err == nil {
-			total = sum
+		sum, err := total.Add(item.PercentageGoal)
+		if err != nil {
+			// Erro ao somar - retorna total parcial
+			// Indica possível overflow ou dados inválidos
+			return total
 		}
+		total = sum
 	}
 	return total
 }
 
 // IsFullyAllocated verifica se o orçamento está 100% alocado
 func (b *Budget) IsFullyAllocated() bool {
-	hundredPercent, _ := vos.NewPercentage(100000)
 	return b.TotalPercentageAllocated().Equals(hundredPercent)
 }
 

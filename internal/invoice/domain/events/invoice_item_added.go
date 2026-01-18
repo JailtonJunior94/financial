@@ -83,8 +83,8 @@ func (e *InvoiceItemAddedEvent) OccurredAt() time.Time {
 }
 
 // Payload retorna os dados do evento como map para serialização JSON.
-func (e *InvoiceItemAddedEvent) Payload() map[string]interface{} {
-	return map[string]interface{}{
+func (e *InvoiceItemAddedEvent) Payload() map[string]any {
+	return map[string]any{
 		"invoice_item_id": e.invoiceItemID.String(),
 		"invoice_id":      e.invoiceID.String(),
 		"user_id":         e.userID.String(),

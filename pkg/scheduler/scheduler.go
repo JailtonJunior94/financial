@@ -26,6 +26,7 @@ type Scheduler struct {
 	ctx        context.Context
 	cancel     context.CancelFunc
 	wg         sync.WaitGroup
+	jobsMux    sync.Mutex         // protege jobs slice
 	runningMux sync.Mutex
 	running    map[string]int // rastreia jobs em execução por nome
 }
@@ -65,6 +66,9 @@ func New(ctx context.Context, o11y observability.Observability, config *jobs.Con
 // O job será agendado de acordo com sua expressão Schedule().
 // Retorna error se a expressão cron for inválida.
 func (s *Scheduler) Register(job jobs.Job) error {
+	s.jobsMux.Lock()
+	defer s.jobsMux.Unlock()
+
 	s.jobs = append(s.jobs, job)
 
 	// Wrapper que adiciona logging, timeout e controle de concorrência
@@ -89,10 +93,15 @@ func (s *Scheduler) Register(job jobs.Job) error {
 // Jobs serão executados de acordo com seus agendamentos.
 // Não bloqueia - retorna imediatamente após iniciar.
 func (s *Scheduler) Start() {
+	s.jobsMux.Lock()
+	defer s.jobsMux.Unlock()
+
+	jobsCount := len(s.jobs)
+
 	s.o11y.Logger().Info(
 		s.ctx,
 		"starting scheduler",
-		observability.Int("jobs_count", len(s.jobs)),
+		observability.Int("jobs_count", jobsCount),
 		observability.Int64("default_timeout_seconds", int64(s.config.DefaultTimeout.Seconds())),
 	)
 
@@ -156,7 +165,7 @@ func (s *Scheduler) wrapJob(job jobs.Job) func() {
 		select {
 		case <-s.ctx.Done():
 			s.o11y.Logger().Info(
-				context.Background(),
+				s.ctx,
 				"skipping job execution (scheduler shutting down)",
 				observability.String("job", jobName),
 			)
@@ -195,7 +204,7 @@ func (s *Scheduler) wrapJob(job jobs.Job) func() {
 		// Recovery adicional (além do cron recovery) para logging detalhado
 		defer func() {
 			if r := recover(); r != nil {
-				s.o11y.Logger().Error(context.Background(),
+				s.o11y.Logger().Error(s.ctx,
 					"job panic recovered",
 					observability.String("job", jobName),
 					observability.Any("panic", r),

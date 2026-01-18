@@ -136,7 +136,7 @@ func (d *dispatcher) processEvent(ctx context.Context, repository Repository, ev
 		rabbitmq.WithContentType("application/json"),
 		rabbitmq.WithDeliveryMode(2), // Persistent
 		rabbitmq.WithMessageID(event.ID.String()),
-		rabbitmq.WithHeaders(map[string]interface{}{
+		rabbitmq.WithHeaders(map[string]any{
 			"aggregate_id":   event.AggregateID.String(),
 			"aggregate_type": event.AggregateType,
 			"event_type":     event.EventType,

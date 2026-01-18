@@ -62,7 +62,7 @@ func (b *BudgetItem) PercentageSpent() vos.Percentage {
 	// Calcula: (SpentAmount / PlannedAmount) * 100
 	spentFloat := b.SpentAmount.Float()
 	plannedFloat := b.PlannedAmount.Float()
-	percentageFloat := (spentFloat / plannedFloat) * 100.0
+	percentageFloat := (spentFloat / plannedFloat) * percentageScale
 
 	percentageSpent, err := vos.NewPercentageFromFloat(percentageFloat)
 	if err != nil {

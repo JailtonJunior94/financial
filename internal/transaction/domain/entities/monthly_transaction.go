@@ -11,10 +11,10 @@ import (
 // MonthlyTransaction é o Aggregate Root que representa o consolidado financeiro mensal.
 //
 // Responsabilidades:
-// - Manter todas as invariantes
-// - Centralizar todos os cálculos
-// - Garantir consistência dos totais
-// - Gerenciar completamente os TransactionItems
+// - Manter todas as invariantes.
+// - Centralizar todos os cálculos.
+// - Garantir consistência dos totais.
+// - Gerenciar completamente os TransactionItems.
 type MonthlyTransaction struct {
 	ID             sharedVos.UUID
 	UserID         sharedVos.UUID

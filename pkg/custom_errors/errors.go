@@ -34,4 +34,8 @@ var (
 	ErrCategoryCycle         = errors.New("category cannot be its own parent or create a cycle")
 	ErrBudgetInvalidTotal    = errors.New("sum of budget item percentages must equal 100%")
 	ErrInvalidParentCategory = errors.New("parent category not found or belongs to different user")
+
+	// Validation errors (shared across modules)
+	ErrNegativeAmount    = errors.New("amount cannot be negative")
+	ErrInvalidCategoryID = errors.New("invalid category ID")
 )

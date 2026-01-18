@@ -106,7 +106,7 @@ func (u *deleteTransactionItemUseCase) Execute(
 	return monthly, nil
 }
 
-func (u *deleteTransactionItemUseCase) toOutput(aggregate interface{}) *dtos.MonthlyTransactionOutput {
+func (u *deleteTransactionItemUseCase) toOutput(aggregate any) *dtos.MonthlyTransactionOutput {
 	monthly, ok := aggregate.(*entities.MonthlyTransaction)
 	if !ok {
 		return &dtos.MonthlyTransactionOutput{}

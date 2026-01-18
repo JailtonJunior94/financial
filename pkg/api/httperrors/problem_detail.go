@@ -20,7 +20,7 @@ type ProblemDetail struct {
 	Timestamp time.Time              `json:"timestamp"`
 	RequestID string                 `json:"request_id,omitempty"`
 	TraceID   string                 `json:"trace_id,omitempty"`
-	Errors    map[string]interface{} `json:"errors,omitempty"`
+	Errors    map[string]any `json:"errors,omitempty"`
 }
 
 // NewProblemDetail creates a new ProblemDetail from an HTTP request and error details

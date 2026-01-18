@@ -3,13 +3,13 @@ package domain
 import "errors"
 
 var (
-	// Invoice errors
+	// Invoice errors.
 	ErrInvoiceNotFound              = errors.New("invoice not found")
 	ErrInvoiceAlreadyExistsForMonth = errors.New("invoice already exists for this card and month")
 	ErrInvoiceHasNoItems            = errors.New("invoice must have at least one item")
 	ErrInvoiceNegativeTotal         = errors.New("invoice total amount cannot be negative")
 
-	// InvoiceItem errors
+	// InvoiceItem errors.
 	ErrInvoiceItemNotFound      = errors.New("invoice item not found")
 	ErrInvalidPurchaseDate      = errors.New("purchase date cannot be in the future")
 	ErrNegativeAmount           = errors.New("amount cannot be negative")

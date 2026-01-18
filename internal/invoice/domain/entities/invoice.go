@@ -65,9 +65,7 @@ func (inv *Invoice) AddItems(items []*InvoiceItem) error {
 		return domain.ErrInvoiceHasNoItems
 	}
 
-	for _, item := range items {
-		inv.Items = append(inv.Items, item)
-	}
+	inv.Items = append(inv.Items, items...)
 
 	inv.recalculateTotalAmount()
 
@@ -116,12 +114,19 @@ func (inv *Invoice) RecalculateTotal() {
 // recalculateTotalAmount recalcula o valor total somando todas as parcelas
 func (inv *Invoice) recalculateTotalAmount() {
 	zeroCurrency := inv.TotalAmount.Currency()
-	total, _ := vos.NewMoney(0, zeroCurrency)
+	total, err := vos.NewMoney(0, zeroCurrency)
+	if err != nil {
+		// Se falhar ao criar Money zero, mantem valor atual
+		return
+	}
 
 	for _, item := range inv.Items {
-		if sum, err := total.Add(item.InstallmentAmount); err == nil {
-			total = sum
+		sum, err := total.Add(item.InstallmentAmount)
+		if err != nil {
+			// Se falhar ao somar, continua com próximo item
+			continue
 		}
+		total = sum
 	}
 
 	inv.TotalAmount = total

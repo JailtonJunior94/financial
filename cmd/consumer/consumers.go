@@ -41,11 +41,11 @@ func Run() error {
 	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
 	defer stop()
 
-	app.o11y.Logger().Info(context.Background(), "consumer is running")
+	app.o11y.Logger().Info(ctx, "consumer is running")
 
 	<-ctx.Done()
 
-	app.o11y.Logger().Info(context.Background(), "shutdown signal received")
+	app.o11y.Logger().Info(ctx, "shutdown signal received")
 
 	if err := app.Stop(30 * time.Second); err != nil {
 		return fmt.Errorf("failed to stop application: %w", err)
@@ -127,7 +127,7 @@ func (app *application) Start() error {
 	app.o11y.Logger().Info(app.ctx, "starting consumer...")
 
 	app.wg.Go(func() {
-		if err := app.consumer.Consume(app.ctx); err != nil {
+		if err := app.consumer.Start(app.ctx); err != nil {
 			app.o11y.Logger().Error(app.ctx, "consumer stopped with error", observability.Error(err))
 		}
 	})

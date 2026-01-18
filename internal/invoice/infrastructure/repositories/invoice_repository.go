@@ -17,6 +17,16 @@ import (
 	"github.com/JailtonJunior94/devkit-go/pkg/vos"
 )
 
+const (
+	// currencyScale é usado para converter centavos para valor decimal (100 centavos = 1.00)
+	currencyScale = 100.0
+)
+
+// scanner é uma interface comum para *sql.Row e *sql.Rows
+type scanner interface {
+	Scan(dest ...any) error
+}
+
 type invoiceRepository struct {
 	db   database.DBTX
 	o11y observability.Observability
@@ -53,7 +63,7 @@ func (r *invoiceRepository) Insert(ctx context.Context, invoice *entities.Invoic
 		invoice.CardID.Value,
 		invoice.ReferenceMonth.ToTime(),
 		invoice.DueDate,
-		float64(invoice.TotalAmount.Cents())/100.0,
+		float64(invoice.TotalAmount.Cents())/currencyScale,
 		invoice.CreatedAt,
 		invoice.UpdatedAt.Ptr(),
 		invoice.DeletedAt.Ptr(),
@@ -88,10 +98,10 @@ func (r *invoiceRepository) InsertItems(ctx context.Context, items []*entities.I
 			item.CategoryID.Value,
 			item.PurchaseDate,
 			item.Description,
-			float64(item.TotalAmount.Cents())/100.0,
+			float64(item.TotalAmount.Cents())/currencyScale,
 			item.InstallmentNumber,
 			item.InstallmentTotal,
-			float64(item.InstallmentAmount.Cents())/100.0,
+			float64(item.InstallmentAmount.Cents())/currencyScale,
 			item.CreatedAt,
 			item.UpdatedAt.Ptr(),
 			item.DeletedAt.Ptr(),
@@ -235,7 +245,7 @@ func (r *invoiceRepository) FindByUserAndMonth(
 
 	var invoices []*entities.Invoice
 	for rows.Next() {
-		invoice, err := r.scanInvoiceFromRows(rows)
+		invoice, err := r.scanInvoice(rows)
 		if err != nil {
 			return nil, err
 		}
@@ -279,7 +289,7 @@ func (r *invoiceRepository) FindByCard(ctx context.Context, cardID vos.UUID) ([]
 
 	var invoices []*entities.Invoice
 	for rows.Next() {
-		invoice, err := r.scanInvoiceFromRows(rows)
+		invoice, err := r.scanInvoice(rows)
 		if err != nil {
 			return nil, err
 		}
@@ -310,7 +320,7 @@ func (r *invoiceRepository) Update(ctx context.Context, invoice *entities.Invoic
 		ctx,
 		query,
 		invoice.ID.Value,
-		float64(invoice.TotalAmount.Cents())/100.0,
+		float64(invoice.TotalAmount.Cents())/currencyScale,
 		time.Now().UTC(),
 	)
 
@@ -335,8 +345,8 @@ func (r *invoiceRepository) UpdateItem(ctx context.Context, item *entities.Invoi
 		item.ID.Value,
 		item.CategoryID.Value,
 		item.Description,
-		float64(item.TotalAmount.Cents())/100.0,
-		float64(item.InstallmentAmount.Cents())/100.0,
+		float64(item.TotalAmount.Cents())/currencyScale,
+		float64(item.InstallmentAmount.Cents())/currencyScale,
 		time.Now().UTC(),
 	)
 
@@ -438,56 +448,14 @@ func (r *invoiceRepository) findItemsByInvoiceID(ctx context.Context, invoiceID 
 	return items, rows.Err()
 }
 
-func (r *invoiceRepository) scanInvoice(row *sql.Row) (*entities.Invoice, error) {
+// scanInvoice é um helper unificado que funciona com *sql.Row e *sql.Rows
+func (r *invoiceRepository) scanInvoice(s scanner) (*entities.Invoice, error) {
 	var invoice entities.Invoice
 	var updatedAt, deletedAt *time.Time
 	var totalAmount string
 	var referenceDate time.Time
 
-	err := row.Scan(
-		&invoice.ID.Value,
-		&invoice.UserID.Value,
-		&invoice.CardID.Value,
-		&referenceDate,
-		&invoice.DueDate,
-		&totalAmount,
-		&invoice.CreatedAt,
-		&updatedAt,
-		&deletedAt,
-	)
-	if err != nil {
-		return nil, err
-	}
-
-	totalAmountFloat, err := strconv.ParseFloat(totalAmount, 64)
-	if err != nil {
-		return nil, fmt.Errorf("failed to parse total_amount: %w", err)
-	}
-
-	invoice.TotalAmount, err = vos.NewMoneyFromFloat(totalAmountFloat, "BRL")
-	if err != nil {
-		return nil, fmt.Errorf("failed to create Money from total_amount: %w", err)
-	}
-
-	invoice.ReferenceMonth = invoiceVos.NewReferenceMonthFromDate(referenceDate)
-
-	if updatedAt != nil {
-		invoice.UpdatedAt = vos.NewNullableTime(*updatedAt)
-	}
-	if deletedAt != nil {
-		invoice.DeletedAt = vos.NewNullableTime(*deletedAt)
-	}
-
-	return &invoice, nil
-}
-
-func (r *invoiceRepository) scanInvoiceFromRows(rows *sql.Rows) (*entities.Invoice, error) {
-	var invoice entities.Invoice
-	var updatedAt, deletedAt *time.Time
-	var totalAmount string
-	var referenceDate time.Time
-
-	err := rows.Scan(
+	err := s.Scan(
 		&invoice.ID.Value,
 		&invoice.UserID.Value,
 		&invoice.CardID.Value,

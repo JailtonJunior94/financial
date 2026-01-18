@@ -214,6 +214,32 @@ func (g *Group) Shutdown(ctx context.Context) error {
 		return nil
 
 	case <-shutdownCtx.Done():
+		// Timeout exceeded - services didn't shut down in time
+		// Start background goroutine to monitor when they eventually finish
+		servicesCount := len(g.services) // Capture value before spawning to avoid race
+
+		// Create context with extended timeout for monitoring goroutine
+		monitorCtx, cancel := context.WithTimeout(context.Background(), 5*time.Minute)
+
+		go func() {
+			defer cancel()
+
+			select {
+			case <-done:
+				// Services eventually completed
+				g.o11y.Logger().Warn(monitorCtx,
+					"services completed shutdown after timeout",
+					observability.Int("services_count", servicesCount),
+				)
+			case <-monitorCtx.Done():
+				// Even monitoring timed out - services truly stuck
+				g.o11y.Logger().Error(monitorCtx,
+					"services still not shutdown after extended wait",
+					observability.Int("services_count", servicesCount),
+				)
+			}
+		}()
+
 		g.o11y.Logger().Warn(shutdownCtx,
 			"shutdown timeout exceeded",
 			observability.Int("services_count", len(g.services)),

@@ -73,7 +73,7 @@ func (j *JSONBPayload) Scan(value any) error {
 		return fmt.Errorf("failed to scan JSONBPayload: expected []byte, got %T", value)
 	}
 
-	var payload map[string]interface{}
+	var payload map[string]any
 	if err := json.Unmarshal(bytes, &payload); err != nil {
 		return fmt.Errorf("failed to unmarshal JSONBPayload: %w", err)
 	}
