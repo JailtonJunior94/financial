@@ -10,7 +10,7 @@ import (
 	invoiceVos "github.com/jailtonjunior94/financial/internal/invoice/domain/vos"
 )
 
-// Invoice é o Aggregate Root que representa uma fatura mensal de cartão
+// Invoice é o Aggregate Root que representa uma fatura mensal de cartão.
 type Invoice struct {
 	entity.Base
 	UserID         vos.UUID
@@ -21,7 +21,7 @@ type Invoice struct {
 	Items          []*InvoiceItem
 }
 
-// NewInvoice cria uma nova fatura
+// NewInvoice cria uma nova fatura.
 func NewInvoice(
 	userID vos.UUID,
 	cardID vos.UUID,
@@ -44,7 +44,7 @@ func NewInvoice(
 	}
 }
 
-// AddItem adiciona um item à fatura e recalcula o total
+// AddItem adiciona um item à fatura e recalcula o total.
 func (inv *Invoice) AddItem(item *InvoiceItem) error {
 	if item == nil {
 		return domain.ErrInvoiceItemNotFound
@@ -59,7 +59,7 @@ func (inv *Invoice) AddItem(item *InvoiceItem) error {
 	return nil
 }
 
-// AddItems adiciona múltiplos itens à fatura
+// AddItems adiciona múltiplos itens à fatura.
 func (inv *Invoice) AddItems(items []*InvoiceItem) error {
 	if len(items) == 0 {
 		return domain.ErrInvoiceHasNoItems
@@ -72,7 +72,7 @@ func (inv *Invoice) AddItems(items []*InvoiceItem) error {
 	return nil
 }
 
-// RemoveItem remove um item da fatura e recalcula o total
+// RemoveItem remove um item da fatura e recalcula o total.
 func (inv *Invoice) RemoveItem(itemID vos.UUID) error {
 	itemIndex := -1
 	for i, item := range inv.Items {
@@ -95,7 +95,7 @@ func (inv *Invoice) RemoveItem(itemID vos.UUID) error {
 	return nil
 }
 
-// FindItemByID busca um item pelo ID
+// FindItemByID busca um item pelo ID.
 func (inv *Invoice) FindItemByID(itemID vos.UUID) *InvoiceItem {
 	for _, item := range inv.Items {
 		if item.ID.String() == itemID.String() {
@@ -105,13 +105,13 @@ func (inv *Invoice) FindItemByID(itemID vos.UUID) *InvoiceItem {
 	return nil
 }
 
-// RecalculateTotal recalcula o valor total da fatura com base nos itens
+// RecalculateTotal recalcula o valor total da fatura com base nos itens.
 func (inv *Invoice) RecalculateTotal() {
 	inv.recalculateTotalAmount()
 	inv.UpdatedAt = vos.NewNullableTime(time.Now().UTC())
 }
 
-// recalculateTotalAmount recalcula o valor total somando todas as parcelas
+// recalculateTotalAmount recalcula o valor total somando todas as parcelas.
 func (inv *Invoice) recalculateTotalAmount() {
 	zeroCurrency := inv.TotalAmount.Currency()
 	total, err := vos.NewMoney(0, zeroCurrency)
@@ -132,12 +132,12 @@ func (inv *Invoice) recalculateTotalAmount() {
 	inv.TotalAmount = total
 }
 
-// IsEmpty verifica se a fatura não tem itens
+// IsEmpty verifica se a fatura não tem itens.
 func (inv *Invoice) IsEmpty() bool {
 	return len(inv.Items) == 0
 }
 
-// ItemCount retorna a quantidade de itens na fatura
+// ItemCount retorna a quantidade de itens na fatura.
 func (inv *Invoice) ItemCount() int {
 	return len(inv.Items)
 }

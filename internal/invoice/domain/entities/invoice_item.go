@@ -10,8 +10,8 @@ import (
 	"github.com/jailtonjunior94/financial/internal/invoice/domain"
 )
 
-// InvoiceItem representa uma compra/parcela lançada no cartão
-// Nota: Mutações devem passar pelo Invoice (aggregate root)
+// InvoiceItem representa uma compra/parcela lançada no cartão.
+// Nota: Mutações devem passar pelo Invoice (aggregate root).
 type InvoiceItem struct {
 	entity.Base
 	Invoice           *Invoice
@@ -25,7 +25,7 @@ type InvoiceItem struct {
 	InstallmentAmount vos.Money // Valor desta parcela
 }
 
-// NewInvoiceItem cria um novo item de fatura com validações
+// NewInvoiceItem cria um novo item de fatura com validações.
 func NewInvoiceItem(
 	invoice *Invoice,
 	categoryID vos.UUID,
@@ -88,12 +88,12 @@ func NewInvoiceItem(
 	}, nil
 }
 
-// IsInstallment retorna se este item é parcelado
+// IsInstallment retorna se este item é parcelado.
 func (i *InvoiceItem) IsInstallment() bool {
 	return i.InstallmentTotal > 1
 }
 
-// InstallmentLabel retorna a label da parcela (ex: "3/12")
+// InstallmentLabel retorna a label da parcela (ex: "3/12").
 func (i *InvoiceItem) InstallmentLabel() string {
 	if !i.IsInstallment() {
 		return "À vista"

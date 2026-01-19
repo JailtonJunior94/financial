@@ -9,13 +9,13 @@ import (
 	customerrors "github.com/jailtonjunior94/financial/pkg/custom_errors"
 )
 
-// ErrorMapping represents the HTTP status code and message for an error
+// ErrorMapping represents the HTTP status code and message for an error.
 type ErrorMapping struct {
 	Status  int
 	Message string
 }
 
-// ErrorMapper maps domain errors to HTTP status codes and messages
+// ErrorMapper maps domain errors to HTTP status codes and messages.
 type ErrorMapper interface {
 	MapError(err error) ErrorMapping
 }
@@ -24,14 +24,14 @@ type errorMapper struct {
 	domainMappings map[error]ErrorMapping
 }
 
-// NewErrorMapper creates a new error mapper with domain error mappings
+// NewErrorMapper creates a new error mapper with domain error mappings.
 func NewErrorMapper() ErrorMapper {
 	return &errorMapper{
 		domainMappings: buildDomainErrorMappings(),
 	}
 }
 
-// MapError maps a domain error to an HTTP status code and message
+// MapError maps a domain error to an HTTP status code and message.
 func (m *errorMapper) MapError(err error) ErrorMapping {
 	if err == nil {
 		return ErrorMapping{
@@ -74,7 +74,7 @@ func (m *errorMapper) MapError(err error) ErrorMapping {
 	}
 }
 
-// buildDomainErrorMappings creates the mapping of domain errors to HTTP status codes
+// buildDomainErrorMappings creates the mapping of domain errors to HTTP status codes.
 func buildDomainErrorMappings() map[error]ErrorMapping {
 	return map[error]ErrorMapping{
 		// Validation errors → 400 Bad Request
@@ -191,14 +191,14 @@ func buildDomainErrorMappings() map[error]ErrorMapping {
 	}
 }
 
-// isJSONError checks if the error is a JSON parsing error
+// isJSONError checks if the error is a JSON parsing error.
 func isJSONError(err error) bool {
 	var syntaxErr *json.SyntaxError
 	var unmarshalErr *json.UnmarshalTypeError
 	return errors.As(err, &syntaxErr) || errors.As(err, &unmarshalErr)
 }
 
-// isValidationError checks if the error is a validation error based on error message
+// isValidationError checks if the error is a validation error based on error message.
 func isValidationError(err error) bool {
 	errMsg := strings.ToLower(err.Error())
 	return strings.Contains(errMsg, "invalid") ||

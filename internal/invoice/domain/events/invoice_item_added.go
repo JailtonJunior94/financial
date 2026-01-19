@@ -19,7 +19,7 @@ import (
 // - user_id: ID do usuário dono da fatura
 // - category_id: ID da categoria (usado para atualizar budget)
 // - amount: Valor da parcela (usado para calcular spent_amount)
-// - reference_month: Mês de referência da fatura (formato: "2024-01")
+// - reference_month: Mês de referência da fatura (formato: "2024-01").
 type InvoiceItemAddedEvent struct {
 	eventID       sharedVos.UUID
 	invoiceItemID sharedVos.UUID

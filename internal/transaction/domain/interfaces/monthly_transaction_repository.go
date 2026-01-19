@@ -10,7 +10,7 @@ import (
 	"github.com/JailtonJunior94/devkit-go/pkg/vos"
 )
 
-// MonthlyTransactionRepository define as operações de persistência para transações mensais
+// MonthlyTransactionRepository define as operações de persistência para transações mensais.
 type MonthlyTransactionRepository interface {
 	// FindByUserAndMonth busca uma transação mensal por usuário e mês de referência
 	FindByUserAndMonth(

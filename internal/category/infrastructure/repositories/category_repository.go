@@ -51,7 +51,7 @@ func (r *categoryRepository) List(ctx context.Context, userID vos.UUID) ([]*enti
 
 		return nil, err
 	}
-	defer rows.Close()
+	defer func() { _ = rows.Close() }()
 
 	var categories []*entities.Category
 	for rows.Next() {
@@ -117,7 +117,7 @@ func (r *categoryRepository) FindByID(ctx context.Context, userID, id vos.UUID) 
 
 		return nil, err
 	}
-	defer rows.Close()
+	defer func() { _ = rows.Close() }()
 
 	var category entities.Category
 	var subCategory entities.Category

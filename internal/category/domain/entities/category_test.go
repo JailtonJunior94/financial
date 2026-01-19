@@ -5,6 +5,7 @@ package entities_test
 
 import (
 	"testing"
+	"time"
 
 	"github.com/stretchr/testify/suite"
 
@@ -51,7 +52,7 @@ func (s *CategoryEntitySuite) TestNewCategory() {
 				s.Equal("Transport", category.Name.String())
 				s.Equal(uint(1), category.Sequence.Value())
 				s.Nil(category.ParentID)
-				s.NotNil(category.CreatedAt.Time)
+				s.False(category.CreatedAt.ValueOr(time.Time{}).IsZero())
 			},
 		},
 		{
@@ -118,7 +119,7 @@ func (s *CategoryEntitySuite) TestUpdate() {
 				s.NotNil(category)
 				s.Equal("Updated Name", category.Name.String())
 				s.Equal(uint(10), category.Sequence.Value())
-				s.NotNil(category.UpdatedAt.Time)
+				s.False(category.UpdatedAt.ValueOr(time.Time{}).IsZero())
 			},
 		},
 		{
@@ -235,7 +236,7 @@ func (s *CategoryEntitySuite) TestDelete() {
 
 		// Assert
 		s.NotNil(result)
-		s.NotNil(result.DeletedAt.Time)
+		s.False(result.DeletedAt.ValueOr(time.Time{}).IsZero())
 		s.Equal(category, result)
 	})
 }

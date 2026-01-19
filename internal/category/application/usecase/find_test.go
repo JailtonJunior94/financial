@@ -160,7 +160,7 @@ func (s *FindCategoryUseCaseSuite) TestExecute() {
 	}
 }
 
-// createTestCategory é um helper para criar categorias de teste
+// createTestCategory é um helper para criar categorias de teste.
 func createTestCategory(id, name string, sequence uint) *entities.Category {
 	category, _ := factories.CreateCategory(
 		"550e8400-e29b-41d4-a716-446655440000",

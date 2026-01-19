@@ -10,16 +10,16 @@ import (
 	budgetVos "github.com/jailtonjunior94/financial/internal/budget/domain/vos"
 )
 
-// Constantes de porcentagem usadas em validações e cálculos
+// Constantes de porcentagem usadas em validações e cálculos.
 var (
-	// hundredPercent representa 100% com scale 3 (100.000)
+	// hundredPercent representa 100% com scale 3 (100.000).
 	hundredPercent = mustNewPercentage(100000)
-	// zeroPercentage representa 0%
+	// zeroPercentage representa 0%.
 	zeroPercentage = mustNewPercentage(0)
 )
 
 const (
-	// percentageScale é usado para converter decimal para porcentagem (0.XX * 100 = XX%)
+	// percentageScale é usado para converter decimal para porcentagem (0.XX * 100 = XX%).
 	percentageScale = 100.0
 )
 
@@ -33,7 +33,7 @@ func mustNewPercentage(value int64) vos.Percentage {
 	return p
 }
 
-// Budget é o Aggregate Root que garante a integridade do orçamento
+// Budget é o Aggregate Root que garante a integridade do orçamento.
 type Budget struct {
 	entity.Base
 	UserID         vos.UUID
@@ -60,7 +60,7 @@ func NewBudget(userID vos.UUID, totalAmount vos.Money, referenceMonth budgetVos.
 	}
 }
 
-// AddItems adiciona múltiplos itens e valida que a soma das porcentagens seja exatamente 100%
+// AddItems adiciona múltiplos itens e valida que a soma das porcentagens seja exatamente 100%.
 func (b *Budget) AddItems(items []*BudgetItem) error {
 	// Valida se items não está vazio
 	if len(items) == 0 {
@@ -106,7 +106,7 @@ func (b *Budget) AddItems(items []*BudgetItem) error {
 	return nil
 }
 
-// AddItem adiciona um único item e valida que a soma das porcentagens não exceda 100%
+// AddItem adiciona um único item e valida que a soma das porcentagens não exceda 100%.
 func (b *Budget) AddItem(item *BudgetItem) error {
 	// Valida categoria duplicada
 	if b.hasCategoryID(item.CategoryID) {
@@ -142,7 +142,7 @@ func (b *Budget) AddItem(item *BudgetItem) error {
 	return nil
 }
 
-// UpdateItemSpentAmount atualiza o valor gasto de um item específico (passando pelo aggregate)
+// UpdateItemSpentAmount atualiza o valor gasto de um item específico (passando pelo aggregate).
 func (b *Budget) UpdateItemSpentAmount(itemID vos.UUID, newSpentAmount vos.Money) error {
 	// Valida que o valor não seja negativo
 	if newSpentAmount.IsNegative() {
@@ -169,12 +169,12 @@ func (b *Budget) UpdateItemSpentAmount(itemID vos.UUID, newSpentAmount vos.Money
 	return nil
 }
 
-// FindItemByID busca um item pelo ID
+// FindItemByID busca um item pelo ID.
 func (b *Budget) FindItemByID(itemID vos.UUID) *BudgetItem {
 	return b.findItemByID(itemID)
 }
 
-// hasCategoryID verifica se já existe um item com a categoria informada
+// hasCategoryID verifica se já existe um item com a categoria informada.
 func (b *Budget) hasCategoryID(categoryID vos.UUID) bool {
 	for _, item := range b.Items {
 		if item.CategoryID.String() == categoryID.String() {
@@ -184,7 +184,7 @@ func (b *Budget) hasCategoryID(categoryID vos.UUID) bool {
 	return false
 }
 
-// findItemByID busca um item pelo ID
+// findItemByID busca um item pelo ID.
 func (b *Budget) findItemByID(itemID vos.UUID) *BudgetItem {
 	for _, item := range b.Items {
 		if item.ID.String() == itemID.String() {
@@ -194,7 +194,7 @@ func (b *Budget) findItemByID(itemID vos.UUID) *BudgetItem {
 	return nil
 }
 
-// recalculateSpentAmount recalcula o valor total gasto
+// recalculateSpentAmount recalcula o valor total gasto.
 func (b *Budget) recalculateSpentAmount() {
 	zeroCurrency := b.TotalAmount.Currency()
 	total, _ := vos.NewMoney(0, zeroCurrency)
@@ -207,7 +207,7 @@ func (b *Budget) recalculateSpentAmount() {
 	b.SpentAmount = total
 }
 
-// recalculatePercentageUsed recalcula a porcentagem total utilizada
+// recalculatePercentageUsed recalcula a porcentagem total utilizada.
 func (b *Budget) recalculatePercentageUsed() {
 	// Evita divisão por zero
 	if b.TotalAmount.IsZero() {
@@ -245,12 +245,12 @@ func (b *Budget) TotalPercentageAllocated() vos.Percentage {
 	return total
 }
 
-// IsFullyAllocated verifica se o orçamento está 100% alocado
+// IsFullyAllocated verifica se o orçamento está 100% alocado.
 func (b *Budget) IsFullyAllocated() bool {
 	return b.TotalPercentageAllocated().Equals(hundredPercent)
 }
 
-// Delete marca o budget como deletado (soft delete)
+// Delete marca o budget como deletado (soft delete).
 func (b *Budget) Delete() *Budget {
 	b.DeletedAt = vos.NewNullableTime(time.Now().UTC())
 	return b

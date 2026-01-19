@@ -14,7 +14,7 @@ import (
 	"go.opentelemetry.io/otel/trace"
 )
 
-// ErrorHandler handles HTTP errors by mapping them to appropriate HTTP responses
+// ErrorHandler handles HTTP errors by mapping them to appropriate HTTP responses.
 type ErrorHandler interface {
 	HandleError(w http.ResponseWriter, r *http.Request, err error)
 }
@@ -24,7 +24,7 @@ type errorHandler struct {
 	mapper ErrorMapper
 }
 
-// NewErrorHandler creates a new error handler with observability
+// NewErrorHandler creates a new error handler with observability.
 func NewErrorHandler(o11y observability.Observability) ErrorHandler {
 	return &errorHandler{
 		o11y:   o11y,
@@ -37,7 +37,7 @@ func NewErrorHandler(o11y observability.Observability) ErrorHandler {
 // 2. Mapping the error to an HTTP status code and message
 // 3. Adding attributes to the span for tracing
 // 4. Logging the error once with appropriate level
-// 5. Constructing and writing a ProblemDetail response
+// 5. Constructing and writing a ProblemDetail response.
 func (h *errorHandler) HandleError(w http.ResponseWriter, r *http.Request, err error) {
 	if err == nil {
 		return
@@ -79,7 +79,7 @@ func (h *errorHandler) HandleError(w http.ResponseWriter, r *http.Request, err e
 	}
 }
 
-// unwrapError unwraps a CustomError to get the original error
+// unwrapError unwraps a CustomError to get the original error.
 func (h *errorHandler) unwrapError(err error) error {
 	var customErr *customerrors.CustomError
 	if errors.As(err, &customErr) && customErr.Err != nil {
@@ -88,7 +88,7 @@ func (h *errorHandler) unwrapError(err error) error {
 	return err
 }
 
-// logError logs the error with appropriate level based on HTTP status
+// logError logs the error with appropriate level based on HTTP status.
 func (h *errorHandler) logError(ctx context.Context, r *http.Request, err error, status int) {
 	fields := []observability.Field{
 		observability.Error(err),

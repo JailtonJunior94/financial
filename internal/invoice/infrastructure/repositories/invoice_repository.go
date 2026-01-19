@@ -18,11 +18,11 @@ import (
 )
 
 const (
-	// currencyScale é usado para converter centavos para valor decimal (100 centavos = 1.00)
+	// currencyScale é usado para converter centavos para valor decimal (100 centavos = 1.00).
 	currencyScale = 100.0
 )
 
-// scanner é uma interface comum para *sql.Row e *sql.Rows
+// scanner é uma interface comum para *sql.Row e *sql.Rows.
 type scanner interface {
 	Scan(dest ...any) error
 }
@@ -241,7 +241,7 @@ func (r *invoiceRepository) FindByUserAndMonth(
 	if err != nil {
 		return nil, err
 	}
-	defer rows.Close()
+	defer func() { _ = rows.Close() }()
 
 	var invoices []*entities.Invoice
 	for rows.Next() {
@@ -285,7 +285,7 @@ func (r *invoiceRepository) FindByCard(ctx context.Context, cardID vos.UUID) ([]
 	if err != nil {
 		return nil, err
 	}
-	defer rows.Close()
+	defer func() { _ = rows.Close() }()
 
 	var invoices []*entities.Invoice
 	for rows.Next() {
@@ -398,7 +398,7 @@ func (r *invoiceRepository) FindItemsByPurchaseOrigin(
 	if err != nil {
 		return nil, err
 	}
-	defer rows.Close()
+	defer func() { _ = rows.Close() }()
 
 	var items []*entities.InvoiceItem
 	for rows.Next() {
@@ -434,7 +434,7 @@ func (r *invoiceRepository) findItemsByInvoiceID(ctx context.Context, invoiceID 
 	if err != nil {
 		return nil, err
 	}
-	defer rows.Close()
+	defer func() { _ = rows.Close() }()
 
 	var items []*entities.InvoiceItem
 	for rows.Next() {
@@ -448,7 +448,7 @@ func (r *invoiceRepository) findItemsByInvoiceID(ctx context.Context, invoiceID 
 	return items, rows.Err()
 }
 
-// scanInvoice é um helper unificado que funciona com *sql.Row e *sql.Rows
+// scanInvoice é um helper unificado que funciona com *sql.Row e *sql.Rows.
 func (r *invoiceRepository) scanInvoice(s scanner) (*entities.Invoice, error) {
 	var invoice entities.Invoice
 	var updatedAt, deletedAt *time.Time

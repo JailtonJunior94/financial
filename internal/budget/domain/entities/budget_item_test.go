@@ -8,6 +8,7 @@ import (
 	"time"
 
 	"github.com/JailtonJunior94/devkit-go/pkg/vos"
+	budgetVos "github.com/jailtonjunior94/financial/internal/budget/domain/vos"
 
 	"github.com/stretchr/testify/assert"
 )
@@ -18,14 +19,22 @@ func TestNewBudgetItem(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	amount := vos.NewMoney(14_400.00)
-	budget := NewBudget(userID, amount, time.Now().UTC())
+	amount, err := vos.NewMoneyFromFloat(14_400.00, vos.CurrencyBRL)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	referenceMonth := budgetVos.NewReferenceMonthFromDate(time.Date(2024, 1, 1, 0, 0, 0, 0, time.UTC))
+	budget := NewBudget(userID, amount, referenceMonth)
 
 	categoryID, err := vos.NewUUID()
 	if err != nil {
 		t.Fatal(err)
 	}
-	percentageGoal := vos.NewPercentage(30)
+	percentageGoal, err := vos.NewPercentage(30000) // 30% with scale 3
+	if err != nil {
+		t.Fatal(err)
+	}
 
 	type args struct {
 		budget         *Budget
@@ -48,7 +57,8 @@ func TestNewBudgetItem(t *testing.T) {
 			expected: func(budgetItem *BudgetItem, err error) {
 				assert.Nil(t, err)
 				assert.NotNil(t, budgetItem)
-				assert.True(t, budgetItem.AmountGoal.Equals(vos.NewMoney(432000)))
+				expectedAmount, _ := vos.NewMoneyFromFloat(4320.00, vos.CurrencyBRL)
+				assert.True(t, budgetItem.PlannedAmount.Equals(expectedAmount))
 			},
 		},
 	}
@@ -65,53 +75,71 @@ func TestNewBudgetItem(t *testing.T) {
 	}
 }
 
-func TestAddAmountUsed(t *testing.T) {
+func TestUpdateItemSpentAmount(t *testing.T) {
 	userID, err := vos.NewUUID()
 	if err != nil {
 		t.Fatal(err)
 	}
 
-	amount := vos.NewMoney(14_400.00)
-	budget := NewBudget(userID, amount, time.Now().UTC())
+	amount, err := vos.NewMoneyFromFloat(14_400.00, vos.CurrencyBRL)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	referenceMonth := budgetVos.NewReferenceMonthFromDate(time.Date(2024, 1, 1, 0, 0, 0, 0, time.UTC))
+	budget := NewBudget(userID, amount, referenceMonth)
 
 	categoryID, err := vos.NewUUID()
 	if err != nil {
 		t.Fatal(err)
 	}
-	percentageGoal := vos.NewPercentage(30)
-	amountUsed := vos.NewMoney(1_323.80)
+	percentageGoal, err := vos.NewPercentage(30000) // 30% with scale 3
+	if err != nil {
+		t.Fatal(err)
+	}
+	spentAmount, err := vos.NewMoneyFromFloat(1_323.80, vos.CurrencyBRL)
+	if err != nil {
+		t.Fatal(err)
+	}
 
 	type args struct {
 		budget         *Budget
 		categoryID     vos.UUID
 		percentageGoal vos.Percentage
-		amountUsed     vos.Money
+		spentAmount    vos.Money
 	}
 
 	scenarios := []struct {
 		name     string
 		args     args
-		expected func(budgetItem *BudgetItem, err error)
+		expected func(budget *Budget, budgetItem *BudgetItem, err error)
 	}{
 		{
-			name: "should calculate the amount goal",
+			name: "should update spent amount via aggregate",
 			args: args{
 				budget:         budget,
 				categoryID:     categoryID,
 				percentageGoal: percentageGoal,
-				amountUsed:     amountUsed,
+				spentAmount:    spentAmount,
 			},
-			expected: func(budgetItem *BudgetItem, err error) {
+			expected: func(budget *Budget, budgetItem *BudgetItem, err error) {
 				assert.Nil(t, err)
 				assert.NotNil(t, budgetItem)
-				assert.True(t, budgetItem.AmountUsed.Equals(vos.NewMoney(1_323.80)))
-				assert.True(t, budgetItem.AmountGoal.Equals(vos.NewMoney(432000)))
-				// PercentageUsed = (AmountUsed / Budget.AmountGoal) * 100
-				// (1323.80 / 14400.00) * 100 = 9.19%
-				expectedPercentage := vos.NewPercentage(9.19)
-				assert.True(t, budgetItem.PercentageUsed.Value() >= expectedPercentage.Value()-0.01 &&
-					budgetItem.PercentageUsed.Value() <= expectedPercentage.Value()+0.01,
-					"Expected percentage around %v, got %v", expectedPercentage.Value(), budgetItem.PercentageUsed.Value())
+				expectedSpent, _ := vos.NewMoneyFromFloat(1_323.80, vos.CurrencyBRL)
+				assert.True(t, budgetItem.SpentAmount.Equals(expectedSpent))
+				expectedPlanned, _ := vos.NewMoneyFromFloat(4320.00, vos.CurrencyBRL)
+				assert.True(t, budgetItem.PlannedAmount.Equals(expectedPlanned))
+				// PercentageSpent = (SpentAmount / PlannedAmount) * 100
+				// (1323.80 / 4320.00) * 100 = 30.64%
+				expectedPercentage, _ := vos.NewPercentageFromFloat(30.64)
+				actualPercentage := budgetItem.PercentageSpent()
+				actualValue, _ := actualPercentage.Value()
+				expectedValue, _ := expectedPercentage.Value()
+				actualInt64 := actualValue.(int64)
+				expectedInt64 := expectedValue.(int64)
+				assert.True(t, actualInt64 >= expectedInt64-100 &&
+					actualInt64 <= expectedInt64+100,
+					"Expected percentage around %v, got %v", expectedInt64, actualInt64)
 			},
 		},
 	}
@@ -124,8 +152,13 @@ func TestAddAmountUsed(t *testing.T) {
 				scenario.args.percentageGoal,
 			)
 
-			err := budgetItem.AddAmountUsed(scenario.args.amountUsed)
-			scenario.expected(budgetItem, err)
+			// Add item to budget first
+			err := scenario.args.budget.AddItem(budgetItem)
+			assert.Nil(t, err)
+
+			// Update spent amount via aggregate root
+			err = scenario.args.budget.UpdateItemSpentAmount(budgetItem.ID, scenario.args.spentAmount)
+			scenario.expected(scenario.args.budget, budgetItem, err)
 		})
 	}
 }

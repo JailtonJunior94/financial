@@ -7,8 +7,8 @@ import (
 	"github.com/JailtonJunior94/devkit-go/pkg/vos"
 )
 
-// BudgetItem representa um item individual de um orçamento
-// Nota: Mutações devem passar pelo Budget (aggregate root)
+// BudgetItem representa um item individual de um orçamento.
+// Nota: Mutações devem passar pelo Budget (aggregate root).
 type BudgetItem struct {
 	entity.Base
 	Budget         *Budget
@@ -43,7 +43,7 @@ func NewBudgetItem(
 	return budgetItem
 }
 
-// calculatePlannedAmount calcula o valor planejado com base na porcentagem
+// calculatePlannedAmount calcula o valor planejado com base na porcentagem.
 func (b *BudgetItem) calculatePlannedAmount() {
 	// Apply percentage to budget total amount
 	if amount, err := b.PercentageGoal.Apply(b.Budget.TotalAmount); err == nil {
@@ -51,7 +51,7 @@ func (b *BudgetItem) calculatePlannedAmount() {
 	}
 }
 
-// PercentageSpent calcula a porcentagem gasta em relação ao planejado
+// PercentageSpent calcula a porcentagem gasta em relação ao planejado.
 func (b *BudgetItem) PercentageSpent() vos.Percentage {
 	// Evita divisão por zero
 	if b.PlannedAmount.IsZero() {
@@ -73,7 +73,7 @@ func (b *BudgetItem) PercentageSpent() vos.Percentage {
 	return percentageSpent
 }
 
-// RemainingAmount calcula o valor restante disponível
+// RemainingAmount calcula o valor restante disponível.
 func (b *BudgetItem) RemainingAmount() vos.Money {
 	remaining, err := b.PlannedAmount.Subtract(b.SpentAmount)
 	if err != nil {

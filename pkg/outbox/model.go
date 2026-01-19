@@ -25,7 +25,7 @@ type OutboxEvent struct {
 }
 
 // OutboxStatus representa os possíveis status de um evento outbox.
-// Valores permitidos pelo schema: 'pending', 'published', 'failed'
+// Valores permitidos pelo schema: 'pending', 'published', 'failed'.
 type OutboxStatus string
 
 const (

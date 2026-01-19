@@ -13,14 +13,14 @@ var (
 
 var referenceMonthRegex = regexp.MustCompile(`^\d{4}-(0[1-9]|1[0-2])$`)
 
-// ReferenceMonth representa um mês de referência no formato YYYY-MM
-type ReferenceMonth struct {
+// ReferenceMonth representa um mês de referência no formato YYYY-MM.
+type ReferenceMonth struct{
 	value string
 	year  int
 	month time.Month
 }
 
-// NewReferenceMonth cria um novo ReferenceMonth validado
+// NewReferenceMonth cria um novo ReferenceMonth validado.
 func NewReferenceMonth(yearMonth string) (ReferenceMonth, error) {
 	if !referenceMonthRegex.MatchString(yearMonth) {
 		return ReferenceMonth{}, ErrInvalidReferenceMonth
@@ -39,7 +39,7 @@ func NewReferenceMonth(yearMonth string) (ReferenceMonth, error) {
 	}, nil
 }
 
-// NewReferenceMonthFromDate cria um ReferenceMonth a partir de um time.Time
+// NewReferenceMonthFromDate cria um ReferenceMonth a partir de um time.Time.
 func NewReferenceMonthFromDate(date time.Time) ReferenceMonth {
 	return ReferenceMonth{
 		value: date.Format("2006-01"),
@@ -48,32 +48,32 @@ func NewReferenceMonthFromDate(date time.Time) ReferenceMonth {
 	}
 }
 
-// String retorna o valor no formato YYYY-MM
+// String retorna o valor no formato YYYY-MM.
 func (r ReferenceMonth) String() string {
 	return r.value
 }
 
-// Year retorna o ano
+// Year retorna o ano.
 func (r ReferenceMonth) Year() int {
 	return r.year
 }
 
-// Month retorna o mês
+// Month retorna o mês.
 func (r ReferenceMonth) Month() time.Month {
 	return r.month
 }
 
-// Equals verifica se dois ReferenceMonth são iguais
+// Equals verifica se dois ReferenceMonth são iguais.
 func (r ReferenceMonth) Equals(other ReferenceMonth) bool {
 	return r.value == other.value
 }
 
-// ToTime retorna o primeiro dia do mês como time.Time
+// ToTime retorna o primeiro dia do mês como time.Time.
 func (r ReferenceMonth) ToTime() time.Time {
 	return time.Date(r.year, r.month, 1, 0, 0, 0, 0, time.UTC)
 }
 
-// AddMonths adiciona N meses ao ReferenceMonth
+// AddMonths adiciona N meses ao ReferenceMonth.
 func (r ReferenceMonth) AddMonths(months int) ReferenceMonth {
 	t := r.ToTime().AddDate(0, months, 0)
 	return NewReferenceMonthFromDate(t)

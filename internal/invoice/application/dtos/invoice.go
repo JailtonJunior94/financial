@@ -2,7 +2,7 @@ package dtos
 
 import "time"
 
-// PurchaseCreateInput representa o input para criar uma compra
+// PurchaseCreateInput representa o input para criar uma compra.
 type PurchaseCreateInput struct {
 	CardID            string                `json:"card_id"`
 	CategoryID        string                `json:"category_id"`
@@ -13,14 +13,14 @@ type PurchaseCreateInput struct {
 	InstallmentTotal  int                   `json:"installment_total"` // 1 para à vista
 }
 
-// PurchaseUpdateInput representa o input para atualizar uma compra
+// PurchaseUpdateInput representa o input para atualizar uma compra.
 type PurchaseUpdateInput struct {
 	CategoryID  string `json:"category_id"`
 	Description string `json:"description"`
 	TotalAmount string `json:"total_amount"`
 }
 
-// InvoiceOutput representa a resposta de uma fatura
+// InvoiceOutput representa a resposta de uma fatura.
 type InvoiceOutput struct {
 	ID             string              `json:"id"`
 	UserID         string              `json:"user_id"`
@@ -35,7 +35,7 @@ type InvoiceOutput struct {
 	UpdatedAt      time.Time           `json:"updated_at,omitempty"`
 }
 
-// InvoiceItemOutput representa a resposta de um item de fatura
+// InvoiceItemOutput representa a resposta de um item de fatura.
 type InvoiceItemOutput struct {
 	ID                string    `json:"id"`
 	InvoiceID         string    `json:"invoice_id"`
@@ -51,7 +51,7 @@ type InvoiceItemOutput struct {
 	UpdatedAt         time.Time `json:"updated_at,omitempty"`
 }
 
-// InvoiceListOutput representa uma lista resumida de faturas
+// InvoiceListOutput representa uma lista resumida de faturas.
 type InvoiceListOutput struct {
 	ID             string    `json:"id"`
 	CardID         string    `json:"card_id"`

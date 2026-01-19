@@ -20,8 +20,8 @@ import (
 // - amount: Valor da transação (usado para calcular spent_amount)
 // - direction: Direção (income/expense) - budget ignora income
 // - type: Tipo da transação (regular/credit_card/transfer)
-// - reference_month: Mês de referência (formato: "2024-01")
-type TransactionCreatedEvent struct {
+// - reference_month: Mês de referência (formato: "2024-01").
+type TransactionCreatedEvent struct{
 	eventID        sharedVos.UUID
 	transactionID  sharedVos.UUID
 	userID         sharedVos.UUID

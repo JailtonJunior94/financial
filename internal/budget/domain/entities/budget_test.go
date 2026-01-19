@@ -8,18 +8,19 @@ import (
 	"time"
 
 	"github.com/JailtonJunior94/devkit-go/pkg/vos"
+	budgetVos "github.com/jailtonjunior94/financial/internal/budget/domain/vos"
 
 	"github.com/stretchr/testify/assert"
 )
 
 func TestNewBudget(t *testing.T) {
 	userID, _ := vos.NewUUID()
-	amount := vos.NewMoney(14_400.00)
+	amount, _ := vos.NewMoneyFromFloat(14_400.00, vos.CurrencyBRL)
 
 	type args struct {
-		userID vos.UUID
-		amount vos.Money
-		date   time.Time
+		userID          vos.UUID
+		amount          vos.Money
+		referenceMonth budgetVos.ReferenceMonth
 	}
 
 	scenarios := []struct {
@@ -30,13 +31,14 @@ func TestNewBudget(t *testing.T) {
 		{
 			name: "should create a new budget",
 			args: args{
-				userID: userID,
-				amount: amount,
-				date:   time.Now().UTC(),
+				userID:         userID,
+				amount:         amount,
+				referenceMonth: budgetVos.NewReferenceMonthFromDate(time.Now().UTC()),
 			},
 			expected: func(budget *Budget) {
 				assert.NotNil(t, budget)
-				assert.True(t, budget.AmountGoal.Equals(vos.NewMoney(14_400.00)))
+				expectedAmount, _ := vos.NewMoneyFromFloat(14_400.00, vos.CurrencyBRL)
+				assert.True(t, budget.TotalAmount.Equals(expectedAmount))
 			},
 		},
 	}
@@ -46,7 +48,7 @@ func TestNewBudget(t *testing.T) {
 			budget := NewBudget(
 				scenario.args.userID,
 				scenario.args.amount,
-				scenario.args.date,
+				scenario.args.referenceMonth,
 			)
 			scenario.expected(budget)
 		})
@@ -55,26 +57,27 @@ func TestNewBudget(t *testing.T) {
 
 func TestAddItems(t *testing.T) {
 	userID, _ := vos.NewUUID()
-	amount := vos.NewMoney(14_400.00)
-	budget := NewBudget(userID, amount, time.Now().UTC())
+	amount, _ := vos.NewMoneyFromFloat(14_400.00, vos.CurrencyBRL)
+	referenceMonth := budgetVos.NewReferenceMonthFromDate(time.Now().UTC())
+	budget := NewBudget(userID, amount, referenceMonth)
 
 	categoryOne, _ := vos.NewUUID()
-	percentageGoalCategoryOne := vos.NewPercentage(30)
+	percentageGoalCategoryOne, _ := vos.NewPercentage(30000) // 30% with scale 3
 
 	categoryTwo, _ := vos.NewUUID()
-	percentageGoalCategoryTwo := vos.NewPercentage(15)
+	percentageGoalCategoryTwo, _ := vos.NewPercentage(15000) // 15%
 
 	categoryThree, _ := vos.NewUUID()
-	percentageGoalCategoryThree := vos.NewPercentage(10)
+	percentageGoalCategoryThree, _ := vos.NewPercentage(10000) // 10%
 
 	categoryFour, _ := vos.NewUUID()
-	percentageGoalCategoryFour := vos.NewPercentage(10)
+	percentageGoalCategoryFour, _ := vos.NewPercentage(10000) // 10%
 
 	categoryFive, _ := vos.NewUUID()
-	percentageGoalCategoryFive := vos.NewPercentage(30)
+	percentageGoalCategoryFive, _ := vos.NewPercentage(30000) // 30%
 
 	categorySix, _ := vos.NewUUID()
-	percentageGoalCategorySix := vos.NewPercentage(5)
+	percentageGoalCategorySix, _ := vos.NewPercentage(5000) // 5%
 
 	items := []*BudgetItem{
 		NewBudgetItem(budget, categoryOne, percentageGoalCategoryOne),
@@ -93,7 +96,7 @@ func TestAddItems(t *testing.T) {
 	scenarios := []struct {
 		name     string
 		args     args
-		expected func(sValid bool)
+		expected func(err error)
 	}{
 		{
 			name: "should add items to the budget",
@@ -101,16 +104,16 @@ func TestAddItems(t *testing.T) {
 				budget: budget,
 				items:  items,
 			},
-			expected: func(isValid bool) {
-				assert.True(t, isValid)
+			expected: func(err error) {
+				assert.Nil(t, err)
 			},
 		},
 	}
 
 	for _, scenario := range scenarios {
 		t.Run(scenario.name, func(t *testing.T) {
-			isValid := scenario.args.budget.AddItems(scenario.args.items)
-			scenario.expected(isValid)
+			err := scenario.args.budget.AddItems(scenario.args.items)
+			scenario.expected(err)
 		})
 	}
 }

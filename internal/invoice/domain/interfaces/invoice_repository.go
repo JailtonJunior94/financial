@@ -9,7 +9,7 @@ import (
 	invoiceVos "github.com/jailtonjunior94/financial/internal/invoice/domain/vos"
 )
 
-// InvoiceRepository define as operações de persistência de Invoice
+// InvoiceRepository define as operações de persistência de Invoice.
 type InvoiceRepository interface {
 	// Insert cria uma nova fatura
 	Insert(ctx context.Context, invoice *entities.Invoice) error

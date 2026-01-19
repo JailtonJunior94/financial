@@ -48,7 +48,7 @@ func NewAuthorization(validator auth.TokenValidator, o11y observability.Observab
 // 2. Valida o formato do header
 // 3. Valida o token usando o TokenValidator
 // 4. Injeta o usuário autenticado no contexto
-// 5. Chama o próximo handler
+// 5. Chama o próximo handler.
 func (a *authorization) Authorization(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		ctx := r.Context()
@@ -84,7 +84,7 @@ func (a *authorization) Authorization(next http.Handler) http.Handler {
 // Espera o formato: "Bearer <token>"
 // Retorna erro se:
 // - O formato não for "Bearer <token>"
-// - O token estiver vazio
+// - O token estiver vazio.
 func extractBearerToken(authHeader string) (string, error) {
 	const bearerPrefix = "Bearer "
 

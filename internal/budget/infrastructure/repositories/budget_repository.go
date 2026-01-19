@@ -376,7 +376,7 @@ func (r *budgetRepository) findItemsByBudgetID(ctx context.Context, budgetID vos
 	if err != nil {
 		return nil, err
 	}
-	defer rows.Close()
+	defer func() { _ = rows.Close() }()
 
 	var items []*entities.BudgetItem
 	for rows.Next() {

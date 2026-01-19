@@ -3,7 +3,7 @@ package customerrors
 import "errors"
 
 var (
-	// Authentication errors
+	// Authentication errors.
 	ErrUnauthorized         = errors.New("unauthorized: user not found in context")
 	ErrMissingAuthHeader    = errors.New("missing authorization header")
 	ErrInvalidAuthFormat    = errors.New("invalid authorization format: expected 'Bearer <token>'")
@@ -13,7 +13,7 @@ var (
 	ErrInvalidTokenClaims   = errors.New("invalid token claims")
 	ErrInvalidSigningMethod = errors.New("invalid token signing method")
 
-	// Domain errors
+	// Domain errors.
 	ErrBudgetNotFound        = errors.New("budget not found")
 	ErrCardNotFound          = errors.New("card not found")
 	ErrCategoryNotFound      = errors.New("category not found")
@@ -35,7 +35,7 @@ var (
 	ErrBudgetInvalidTotal    = errors.New("sum of budget item percentages must equal 100%")
 	ErrInvalidParentCategory = errors.New("parent category not found or belongs to different user")
 
-	// Validation errors (shared across modules)
+	// Validation errors (shared across modules).
 	ErrNegativeAmount    = errors.New("amount cannot be negative")
 	ErrInvalidCategoryID = errors.New("invalid category ID")
 )

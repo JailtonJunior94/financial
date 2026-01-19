@@ -24,7 +24,7 @@ import (
 // 2. Busca budget_item pela categoria
 // 3. Incrementa spent_amount (novo valor = atual + increment)
 // 4. Recalcula percentageUsed automaticamente
-// 5. Persiste as alterações
+// 5. Persiste as alterações.
 type (
 	IncrementSpentAmountUseCase interface {
 		Execute(ctx context.Context, userID vos.UUID, referenceMonth budgetVos.ReferenceMonth, categoryID vos.UUID, incrementAmount vos.Money) error

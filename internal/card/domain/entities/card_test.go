@@ -197,7 +197,7 @@ func (s *CardEntitySuite) TestUpdate() {
 			card, _ := entities.NewCard(userID, name, dueDay)
 
 			// Act
-			err := card.Update(scenario.args.name, scenario.args.dueDay)
+			err := card.Update(scenario.args.name, scenario.args.dueDay, 7) // Default closing offset days
 
 			// Assert
 			scenario.expect(card, err)

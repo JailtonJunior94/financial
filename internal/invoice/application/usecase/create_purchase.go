@@ -176,7 +176,7 @@ func (u *createPurchaseUseCase) Execute(ctx context.Context, userID string, inpu
 	return nil
 }
 
-// findOrCreateInvoice busca ou cria uma fatura para o mês de referência
+// findOrCreateInvoice busca ou cria uma fatura para o mês de referência.
 func (u *createPurchaseUseCase) findOrCreateInvoice(
 	ctx context.Context,
 	repo interfaces.InvoiceRepository,

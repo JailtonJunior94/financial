@@ -204,7 +204,7 @@ func (d *dispatcher) handlePublishFailure(ctx context.Context, repository Reposi
 }
 
 // buildRoutingKey constrói a routing key para o evento.
-// Formato: {aggregate_type}.{event_type}
+// Formato: {aggregate_type}.{event_type}.
 func (d *dispatcher) buildRoutingKey(event *OutboxEvent) string {
 	return fmt.Sprintf("%s.%s", event.AggregateType, event.EventType)
 }

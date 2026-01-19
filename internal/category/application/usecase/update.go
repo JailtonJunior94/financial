@@ -168,8 +168,8 @@ func (u *updateCategoryUseCase) Execute(ctx context.Context, userID, id string, 
 	}, nil
 }
 
-// validateNoCycle checks if setting parentID as parent would create a cycle
-// Uses a recursive CTE query for efficient cycle detection in a single database round-trip
+// validateNoCycle checks if setting parentID as parent would create a cycle.
+// Uses a recursive CTE query for efficient cycle detection in a single database round-trip.
 func (u *updateCategoryUseCase) validateNoCycle(ctx context.Context, userID, parentID, categoryID vos.UUID) error {
 	cycleExists, err := u.repository.CheckCycleExists(ctx, userID, categoryID, parentID)
 	if err != nil {

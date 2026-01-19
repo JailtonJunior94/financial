@@ -48,7 +48,7 @@ func NewInvoiceHandler(
 	}
 }
 
-// CreatePurchase creates a new purchase with installments
+// CreatePurchase creates a new purchase with installments.
 func (h *InvoiceHandler) CreatePurchase(w http.ResponseWriter, r *http.Request) {
 	ctx, span := h.o11y.Tracer().Start(r.Context(), "invoice_handler.create_purchase")
 	defer span.End()
@@ -75,7 +75,7 @@ func (h *InvoiceHandler) CreatePurchase(w http.ResponseWriter, r *http.Request) 
 	})
 }
 
-// UpdatePurchase updates all installments of a purchase
+// UpdatePurchase updates all installments of a purchase.
 func (h *InvoiceHandler) UpdatePurchase(w http.ResponseWriter, r *http.Request) {
 	ctx, span := h.o11y.Tracer().Start(r.Context(), "invoice_handler.update_purchase")
 	defer span.End()
@@ -103,7 +103,7 @@ func (h *InvoiceHandler) UpdatePurchase(w http.ResponseWriter, r *http.Request) 
 	})
 }
 
-// DeletePurchase deletes all installments of a purchase
+// DeletePurchase deletes all installments of a purchase.
 func (h *InvoiceHandler) DeletePurchase(w http.ResponseWriter, r *http.Request) {
 	ctx, span := h.o11y.Tracer().Start(r.Context(), "invoice_handler.delete_purchase")
 	defer span.End()
@@ -123,7 +123,7 @@ func (h *InvoiceHandler) DeletePurchase(w http.ResponseWriter, r *http.Request) 
 	responses.JSON(w, http.StatusNoContent, nil)
 }
 
-// GetInvoice retrieves a single invoice with its items
+// GetInvoice retrieves a single invoice with its items.
 func (h *InvoiceHandler) GetInvoice(w http.ResponseWriter, r *http.Request) {
 	ctx, span := h.o11y.Tracer().Start(r.Context(), "invoice_handler.get_invoice")
 	defer span.End()
@@ -144,7 +144,7 @@ func (h *InvoiceHandler) GetInvoice(w http.ResponseWriter, r *http.Request) {
 	responses.JSON(w, http.StatusOK, output)
 }
 
-// ListInvoicesByMonth lists all invoices for a user in a specific month
+// ListInvoicesByMonth lists all invoices for a user in a specific month.
 func (h *InvoiceHandler) ListInvoicesByMonth(w http.ResponseWriter, r *http.Request) {
 	ctx, span := h.o11y.Tracer().Start(r.Context(), "invoice_handler.list_invoices_by_month")
 	defer span.End()
@@ -171,7 +171,7 @@ func (h *InvoiceHandler) ListInvoicesByMonth(w http.ResponseWriter, r *http.Requ
 	responses.JSON(w, http.StatusOK, output)
 }
 
-// ListInvoicesByCard lists all invoices for a specific card
+// ListInvoicesByCard lists all invoices for a specific card.
 func (h *InvoiceHandler) ListInvoicesByCard(w http.ResponseWriter, r *http.Request) {
 	ctx, span := h.o11y.Tracer().Start(r.Context(), "invoice_handler.list_invoices_by_card")
 	defer span.End()

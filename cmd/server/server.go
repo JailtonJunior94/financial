@@ -93,6 +93,9 @@ func Run() error {
 		httpserver.WithServiceVersion(cfg.O11yConfig.ServiceVersion),
 		httpserver.WithHealthChecks(map[string]httpserver.HealthCheckFunc{"database": dbManager.Ping}),
 	)
+	if err != nil {
+		return fmt.Errorf("run: failed to create http server: %v", err)
+	}
 
 	srv.RegisterRouters(userModule.UserRouter)
 	srv.RegisterRouters(categoryModule.CategoryRouter)

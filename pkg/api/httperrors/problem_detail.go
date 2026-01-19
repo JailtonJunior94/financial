@@ -23,7 +23,7 @@ type ProblemDetail struct {
 	Errors    map[string]any `json:"errors,omitempty"`
 }
 
-// NewProblemDetail creates a new ProblemDetail from an HTTP request and error details
+// NewProblemDetail creates a new ProblemDetail from an HTTP request and error details.
 func NewProblemDetail(r *http.Request, status int, title, detail string) *ProblemDetail {
 	requestID := getRequestID(r)
 	traceID := getTraceID(r)
@@ -40,14 +40,14 @@ func NewProblemDetail(r *http.Request, status int, title, detail string) *Proble
 	}
 }
 
-// WriteProblemDetail writes a ProblemDetail as JSON response
+// WriteProblemDetail writes a ProblemDetail as JSON response.
 func WriteProblemDetail(w http.ResponseWriter, problem *ProblemDetail) error {
 	w.Header().Set("Content-Type", "application/problem+json")
 	w.WriteHeader(problem.Status)
 	return json.NewEncoder(w).Encode(problem)
 }
 
-// getRequestID extracts the request ID from the HTTP request
+// getRequestID extracts the request ID from the HTTP request.
 func getRequestID(r *http.Request) string {
 	if requestID := r.Header.Get("X-Request-ID"); requestID != "" {
 		return requestID
@@ -58,7 +58,7 @@ func getRequestID(r *http.Request) string {
 	return ""
 }
 
-// getTraceID extracts the trace ID from the request context
+// getTraceID extracts the trace ID from the request context.
 func getTraceID(r *http.Request) string {
 	spanContext := trace.SpanContextFromContext(r.Context())
 	if spanContext.IsValid() {
@@ -67,7 +67,7 @@ func getTraceID(r *http.Request) string {
 	return ""
 }
 
-// getStatusText returns the standard HTTP status text for a given code
+// getStatusText returns the standard HTTP status text for a given code.
 func getStatusText(code int) string {
 	text := http.StatusText(code)
 	if text == "" {
