@@ -7,6 +7,7 @@ import (
 	"github.com/jailtonjunior94/financial/internal/card/application/dtos"
 	"github.com/jailtonjunior94/financial/internal/card/domain/entities"
 	"github.com/jailtonjunior94/financial/internal/card/domain/interfaces"
+	"github.com/jailtonjunior94/financial/pkg/observability/metrics"
 
 	"github.com/JailtonJunior94/devkit-go/pkg/linq"
 	"github.com/JailtonJunior94/devkit-go/pkg/observability"
@@ -21,16 +22,19 @@ type (
 	findCardUseCase struct {
 		o11y       observability.Observability
 		repository interfaces.CardRepository
+		metrics    *metrics.CardMetrics
 	}
 )
 
 func NewFindCardUseCase(
 	o11y observability.Observability,
 	repository interfaces.CardRepository,
+	metrics *metrics.CardMetrics,
 ) FindCardUseCase {
 	return &findCardUseCase{
 		o11y:       o11y,
 		repository: repository,
+		metrics:    metrics,
 	}
 }
 
@@ -38,12 +42,25 @@ func (u *findCardUseCase) Execute(ctx context.Context, userID string) ([]*dtos.C
 	ctx, span := u.o11y.Tracer().Start(ctx, "find_card_usecase.execute")
 	defer span.End()
 
+	start := time.Now()
+	defer func() {
+		duration := time.Since(start)
+		if err := recover(); err != nil {
+			u.metrics.RecordOperationFailure(ctx, metrics.OperationFind, duration)
+			panic(err)
+		}
+	}()
+
 	user, err := vos.NewUUIDFromString(userID)
 	if err != nil {
+		duration := time.Since(start)
+		u.metrics.RecordOperationFailure(ctx, metrics.OperationFind, duration)
+		u.metrics.RecordError(ctx, metrics.OperationFind, metrics.ClassifyError(err))
+
 		span.AddEvent(
 			"error parsing user id",
-			observability.Field{Key: "user_id", Value: userID},
-			observability.Field{Key: "error", Value: err},
+			observability.String("user_id", userID),
+			observability.Error(err),
 		)
 
 		return nil, err
@@ -51,10 +68,14 @@ func (u *findCardUseCase) Execute(ctx context.Context, userID string) ([]*dtos.C
 
 	cards, err := u.repository.List(ctx, user)
 	if err != nil {
+		duration := time.Since(start)
+		u.metrics.RecordOperationFailure(ctx, metrics.OperationFind, duration)
+		u.metrics.RecordError(ctx, metrics.OperationFind, metrics.ClassifyError(err))
+
 		span.AddEvent(
 			"error listing cards from repository",
-			observability.Field{Key: "user_id", Value: userID},
-			observability.Field{Key: "error", Value: err},
+			observability.String("user_id", userID),
+			observability.Error(err),
 		)
 
 		return nil, err
@@ -73,6 +94,9 @@ func (u *findCardUseCase) Execute(ctx context.Context, userID string) ([]*dtos.C
 		}
 		return output
 	})
+
+	duration := time.Since(start)
+	u.metrics.RecordOperation(ctx, metrics.OperationFind, duration)
 
 	return cardsOutput, nil
 }

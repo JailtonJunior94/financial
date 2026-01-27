@@ -11,25 +11,29 @@ import (
 	"github.com/jailtonjunior94/financial/pkg/api/httperrors"
 	"github.com/jailtonjunior94/financial/pkg/api/middlewares"
 	"github.com/jailtonjunior94/financial/pkg/auth"
+	"github.com/jailtonjunior94/financial/pkg/observability/metrics"
 
 	"github.com/JailtonJunior94/devkit-go/pkg/observability"
 )
 
 type CardModule struct {
 	CardRouter   *http.CardRouter
-	CardProvider invoiceInterfaces.CardProvider // ✅ Export adapter for invoice module
+	CardProvider invoiceInterfaces.CardProvider
 }
 
 func NewCardModule(db *sql.DB, o11y observability.Observability, tokenValidator auth.TokenValidator) CardModule {
 	errorHandler := httperrors.NewErrorHandler(o11y)
 	authMiddleware := middlewares.NewAuthorization(tokenValidator, o11y, errorHandler)
 
+	// Inicializa métricas do módulo de cartões
+	cardMetrics := metrics.NewCardMetrics(o11y)
+
 	cardRepository := repositories.NewCardRepository(db, o11y)
-	findCardUsecase := usecase.NewFindCardUseCase(o11y, cardRepository)
-	findCardByUsecase := usecase.NewFindCardByUseCase(o11y, cardRepository)
-	createCardUsecase := usecase.NewCreateCardUseCase(o11y, cardRepository)
-	updateCardUsecase := usecase.NewUpdateCardUseCase(o11y, cardRepository)
-	removeCardUsecase := usecase.NewRemoveCardUseCase(o11y, cardRepository)
+	findCardUsecase := usecase.NewFindCardUseCase(o11y, cardRepository, cardMetrics)
+	findCardByUsecase := usecase.NewFindCardByUseCase(o11y, cardRepository, cardMetrics)
+	createCardUsecase := usecase.NewCreateCardUseCase(o11y, cardRepository, cardMetrics)
+	updateCardUsecase := usecase.NewUpdateCardUseCase(o11y, cardRepository, cardMetrics)
+	removeCardUsecase := usecase.NewRemoveCardUseCase(o11y, cardRepository, cardMetrics)
 
 	cardHandler := http.NewCardHandler(
 		o11y,
@@ -42,8 +46,6 @@ func NewCardModule(db *sql.DB, o11y observability.Observability, tokenValidator 
 	)
 
 	cardRouter := http.NewCardRouter(cardHandler, authMiddleware)
-
-	// ✅ Create CardProvider adapter for invoice module
 	cardProvider := adapters.NewCardProviderAdapter(cardRepository, o11y)
 
 	return CardModule{

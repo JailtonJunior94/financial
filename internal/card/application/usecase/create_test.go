@@ -11,6 +11,7 @@ import (
 	"github.com/JailtonJunior94/devkit-go/pkg/observability"
 	"github.com/jailtonjunior94/financial/internal/card/application/dtos"
 	repositoryMock "github.com/jailtonjunior94/financial/internal/card/infrastructure/repositories/mocks"
+	"github.com/jailtonjunior94/financial/pkg/observability/metrics"
 
 	"github.com/JailtonJunior94/devkit-go/pkg/observability/fake"
 )
@@ -230,7 +231,8 @@ func (s *CreateCardUseCaseSuite) TestExecute() {
 	for _, scenario := range scenarios {
 		s.Run(scenario.name, func() {
 			// Act
-			uc := NewCreateCardUseCase(s.obs, scenario.dependencies.cardRepository)
+			cardMetrics := metrics.NewTestCardMetrics()
+			uc := NewCreateCardUseCase(s.obs, scenario.dependencies.cardRepository, cardMetrics)
 			output, err := uc.Execute(s.ctx, scenario.args.userID, scenario.args.input)
 
 			// Assert
