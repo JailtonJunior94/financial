@@ -37,11 +37,11 @@ func Run() error {
 		Environment:     cfg.Environment,
 		ServiceName:     cfg.HTTPConfig.ServiceName,
 		ServiceVersion:  cfg.O11yConfig.ServiceVersion,
-		OTLPEndpoint:    cfg.O11yConfig.ExporterEndpoint,
-		OTLPProtocol:    otel.OTLPProtocol(cfg.O11yConfig.ExporterProtocol),
-		Insecure:        cfg.O11yConfig.ExporterInsecure,
 		TraceSampleRate: cfg.O11yConfig.TraceSampleRate,
+		OTLPEndpoint:    cfg.O11yConfig.ExporterEndpoint,
+		Insecure:        cfg.O11yConfig.ExporterInsecure,
 		LogLevel:        observability.LogLevel(cfg.O11yConfig.LogLevel),
+		OTLPProtocol:    otel.OTLPProtocol(cfg.O11yConfig.ExporterProtocol),
 		LogFormat:       observability.LogFormat(cfg.O11yConfig.LogFormat),
 	}
 

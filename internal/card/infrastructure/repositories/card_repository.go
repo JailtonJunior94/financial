@@ -47,13 +47,11 @@ func (r *cardRepository) List(ctx context.Context, userID vos.UUID) ([]*entities
 	rows, err := r.db.QueryContext(ctx, query, userID.String())
 	if err != nil {
 		span.RecordError(err)
-
 		return nil, err
 	}
 	defer func() {
 		if closeErr := rows.Close(); closeErr != nil {
 			span.RecordError(closeErr)
-
 		}
 	}()
 
@@ -72,7 +70,6 @@ func (r *cardRepository) List(ctx context.Context, userID vos.UUID) ([]*entities
 		)
 		if err != nil {
 			span.RecordError(err)
-
 			return nil, err
 		}
 		cards = append(cards, &card)
@@ -117,7 +114,6 @@ func (r *cardRepository) FindByID(ctx context.Context, userID, id vos.UUID) (*en
 			return nil, nil
 		}
 		span.RecordError(err)
-
 		return nil, err
 	}
 
@@ -146,8 +142,8 @@ func (r *cardRepository) Save(ctx context.Context, card *entities.Card) error {
 	if err != nil {
 		span.AddEvent(
 			"error preparing insert card",
-			observability.Field{Key: "user_id", Value: card.UserID},
-			observability.Field{Key: "error", Value: err},
+			observability.String("user_id", card.UserID.String()),
+			observability.Error(err),
 		)
 
 		return err
@@ -172,8 +168,8 @@ func (r *cardRepository) Save(ctx context.Context, card *entities.Card) error {
 	if err != nil {
 		span.AddEvent(
 			"error inserting card",
-			observability.Field{Key: "user_id", Value: card.UserID},
-			observability.Field{Key: "error", Value: err},
+			observability.Error(err),
+			observability.String("user_id", card.UserID.String()),
 		)
 
 		return err
@@ -201,8 +197,8 @@ func (r *cardRepository) Update(ctx context.Context, card *entities.Card) error 
 	if err != nil {
 		span.AddEvent(
 			"error preparing update card",
-			observability.Field{Key: "user_id", Value: card.UserID},
-			observability.Field{Key: "error", Value: err},
+			observability.String("user_id", card.UserID.String()),
+			observability.Error(err),
 		)
 
 		return err
@@ -226,8 +222,8 @@ func (r *cardRepository) Update(ctx context.Context, card *entities.Card) error 
 	if err != nil {
 		span.AddEvent(
 			"error updating card",
-			observability.Field{Key: "user_id", Value: card.UserID},
-			observability.Field{Key: "error", Value: err},
+			observability.String("user_id", card.UserID.String()),
+			observability.Error(err),
 		)
 
 		return err

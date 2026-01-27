@@ -33,12 +33,12 @@ func Run() error {
 		Environment:     cfg.Environment,
 		ServiceName:     cfg.WorkerConfig.ServiceName,
 		ServiceVersion:  cfg.O11yConfig.ServiceVersion,
-		OTLPEndpoint:    cfg.O11yConfig.ExporterEndpoint,
-		OTLPProtocol:    otel.OTLPProtocol(cfg.O11yConfig.ExporterProtocol),
-		Insecure:        cfg.O11yConfig.ExporterInsecure,
 		TraceSampleRate: cfg.O11yConfig.TraceSampleRate,
+		OTLPEndpoint:    cfg.O11yConfig.ExporterEndpoint,
+		Insecure:        cfg.O11yConfig.ExporterInsecure,
 		LogLevel:        observability.LogLevel(cfg.O11yConfig.LogLevel),
 		LogFormat:       observability.LogFormat(cfg.O11yConfig.LogFormat),
+		OTLPProtocol:    otel.OTLPProtocol(cfg.O11yConfig.ExporterProtocol),
 	}
 
 	o11y, err := otel.NewProvider(context.Background(), o11yConfig)

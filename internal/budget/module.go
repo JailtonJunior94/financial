@@ -29,11 +29,10 @@ func NewBudgetModule(db *sql.DB, o11y observability.Observability, tokenValidato
 	}
 
 	budgetRepository := repositories.NewBudgetRepository(db, o11y)
-
 	createBudgetUseCase := usecase.NewCreateBudgetUseCase(uow, o11y)
-	findBudgetUseCase := usecase.NewFindBudgetUseCase(budgetRepository, o11y)
 	updateBudgetUseCase := usecase.NewUpdateBudgetUseCase(uow, o11y)
 	deleteBudgetUseCase := usecase.NewDeleteBudgetUseCase(uow, o11y)
+	findBudgetUseCase := usecase.NewFindBudgetUseCase(budgetRepository, o11y)
 
 	budgetHandler := http.NewBudgetHandler(
 		o11y,
