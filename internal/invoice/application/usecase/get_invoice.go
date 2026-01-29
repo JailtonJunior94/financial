@@ -8,6 +8,7 @@ import (
 	"github.com/JailtonJunior94/devkit-go/pkg/vos"
 
 	"github.com/jailtonjunior94/financial/internal/invoice/application/dtos"
+	"github.com/jailtonjunior94/financial/internal/invoice/domain"
 	"github.com/jailtonjunior94/financial/internal/invoice/domain/entities"
 	"github.com/jailtonjunior94/financial/internal/invoice/domain/interfaces"
 )
@@ -51,7 +52,7 @@ func (u *getInvoiceUseCase) Execute(ctx context.Context, invoiceID string) (*dto
 	}
 
 	if invoice == nil {
-		return nil, fmt.Errorf("invoice not found")
+		return nil, domain.ErrInvoiceNotFound
 	}
 
 	// Convert to DTO

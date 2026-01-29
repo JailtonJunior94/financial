@@ -33,3 +33,27 @@ linters:
   - ineffassign
   - staticcheck
   - gosec
+  - forbidigo
+
+linters-settings:
+  forbidigo:
+    forbid:
+      # Enforce domain errors instead of generic fmt.Errorf for "not found" scenarios
+      - pattern: 'fmt\.Errorf\(".*not found.*"\)'
+        msg: 'Use domain errors (ErrXxxNotFound) instead of fmt.Errorf for not found scenarios. See docs/ERROR_HANDLING_GUIDE.md'
+
+      # Enforce errors.Is() instead of string comparison
+      - pattern: 'err\.Error\(\)\s*==\s*"sql:'
+        msg: 'Use errors.Is(err, sql.ErrNoRows) instead of string comparison. See docs/ERROR_HANDLING_GUIDE.md'
+
+      # Enforce errors.Is() instead of direct comparison (for wrapped errors compatibility)
+      - pattern: 'err\s*==\s*sql\.ErrNoRows'
+        msg: 'Use errors.Is(err, sql.ErrNoRows) instead of direct comparison for better wrapped error support. See docs/ERROR_HANDLING_GUIDE.md'
+
+      # Prevent other common "not found" string errors
+      - pattern: 'fmt\.Errorf\(".*item not found.*"\)'
+        msg: 'Use domain errors (ErrXxxItemNotFound) instead of fmt.Errorf. See docs/ERROR_HANDLING_GUIDE.md'
+
+      # Prevent generic error messages that should be domain errors
+      - pattern: 'fmt\.Errorf\(".*already exists.*"\)'
+        msg: 'Use domain errors (ErrXxxAlreadyExists) for conflict scenarios. Should return 409, not 500. See docs/ERROR_HANDLING_GUIDE.md'

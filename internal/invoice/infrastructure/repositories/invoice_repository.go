@@ -3,6 +3,7 @@ package repositories
 import (
 	"context"
 	"database/sql"
+	"errors"
 	"fmt"
 	"strconv"
 	"strings"
@@ -152,7 +153,7 @@ func (r *invoiceRepository) FindByID(ctx context.Context, id vos.UUID) (*entitie
 
 	invoice, err := r.scanInvoice(row)
 	if err != nil {
-		if err == sql.ErrNoRows {
+		if errors.Is(err, sql.ErrNoRows) {
 			return nil, nil
 		}
 		return nil, err
@@ -197,7 +198,7 @@ func (r *invoiceRepository) FindByUserAndCardAndMonth(
 
 	invoice, err := r.scanInvoice(row)
 	if err != nil {
-		if err == sql.ErrNoRows {
+		if errors.Is(err, sql.ErrNoRows) {
 			return nil, nil
 		}
 		return nil, err

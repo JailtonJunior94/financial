@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 
+	"github.com/jailtonjunior94/financial/internal/budget/domain"
 	"github.com/jailtonjunior94/financial/internal/budget/infrastructure/repositories"
 
 	"github.com/JailtonJunior94/devkit-go/pkg/database"
@@ -53,7 +54,7 @@ func (u *deleteBudgetUseCase) Execute(ctx context.Context, budgetID string) erro
 		}
 
 		if budget == nil {
-			return fmt.Errorf("budget not found")
+			return domain.ErrBudgetNotFound
 		}
 
 		// Soft delete (sets DeletedAt timestamp)

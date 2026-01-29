@@ -3,6 +3,7 @@ package repositories
 import (
 	"context"
 	"database/sql"
+	"errors"
 	"fmt"
 	"strconv"
 	"strings"
@@ -159,7 +160,7 @@ func (r *budgetRepository) FindByID(ctx context.Context, id vos.UUID) (*entities
 		&deletedAt,
 	)
 	if err != nil {
-		if err == sql.ErrNoRows {
+		if errors.Is(err, sql.ErrNoRows) {
 			return nil, nil
 		}
 		return nil, err
@@ -253,7 +254,7 @@ func (r *budgetRepository) FindByUserIDAndReferenceMonth(ctx context.Context, us
 		&deletedAt,
 	)
 	if err != nil {
-		if err == sql.ErrNoRows {
+		if errors.Is(err, sql.ErrNoRows) {
 			return nil, nil
 		}
 		return nil, err

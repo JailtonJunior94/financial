@@ -6,6 +6,7 @@ import (
 	"time"
 
 	"github.com/jailtonjunior94/financial/internal/budget/application/dtos"
+	"github.com/jailtonjunior94/financial/internal/budget/domain"
 	"github.com/jailtonjunior94/financial/internal/budget/infrastructure/repositories"
 
 	"github.com/JailtonJunior94/devkit-go/pkg/database"
@@ -57,7 +58,7 @@ func (u *updateBudgetUseCase) Execute(ctx context.Context, budgetID string, inpu
 		}
 
 		if budget == nil {
-			return fmt.Errorf("budget not found")
+			return domain.ErrBudgetNotFound
 		}
 
 		// Parse new total amount

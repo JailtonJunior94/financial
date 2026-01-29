@@ -2,6 +2,8 @@ package repositories
 
 import (
 	"context"
+	"database/sql"
+	"errors"
 
 	"github.com/jailtonjunior94/financial/internal/card/domain/entities"
 	"github.com/jailtonjunior94/financial/internal/card/domain/interfaces"
@@ -110,7 +112,7 @@ func (r *cardRepository) FindByID(ctx context.Context, userID, id vos.UUID) (*en
 	)
 
 	if err != nil {
-		if err.Error() == "sql: no rows in result set" {
+		if errors.Is(err, sql.ErrNoRows) {
 			return nil, nil
 		}
 		span.RecordError(err)

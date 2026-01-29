@@ -3,6 +3,7 @@ package repositories
 import (
 	"context"
 	"database/sql"
+	"errors"
 	"fmt"
 
 	"github.com/jailtonjunior94/financial/internal/user/domain/entities"
@@ -100,7 +101,7 @@ func (r *userRepository) FindByEmail(ctx context.Context, email string) (*entiti
 	)
 
 	if err != nil {
-		if err == sql.ErrNoRows {
+		if errors.Is(err, sql.ErrNoRows) {
 			return nil, nil
 		}
 		span.RecordError(err)

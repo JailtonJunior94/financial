@@ -2,6 +2,8 @@ package repositories
 
 import (
 	"context"
+	"database/sql"
+	"errors"
 	"strings"
 
 	"github.com/jailtonjunior94/financial/internal/payment_method/domain/entities"
@@ -108,7 +110,7 @@ func (r *paymentMethodRepository) FindByID(ctx context.Context, id vos.UUID) (*e
 	)
 
 	if err != nil {
-		if err.Error() == "sql: no rows in result set" {
+		if errors.Is(err, sql.ErrNoRows) {
 			return nil, nil
 		}
 		span.RecordError(err)
@@ -151,7 +153,7 @@ func (r *paymentMethodRepository) FindByCode(ctx context.Context, code string) (
 	)
 
 	if err != nil {
-		if err.Error() == "sql: no rows in result set" {
+		if errors.Is(err, sql.ErrNoRows) {
 			return nil, nil
 		}
 		span.RecordError(err)

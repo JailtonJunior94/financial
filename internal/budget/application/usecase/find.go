@@ -9,6 +9,7 @@ import (
 	"github.com/JailtonJunior94/devkit-go/pkg/vos"
 
 	"github.com/jailtonjunior94/financial/internal/budget/application/dtos"
+	"github.com/jailtonjunior94/financial/internal/budget/domain"
 	"github.com/jailtonjunior94/financial/internal/budget/domain/interfaces"
 )
 
@@ -50,7 +51,7 @@ func (u *findBudgetUseCase) Execute(ctx context.Context, budgetID string) (*dtos
 	}
 
 	if budget == nil {
-		return nil, fmt.Errorf("budget not found")
+		return nil, domain.ErrBudgetNotFound
 	}
 
 	// Build items output

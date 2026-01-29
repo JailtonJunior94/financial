@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 
+	"github.com/jailtonjunior94/financial/internal/invoice/domain"
 	"github.com/jailtonjunior94/financial/internal/invoice/domain/entities"
 	"github.com/jailtonjunior94/financial/internal/invoice/infrastructure/repositories"
 
@@ -53,7 +54,7 @@ func (u *deletePurchaseUseCase) Execute(ctx context.Context, itemID string) erro
 			return err
 		}
 		if invoice == nil {
-			return fmt.Errorf("invoice not found")
+			return domain.ErrInvoiceNotFound
 		}
 
 		// Find the specific item
@@ -66,7 +67,7 @@ func (u *deletePurchaseUseCase) Execute(ctx context.Context, itemID string) erro
 		}
 
 		if targetItem == nil {
-			return fmt.Errorf("invoice item not found")
+			return domain.ErrInvoiceItemNotFound
 		}
 
 		// Find all items from the same purchase origin

@@ -6,6 +6,7 @@ import (
 	"net/http"
 	"strings"
 
+	invoicedomain "github.com/jailtonjunior94/financial/internal/invoice/domain"
 	customerrors "github.com/jailtonjunior94/financial/pkg/custom_errors"
 )
 
@@ -127,14 +128,72 @@ func buildDomainErrorMappings() map[error]ErrorMapping {
 			Message: "Value cannot be more than 255 characters",
 		},
 
+		// Invoice validation errors → 400 Bad Request
+		invoicedomain.ErrInvalidPurchaseDate: {
+			Status:  http.StatusBadRequest,
+			Message: "Purchase date cannot be in the future",
+		},
+		invoicedomain.ErrNegativeAmount: {
+			Status:  http.StatusBadRequest,
+			Message: "Amount cannot be negative",
+		},
+		invoicedomain.ErrInvalidInstallment: {
+			Status:  http.StatusBadRequest,
+			Message: "Installment number must be between 1 and installment total",
+		},
+		invoicedomain.ErrInvalidInstallmentTotal: {
+			Status:  http.StatusBadRequest,
+			Message: "Installment total must be at least 1",
+		},
+		invoicedomain.ErrInstallmentAmountInvalid: {
+			Status:  http.StatusBadRequest,
+			Message: "Installment amount must equal total amount divided by installments",
+		},
+		invoicedomain.ErrInvalidCategoryID: {
+			Status:  http.StatusBadRequest,
+			Message: "Invalid category ID",
+		},
+		invoicedomain.ErrInvalidCardID: {
+			Status:  http.StatusBadRequest,
+			Message: "Invalid card ID",
+		},
+		invoicedomain.ErrEmptyDescription: {
+			Status:  http.StatusBadRequest,
+			Message: "Description cannot be empty",
+		},
+		invoicedomain.ErrInvoiceHasNoItems: {
+			Status:  http.StatusBadRequest,
+			Message: "Invoice must have at least one item",
+		},
+		invoicedomain.ErrInvoiceNegativeTotal: {
+			Status:  http.StatusBadRequest,
+			Message: "Invoice total amount cannot be negative",
+		},
+
 		// Not found errors → 404 Not Found
 		customerrors.ErrBudgetNotFound: {
 			Status:  http.StatusNotFound,
 			Message: "Budget not found",
 		},
+		customerrors.ErrCardNotFound: {
+			Status:  http.StatusNotFound,
+			Message: "Card not found",
+		},
 		customerrors.ErrCategoryNotFound: {
 			Status:  http.StatusNotFound,
 			Message: "Category not found",
+		},
+		invoicedomain.ErrInvoiceNotFound: {
+			Status:  http.StatusNotFound,
+			Message: "Invoice not found",
+		},
+		invoicedomain.ErrInvoiceItemNotFound: {
+			Status:  http.StatusNotFound,
+			Message: "Invoice item not found",
+		},
+		customerrors.ErrPaymentMethodNotFound: {
+			Status:  http.StatusNotFound,
+			Message: "Payment method not found",
 		},
 		customerrors.ErrUserNotFound: {
 			Status:  http.StatusNotFound,
@@ -149,6 +208,10 @@ func buildDomainErrorMappings() map[error]ErrorMapping {
 		customerrors.ErrInvalidParentCategory: {
 			Status:  http.StatusConflict,
 			Message: "Invalid parent category",
+		},
+		invoicedomain.ErrInvoiceAlreadyExistsForMonth: {
+			Status:  http.StatusConflict,
+			Message: "Invoice already exists for this card and month",
 		},
 
 		// Authentication errors → 401 Unauthorized

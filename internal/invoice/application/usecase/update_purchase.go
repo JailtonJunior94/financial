@@ -6,6 +6,7 @@ import (
 	"strconv"
 
 	"github.com/jailtonjunior94/financial/internal/invoice/application/dtos"
+	"github.com/jailtonjunior94/financial/internal/invoice/domain"
 	"github.com/jailtonjunior94/financial/internal/invoice/infrastructure/repositories"
 
 	"github.com/JailtonJunior94/devkit-go/pkg/database"
@@ -66,7 +67,7 @@ func (u *updatePurchaseUseCase) Execute(ctx context.Context, itemID string, inpu
 			return err
 		}
 		if item == nil {
-			return fmt.Errorf("invoice item not found")
+			return domain.ErrInvoiceItemNotFound
 		}
 
 		// Get the first item to extract purchase origin
