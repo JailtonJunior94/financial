@@ -53,6 +53,14 @@
                 "[Debug] API",
                 "[Debug] Consumers"
             ]
+        },
+        {
+            "name": "All",
+            "configurations": [
+                "[Debug] API",
+                "[Debug] Consumers",
+                "[Debug] Worker"
+            ]
         }
     ]
 }

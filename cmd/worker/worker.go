@@ -9,11 +9,11 @@ import (
 	"time"
 
 	"github.com/jailtonjunior94/financial/configs"
+	"github.com/jailtonjunior94/financial/pkg/database"
 	pkgjobs "github.com/jailtonjunior94/financial/pkg/jobs"
 	"github.com/jailtonjunior94/financial/pkg/outbox"
 	"github.com/jailtonjunior94/financial/pkg/scheduler"
 
-	"github.com/JailtonJunior94/devkit-go/pkg/database/postgres"
 	"github.com/JailtonJunior94/devkit-go/pkg/database/uow"
 	"github.com/JailtonJunior94/devkit-go/pkg/messaging/rabbitmq"
 	"github.com/JailtonJunior94/devkit-go/pkg/observability"
@@ -46,17 +46,20 @@ func Run() error {
 		return fmt.Errorf("worker: failed to create observability provider: %v", err)
 	}
 
-	dbManager, err := postgres.New(
-		cfg.DBConfig.DSN(),
-		postgres.WithConnMaxLifetime(5*time.Minute),
-		postgres.WithConnMaxIdleTime(2*time.Minute),
-		postgres.WithMaxOpenConns(cfg.DBConfig.DBMaxOpenConns),
-		postgres.WithMaxIdleConns(cfg.DBConfig.DBMaxIdleConns),
+	dbManager, err := database.NewDatabaseManager(
+		ctx,
+		database.WithMetrics(true),
+		database.WithDSN(cfg.DBConfig.DSN()),
+		database.WithConnMaxLifetime(5*time.Minute),
+		database.WithConnMaxIdleTime(2*time.Minute),
+		database.WithServiceName(cfg.WorkerConfig.ServiceName),
+		database.WithMaxOpenConns(cfg.DBConfig.DBMaxOpenConns),
+		database.WithMaxIdleConns(cfg.DBConfig.DBMaxIdleConns),
 	)
 	if err != nil {
-		return fmt.Errorf("worker: failed to connect to database: %v", err)
+		return fmt.Errorf("run: failed to connect to database: %v", err)
 	}
-	o11y.Logger().Info(ctx, "database connection established")
+	o11y.Logger().Info(ctx, "database connection established with OpenTelemetry instrumentation")
 
 	rabbitClient, err := rabbitmq.New(
 		o11y,

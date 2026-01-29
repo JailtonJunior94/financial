@@ -17,8 +17,8 @@ import (
 	"github.com/jailtonjunior94/financial/internal/transaction"
 	"github.com/jailtonjunior94/financial/internal/user"
 	"github.com/jailtonjunior94/financial/pkg/auth"
+	"github.com/jailtonjunior94/financial/pkg/database"
 
-	"github.com/JailtonJunior94/devkit-go/pkg/database/postgres"
 	httpserver "github.com/JailtonJunior94/devkit-go/pkg/http_server/chi_server"
 	"github.com/JailtonJunior94/devkit-go/pkg/observability"
 	"github.com/JailtonJunior94/devkit-go/pkg/observability/otel"
@@ -50,17 +50,20 @@ func Run() error {
 		return fmt.Errorf("run: failed to create observability provider: %v", err)
 	}
 
-	dbManager, err := postgres.New(
-		cfg.DBConfig.DSN(),
-		postgres.WithConnMaxLifetime(5*time.Minute),
-		postgres.WithConnMaxIdleTime(2*time.Minute),
-		postgres.WithMaxOpenConns(cfg.DBConfig.DBMaxOpenConns),
-		postgres.WithMaxIdleConns(cfg.DBConfig.DBMaxIdleConns),
+	dbManager, err := database.NewDatabaseManager(
+		ctx,
+		database.WithMetrics(true),
+		database.WithDSN(cfg.DBConfig.DSN()),
+		database.WithConnMaxLifetime(5*time.Minute),
+		database.WithConnMaxIdleTime(2*time.Minute),
+		database.WithServiceName(cfg.HTTPConfig.ServiceName),
+		database.WithMaxOpenConns(cfg.DBConfig.DBMaxOpenConns),
+		database.WithMaxIdleConns(cfg.DBConfig.DBMaxIdleConns),
 	)
 	if err != nil {
 		return fmt.Errorf("run: failed to connect to database: %v", err)
 	}
-	o11y.Logger().Info(ctx, "database connection established")
+	o11y.Logger().Info(ctx, "database connection established with OpenTelemetry instrumentation")
 
 	jwtAdapter := auth.NewJwtAdapter(cfg, o11y)
 	userModule := user.NewUserModule(dbManager.DB(), cfg, o11y)

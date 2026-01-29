@@ -10,8 +10,9 @@ import (
 	"time"
 
 	"github.com/jailtonjunior94/financial/configs"
+	"github.com/jailtonjunior94/financial/pkg/database"
 
-	"github.com/JailtonJunior94/devkit-go/pkg/database/postgres"
+	"github.com/JailtonJunior94/devkit-go/pkg/database/postgres_otelsql"
 	"github.com/JailtonJunior94/devkit-go/pkg/messaging/rabbitmq"
 	"github.com/JailtonJunior94/devkit-go/pkg/observability"
 	"github.com/JailtonJunior94/devkit-go/pkg/observability/otel"
@@ -20,7 +21,7 @@ import (
 type application struct {
 	config    *configs.Config
 	wg        sync.WaitGroup
-	dbManager *postgres.Database
+	dbManager *postgres_otelsql.DBManager
 	ctx       context.Context
 	cancel    context.CancelFunc
 	client    *rabbitmq.Client
@@ -82,12 +83,16 @@ func NewApplication() (*application, error) {
 		observability.String("service", cfg.ConsumerConfig.ServiceName),
 		observability.String("version", cfg.O11yConfig.ServiceVersion),
 	)
-	dbManager, err := postgres.New(
-		cfg.DBConfig.DSN(),
-		postgres.WithConnMaxLifetime(5*time.Minute),
-		postgres.WithConnMaxIdleTime(2*time.Minute),
-		postgres.WithMaxOpenConns(cfg.DBConfig.DBMaxOpenConns),
-		postgres.WithMaxIdleConns(cfg.DBConfig.DBMaxIdleConns),
+
+	dbManager, err := database.NewDatabaseManager(
+		context.Background(),
+		database.WithMetrics(true),
+		database.WithDSN(cfg.DBConfig.DSN()),
+		database.WithConnMaxLifetime(5*time.Minute),
+		database.WithConnMaxIdleTime(2*time.Minute),
+		database.WithMaxOpenConns(cfg.DBConfig.DBMaxOpenConns),
+		database.WithMaxIdleConns(cfg.DBConfig.DBMaxIdleConns),
+		database.WithServiceName(cfg.ConsumerConfig.ServiceName),
 	)
 	if err != nil {
 		return nil, fmt.Errorf("run: failed to connect to database: %v", err)
