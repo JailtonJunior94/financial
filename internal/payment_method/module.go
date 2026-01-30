@@ -20,6 +20,7 @@ func NewPaymentMethodModule(db *sql.DB, o11y observability.Observability) Paymen
 
 	paymentMethodRepository := repositories.NewPaymentMethodRepository(db, o11y)
 	findPaymentMethodUsecase := usecase.NewFindPaymentMethodUseCase(o11y, paymentMethodRepository)
+	findPaymentMethodPaginatedUsecase := usecase.NewFindPaymentMethodPaginatedUseCase(o11y, paymentMethodRepository)
 	findPaymentMethodByUsecase := usecase.NewFindPaymentMethodByUseCase(o11y, paymentMethodRepository)
 	findPaymentMethodByCodeUsecase := usecase.NewFindPaymentMethodByCodeUseCase(o11y, paymentMethodRepository)
 	createPaymentMethodUsecase := usecase.NewCreatePaymentMethodUseCase(o11y, paymentMethodRepository)
@@ -30,6 +31,7 @@ func NewPaymentMethodModule(db *sql.DB, o11y observability.Observability) Paymen
 		o11y,
 		errorHandler,
 		findPaymentMethodUsecase,
+		findPaymentMethodPaginatedUsecase,
 		createPaymentMethodUsecase,
 		findPaymentMethodByUsecase,
 		findPaymentMethodByCodeUsecase,

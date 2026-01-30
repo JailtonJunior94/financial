@@ -310,6 +310,127 @@ func (r *budgetRepository) FindByUserIDAndReferenceMonth(ctx context.Context, us
 	return &budget, nil
 }
 
+// ListPaginated lista budgets de um usuário com paginação cursor-based.
+func (r *budgetRepository) ListPaginated(ctx context.Context, params interfaces.ListBudgetsParams) ([]*entities.Budget, error) {
+	ctx, span := r.o11y.Tracer().Start(ctx, "budget_repository.list_paginated")
+	defer span.End()
+
+	// Build WHERE clause with cursor
+	whereClause := "user_id = $1 AND deleted_at IS NULL"
+	args := []interface{}{params.UserID.Value}
+
+	cursorDate, hasDate := params.Cursor.GetString("date")
+	cursorID, hasID := params.Cursor.GetString("id")
+
+	if hasDate && hasID && cursorDate != "" && cursorID != "" {
+		// Keyset pagination: WHERE (date, id) > (cursor_date, cursor_id)
+		// Using DESC order: most recent budgets first
+		whereClause += ` AND (
+			date < $2
+			OR (date = $2 AND id < $3)
+		)`
+		args = append(args, cursorDate, cursorID)
+	}
+
+	query := fmt.Sprintf(`
+		SELECT
+			id,
+			user_id,
+			date,
+			amount_goal,
+			amount_used,
+			percentage_used,
+			created_at,
+			updated_at,
+			deleted_at
+		FROM budgets
+		WHERE %s
+		ORDER BY date DESC, id DESC
+		LIMIT $%d`, whereClause, len(args)+1)
+
+	args = append(args, params.Limit)
+
+	rows, err := r.db.QueryContext(ctx, query, args...)
+	if err != nil {
+		return nil, err
+	}
+	defer func() { _ = rows.Close() }()
+
+	budgets := make([]*entities.Budget, 0)
+	for rows.Next() {
+		var budget entities.Budget
+		var updatedAt, deletedAt *time.Time
+		var amountGoal, amountUsed, percentageUsed string
+		var referenceDate time.Time
+
+		err := rows.Scan(
+			&budget.ID.Value,
+			&budget.UserID.Value,
+			&referenceDate,
+			&amountGoal,
+			&amountUsed,
+			&percentageUsed,
+			&budget.CreatedAt,
+			&updatedAt,
+			&deletedAt,
+		)
+		if err != nil {
+			return nil, err
+		}
+
+		// Parse values
+		amountGoalFloat, err := strconv.ParseFloat(amountGoal, 64)
+		if err != nil {
+			return nil, fmt.Errorf("failed to parse amount_goal: %w", err)
+		}
+
+		amountUsedFloat, err := strconv.ParseFloat(amountUsed, 64)
+		if err != nil {
+			return nil, fmt.Errorf("failed to parse amount_used: %w", err)
+		}
+
+		percentageUsedFloat, err := strconv.ParseFloat(percentageUsed, 64)
+		if err != nil {
+			return nil, fmt.Errorf("failed to parse percentage_used: %w", err)
+		}
+
+		budget.TotalAmount, err = vos.NewMoneyFromFloat(amountGoalFloat, "BRL")
+		if err != nil {
+			return nil, fmt.Errorf("failed to create Money from amount_goal: %w", err)
+		}
+
+		budget.SpentAmount, err = vos.NewMoneyFromFloat(amountUsedFloat, "BRL")
+		if err != nil {
+			return nil, fmt.Errorf("failed to create Money from amount_used: %w", err)
+		}
+
+		budget.PercentageUsed, err = vos.NewPercentageFromFloat(percentageUsedFloat)
+		if err != nil {
+			return nil, fmt.Errorf("failed to create Percentage from percentage_used: %w", err)
+		}
+
+		budget.ReferenceMonth = budgetVos.NewReferenceMonthFromDate(referenceDate)
+
+		if updatedAt != nil {
+			budget.UpdatedAt = vos.NewNullableTime(*updatedAt)
+		}
+		if deletedAt != nil {
+			budget.DeletedAt = vos.NewNullableTime(*deletedAt)
+		}
+
+		// Load budget items for each budget
+		items, err := r.findItemsByBudgetID(ctx, budget.ID)
+		if err != nil {
+			return nil, err
+		}
+		budget.Items = items
+
+		budgets = append(budgets, &budget)
+	}
+
+	return budgets, rows.Err()
+}
+
 func (r *budgetRepository) Update(ctx context.Context, budget *entities.Budget) error {
 	ctx, span := r.o11y.Tracer().Start(ctx, "budget_repository.update")
 	defer span.End()

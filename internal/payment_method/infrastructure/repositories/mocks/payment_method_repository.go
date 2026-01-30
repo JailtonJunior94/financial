@@ -9,6 +9,7 @@ import (
 
 	"github.com/JailtonJunior94/devkit-go/pkg/vos"
 	"github.com/jailtonjunior94/financial/internal/payment_method/domain/entities"
+	"github.com/jailtonjunior94/financial/internal/payment_method/domain/interfaces"
 	mock "github.com/stretchr/testify/mock"
 )
 
@@ -233,6 +234,74 @@ func (_c *PaymentMethodRepository_List_Call) Return(paymentMethods []*entities.P
 }
 
 func (_c *PaymentMethodRepository_List_Call) RunAndReturn(run func(ctx context.Context) ([]*entities.PaymentMethod, error)) *PaymentMethodRepository_List_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
+// ListPaginated provides a mock function for the type PaymentMethodRepository
+func (_mock *PaymentMethodRepository) ListPaginated(ctx context.Context, params interfaces.ListPaymentMethodsParams) ([]*entities.PaymentMethod, error) {
+	ret := _mock.Called(ctx, params)
+
+	if len(ret) == 0 {
+		panic("no return value specified for ListPaginated")
+	}
+
+	var r0 []*entities.PaymentMethod
+	var r1 error
+	if returnFunc, ok := ret.Get(0).(func(context.Context, interfaces.ListPaymentMethodsParams) ([]*entities.PaymentMethod, error)); ok {
+		return returnFunc(ctx, params)
+	}
+	if returnFunc, ok := ret.Get(0).(func(context.Context, interfaces.ListPaymentMethodsParams) []*entities.PaymentMethod); ok {
+		r0 = returnFunc(ctx, params)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).([]*entities.PaymentMethod)
+		}
+	}
+	if returnFunc, ok := ret.Get(1).(func(context.Context, interfaces.ListPaymentMethodsParams) error); ok {
+		r1 = returnFunc(ctx, params)
+	} else {
+		r1 = ret.Error(1)
+	}
+	return r0, r1
+}
+
+// PaymentMethodRepository_ListPaginated_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'ListPaginated'
+type PaymentMethodRepository_ListPaginated_Call struct {
+	*mock.Call
+}
+
+// ListPaginated is a helper method to define mock.On call
+//   - ctx context.Context
+//   - params interfaces.ListPaymentMethodsParams
+func (_e *PaymentMethodRepository_Expecter) ListPaginated(ctx interface{}, params interface{}) *PaymentMethodRepository_ListPaginated_Call {
+	return &PaymentMethodRepository_ListPaginated_Call{Call: _e.mock.On("ListPaginated", ctx, params)}
+}
+
+func (_c *PaymentMethodRepository_ListPaginated_Call) Run(run func(ctx context.Context, params interfaces.ListPaymentMethodsParams)) *PaymentMethodRepository_ListPaginated_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		var arg0 context.Context
+		if args[0] != nil {
+			arg0 = args[0].(context.Context)
+		}
+		var arg1 interfaces.ListPaymentMethodsParams
+		if args[1] != nil {
+			arg1 = args[1].(interfaces.ListPaymentMethodsParams)
+		}
+		run(
+			arg0,
+			arg1,
+		)
+	})
+	return _c
+}
+
+func (_c *PaymentMethodRepository_ListPaginated_Call) Return(paymentMethods []*entities.PaymentMethod, err error) *PaymentMethodRepository_ListPaginated_Call {
+	_c.Call.Return(paymentMethods, err)
+	return _c
+}
+
+func (_c *PaymentMethodRepository_ListPaginated_Call) RunAndReturn(run func(ctx context.Context, params interfaces.ListPaymentMethodsParams) ([]*entities.PaymentMethod, error)) *PaymentMethodRepository_ListPaginated_Call {
 	_c.Call.Return(run)
 	return _c
 }

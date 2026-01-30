@@ -72,14 +72,14 @@ func (h *InvoiceHandler) CreatePurchase(w http.ResponseWriter, r *http.Request) 
 		return
 	}
 
-	if err := h.createPurchaseUseCase.Execute(ctx, user.ID, input); err != nil {
+	output, err := h.createPurchaseUseCase.Execute(ctx, user.ID, input)
+	if err != nil {
 		h.errorHandler.HandleError(w, r, err)
 		return
 	}
 
-	responses.JSON(w, http.StatusCreated, map[string]string{
-		"message": "Purchase created successfully",
-	})
+	// Phase 2 Fix: Return created items with 201 Created
+	responses.JSON(w, http.StatusCreated, output)
 }
 
 // UpdatePurchase updates all installments of a purchase.
@@ -100,14 +100,14 @@ func (h *InvoiceHandler) UpdatePurchase(w http.ResponseWriter, r *http.Request) 
 	}
 
 	itemID := chi.URLParam(r, "id")
-	if err := h.updatePurchaseUseCase.Execute(ctx, itemID, input); err != nil {
+	output, err := h.updatePurchaseUseCase.Execute(ctx, itemID, input)
+	if err != nil {
 		h.errorHandler.HandleError(w, r, err)
 		return
 	}
 
-	responses.JSON(w, http.StatusOK, map[string]string{
-		"message": "Purchase updated successfully",
-	})
+	// Phase 2 Fix: Return updated items instead of message wrapper
+	responses.JSON(w, http.StatusOK, output)
 }
 
 // DeletePurchase deletes all installments of a purchase.
@@ -224,4 +224,69 @@ func (h *InvoiceHandler) ListInvoicesByCard(w http.ResponseWriter, r *http.Reque
 	// Build paginated response
 	response := pagination.NewPaginatedResponse(output.Invoices, params.Limit, output.NextCursor)
 	responses.JSON(w, http.StatusOK, response)
+}
+
+// ListInvoices unifica listagem por month e por cardId via query params (Change 6).
+func (h *InvoiceHandler) ListInvoices(w http.ResponseWriter, r *http.Request) {
+	ctx, span := h.o11y.Tracer().Start(r.Context(), "invoice_handler.list_invoices")
+	defer span.End()
+
+	user, err := middlewares.GetUserFromContext(ctx)
+	if err != nil {
+		h.errorHandler.HandleError(w, r, err)
+		return
+	}
+
+	// Get query parameters
+	month := r.URL.Query().Get("month")
+	cardID := r.URL.Query().Get("cardId")
+
+	// At least one filter is required
+	if month == "" && cardID == "" {
+		h.errorHandler.HandleError(w, r, fmt.Errorf("month or cardId parameter is required"))
+		return
+	}
+
+	// Parse cursor parameters
+	params, err := pagination.ParseCursorParams(r, 20, 100)
+	if err != nil {
+		h.errorHandler.HandleError(w, r, err)
+		return
+	}
+
+	// Route to appropriate use case based on query params
+	if month != "" {
+		// List by month
+		output, err := h.listInvoicesByMonthPaginatedUseCase.Execute(ctx, usecase.ListInvoicesByMonthPaginatedInput{
+			UserID:         user.ID,
+			ReferenceMonth: month,
+			Limit:          params.Limit,
+			Cursor:         params.Cursor,
+		})
+		if err != nil {
+			h.errorHandler.HandleError(w, r, err)
+			return
+		}
+
+		response := pagination.NewPaginatedResponse(output.Invoices, params.Limit, output.NextCursor)
+		responses.JSON(w, http.StatusOK, response)
+		return
+	}
+
+	if cardID != "" {
+		// List by card
+		output, err := h.listInvoicesByCardPaginatedUseCase.Execute(ctx, usecase.ListInvoicesByCardPaginatedInput{
+			CardID: cardID,
+			Limit:  params.Limit,
+			Cursor: params.Cursor,
+		})
+		if err != nil {
+			h.errorHandler.HandleError(w, r, err)
+			return
+		}
+
+		response := pagination.NewPaginatedResponse(output.Invoices, params.Limit, output.NextCursor)
+		responses.JSON(w, http.StatusOK, response)
+		return
+	}
 }

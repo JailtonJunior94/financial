@@ -21,7 +21,7 @@ import (
 
 type (
 	CreatePurchaseUseCase interface {
-		Execute(ctx context.Context, userID string, input *dtos.PurchaseCreateInput) error
+		Execute(ctx context.Context, userID string, input *dtos.PurchaseCreateInput) (*dtos.PurchaseCreateOutput, error)
 	}
 
 	createPurchaseUseCase struct {
@@ -45,56 +45,56 @@ func NewCreatePurchaseUseCase(
 	}
 }
 
-func (u *createPurchaseUseCase) Execute(ctx context.Context, userID string, input *dtos.PurchaseCreateInput) error {
+func (u *createPurchaseUseCase) Execute(ctx context.Context, userID string, input *dtos.PurchaseCreateInput) (*dtos.PurchaseCreateOutput, error) {
 	ctx, span := u.o11y.Tracer().Start(ctx, "create_purchase_usecase.execute")
 	defer span.End()
 
 	// Parse userID
 	user, err := vos.NewUUIDFromString(userID)
 	if err != nil {
-		return fmt.Errorf("invalid user ID: %w", err)
+		return nil, fmt.Errorf("invalid user ID: %w", err)
 	}
 
 	// Parse cardID
 	cardID, err := vos.NewUUIDFromString(input.CardID)
 	if err != nil {
-		return fmt.Errorf("invalid card ID: %w", err)
+		return nil, fmt.Errorf("invalid card ID: %w", err)
 	}
 
 	// Parse categoryID
 	categoryID, err := vos.NewUUIDFromString(input.CategoryID)
 	if err != nil {
-		return fmt.Errorf("invalid category ID: %w", err)
+		return nil, fmt.Errorf("invalid category ID: %w", err)
 	}
 
 	// Parse purchaseDate
 	purchaseDate, err := time.Parse("2006-01-02", input.PurchaseDate)
 	if err != nil {
-		return fmt.Errorf("invalid purchase date format: %w", err)
+		return nil, fmt.Errorf("invalid purchase date format: %w", err)
 	}
 
 	// Parse totalAmount
 	totalAmountFloat, err := strconv.ParseFloat(input.TotalAmount, 64)
 	if err != nil {
-		return fmt.Errorf("invalid total amount format: %w", err)
+		return nil, fmt.Errorf("invalid total amount format: %w", err)
 	}
 
 	totalAmount, err := vos.NewMoneyFromFloat(totalAmountFloat, vos.CurrencyBRL)
 	if err != nil {
-		return fmt.Errorf("invalid money value: %w", err)
+		return nil, fmt.Errorf("invalid money value: %w", err)
 	}
 
 	// ✅ Obter informações de faturamento do cartão via CardProvider (desacoplado)
 	cardBillingInfo, err := u.cardProvider.GetCardBillingInfo(ctx, user, cardID)
 	if err != nil {
 		u.o11y.Logger().Error(ctx, "failed to get card billing info", observability.Error(err))
-		return err
+		return nil, err
 	}
 
 	// Calcular parcelas (valor de cada parcela)
 	installmentAmount, err := totalAmount.Divide(int64(input.InstallmentTotal))
 	if err != nil {
-		return fmt.Errorf("failed to calculate installment amount: %w", err)
+		return nil, fmt.Errorf("failed to calculate installment amount: %w", err)
 	}
 
 	// ✅ Usar InvoiceCalculator para determinar os meses de cada parcela
@@ -104,6 +104,9 @@ func (u *createPurchaseUseCase) Execute(ctx context.Context, userID string, inpu
 		cardBillingInfo.ClosingOffsetDays,
 		input.InstallmentTotal,
 	)
+
+	// Collect created items for response
+	createdItems := make([]*entities.InvoiceItem, 0, input.InstallmentTotal)
 
 	// Criar os itens de fatura para cada parcela
 	err = u.uow.Do(ctx, func(ctx context.Context, tx database.DBTX) error {
@@ -163,6 +166,8 @@ func (u *createPurchaseUseCase) Execute(ctx context.Context, userID string, inpu
 				return err
 			}
 
+			// Collect created item
+			createdItems = append(createdItems, item)
 		}
 
 		return nil
@@ -170,10 +175,36 @@ func (u *createPurchaseUseCase) Execute(ctx context.Context, userID string, inpu
 
 	if err != nil {
 		u.o11y.Logger().Error(ctx, "failed to create purchase", observability.Error(err))
-		return err
+		return nil, err
 	}
 
-	return nil
+	// Convert entities to DTOs
+	itemOutputs := make([]dtos.InvoiceItemOutput, 0, len(createdItems))
+	for _, item := range createdItems {
+		installmentLabel := fmt.Sprintf("%d/%d", item.InstallmentNumber, item.InstallmentTotal)
+		if item.InstallmentTotal == 1 {
+			installmentLabel = "À vista"
+		}
+
+		itemOutputs = append(itemOutputs, dtos.InvoiceItemOutput{
+			ID:                item.ID.String(),
+			InvoiceID:         item.InvoiceID.String(),
+			CategoryID:        item.CategoryID.String(),
+			PurchaseDate:      item.PurchaseDate.Format("2006-01-02"),
+			Description:       item.Description,
+			TotalAmount:       item.TotalAmount.String(),
+			InstallmentNumber: item.InstallmentNumber,
+			InstallmentTotal:  item.InstallmentTotal,
+			InstallmentAmount: item.InstallmentAmount.String(),
+			InstallmentLabel:  installmentLabel,
+			CreatedAt:         item.CreatedAt,
+			UpdatedAt:         item.UpdatedAt.ValueOr(time.Time{}),
+		})
+	}
+
+	return &dtos.PurchaseCreateOutput{
+		Items: itemOutputs,
+	}, nil
 }
 
 // findOrCreateInvoice busca ou cria uma fatura para o mês de referência.

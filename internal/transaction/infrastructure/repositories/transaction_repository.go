@@ -545,3 +545,122 @@ func (r *transactionRepository) findItemsByMonthlyID(
 
 	return items, rows.Err()
 }
+
+// ListMonthlyPaginated lista monthly transactions com paginação cursor-based.
+func (r *transactionRepository) ListMonthlyPaginated(
+	ctx context.Context,
+	params interfaces.ListMonthlyParams,
+) ([]*entities.MonthlyTransaction, error) {
+	ctx, span := r.o11y.Tracer().Start(ctx, "transaction_repository.list_monthly_paginated")
+	defer span.End()
+
+	// Build WHERE clause with cursor for keyset pagination
+	whereClause := "user_id = $1"
+	args := []interface{}{params.UserID.String()}
+
+	cursorDate, hasDate := params.Cursor.GetString("date")
+	cursorID, hasID := params.Cursor.GetString("id")
+
+	if hasDate && hasID && cursorDate != "" && cursorID != "" {
+		whereClause += ` AND (
+			reference_month < $2
+			OR (reference_month = $2 AND id < $3)
+		)`
+		args = append(args, cursorDate, cursorID)
+	}
+
+	query := fmt.Sprintf(`
+		SELECT
+			id, user_id, reference_month,
+			total_income, total_expense, total_amount,
+			created_at, updated_at
+		FROM monthly_transactions
+		WHERE %s
+		ORDER BY reference_month DESC, id DESC
+		LIMIT $%d`, whereClause, len(args)+1)
+
+	args = append(args, params.Limit)
+
+	rows, err := r.db.QueryContext(ctx, query, args...)
+	if err != nil {
+		r.o11y.Logger().Error(ctx, "failed to list monthly transactions", observability.Error(err))
+		return nil, err
+	}
+	defer rows.Close()
+
+	var monthlyList []*entities.MonthlyTransaction
+
+	for rows.Next() {
+		var monthly entities.MonthlyTransaction
+		var refMonthStr string
+		var totalIncomeInt, totalExpenseInt, totalAmountInt int64
+		var createdAt time.Time
+		var updatedAt sql.NullTime
+
+		err := rows.Scan(
+			&monthly.ID,
+			&monthly.UserID,
+			&refMonthStr,
+			&totalIncomeInt,
+			&totalExpenseInt,
+			&totalAmountInt,
+			&createdAt,
+			&updatedAt,
+		)
+		if err != nil {
+			r.o11y.Logger().Error(ctx, "failed to scan monthly transaction", observability.Error(err))
+			return nil, err
+		}
+
+		// Parse reference month
+		monthly.ReferenceMonth, err = transactionVos.NewReferenceMonthFromString(refMonthStr)
+		if err != nil {
+			return nil, err
+		}
+
+		// Parse money values
+		monthly.TotalIncome, err = sharedVos.NewMoney(totalIncomeInt, sharedVos.CurrencyBRL)
+		if err != nil {
+			return nil, err
+		}
+
+		monthly.TotalExpense, err = sharedVos.NewMoney(totalExpenseInt, sharedVos.CurrencyBRL)
+		if err != nil {
+			return nil, err
+		}
+
+		monthly.TotalAmount, err = sharedVos.NewMoney(totalAmountInt, sharedVos.CurrencyBRL)
+		if err != nil {
+			return nil, err
+		}
+
+		// Parse timestamps
+		monthly.CreatedAt = sharedVos.NewNullableTime(createdAt)
+		if updatedAt.Valid {
+			monthly.UpdatedAt = sharedVos.NewNullableTime(updatedAt.Time)
+		}
+
+		// Load items for this monthly transaction
+		items, err := r.findItemsByMonthlyID(ctx, r.db, monthly.ID)
+		if err != nil {
+			return nil, err
+		}
+		monthly.LoadItems(items)
+
+		monthlyList = append(monthlyList, &monthly)
+	}
+
+	return monthlyList, rows.Err()
+}
+
+// GetMonthlyByID busca um monthly transaction por ID (sem executor UoW).
+func (r *transactionRepository) GetMonthlyByID(
+	ctx context.Context,
+	userID sharedVos.UUID,
+	monthlyID sharedVos.UUID,
+) (*entities.MonthlyTransaction, error) {
+	ctx, span := r.o11y.Tracer().Start(ctx, "transaction_repository.get_monthly_by_id")
+	defer span.End()
+
+	return r.FindMonthlyByID(ctx, r.db, userID, monthlyID)
+}

@@ -9,18 +9,20 @@ import (
 	"github.com/jailtonjunior94/financial/internal/budget/application/usecase"
 	"github.com/jailtonjunior94/financial/pkg/api/httperrors"
 	"github.com/jailtonjunior94/financial/pkg/api/middlewares"
+	"github.com/jailtonjunior94/financial/pkg/pagination"
 
 	"github.com/JailtonJunior94/devkit-go/pkg/observability"
 	"github.com/JailtonJunior94/devkit-go/pkg/responses"
 )
 
 type BudgetHandler struct {
-	o11y                observability.Observability
-	errorHandler        httperrors.ErrorHandler
-	createBudgetUseCase usecase.CreateBudgetUseCase
-	findBudgetUseCase   usecase.FindBudgetUseCase
-	updateBudgetUseCase usecase.UpdateBudgetUseCase
-	deleteBudgetUseCase usecase.DeleteBudgetUseCase
+	o11y                       observability.Observability
+	errorHandler               httperrors.ErrorHandler
+	createBudgetUseCase        usecase.CreateBudgetUseCase
+	findBudgetUseCase          usecase.FindBudgetUseCase
+	updateBudgetUseCase        usecase.UpdateBudgetUseCase
+	deleteBudgetUseCase        usecase.DeleteBudgetUseCase
+	listBudgetsPaginatedUseCase usecase.ListBudgetsPaginatedUseCase
 }
 
 func NewBudgetHandler(
@@ -30,14 +32,16 @@ func NewBudgetHandler(
 	findBudgetUseCase usecase.FindBudgetUseCase,
 	updateBudgetUseCase usecase.UpdateBudgetUseCase,
 	deleteBudgetUseCase usecase.DeleteBudgetUseCase,
+	listBudgetsPaginatedUseCase usecase.ListBudgetsPaginatedUseCase,
 ) *BudgetHandler {
 	return &BudgetHandler{
-		o11y:                o11y,
-		errorHandler:        errorHandler,
-		createBudgetUseCase: createBudgetUseCase,
-		findBudgetUseCase:   findBudgetUseCase,
-		updateBudgetUseCase: updateBudgetUseCase,
-		deleteBudgetUseCase: deleteBudgetUseCase,
+		o11y:                       o11y,
+		errorHandler:               errorHandler,
+		createBudgetUseCase:        createBudgetUseCase,
+		findBudgetUseCase:          findBudgetUseCase,
+		updateBudgetUseCase:        updateBudgetUseCase,
+		deleteBudgetUseCase:        deleteBudgetUseCase,
+		listBudgetsPaginatedUseCase: listBudgetsPaginatedUseCase,
 	}
 }
 
@@ -66,11 +70,43 @@ func (h *BudgetHandler) Create(w http.ResponseWriter, r *http.Request) {
 	responses.JSON(w, http.StatusCreated, output)
 }
 
+func (h *BudgetHandler) List(w http.ResponseWriter, r *http.Request) {
+	ctx, span := h.o11y.Tracer().Start(r.Context(), "budget_handler.list")
+	defer span.End()
+
+	user, err := middlewares.GetUserFromContext(ctx)
+	if err != nil {
+		h.errorHandler.HandleError(w, r, err)
+		return
+	}
+
+	// Parse cursor parameters (default: limit=20, max=100)
+	params, err := pagination.ParseCursorParams(r, 20, 100)
+	if err != nil {
+		h.errorHandler.HandleError(w, r, err)
+		return
+	}
+
+	output, err := h.listBudgetsPaginatedUseCase.Execute(ctx, usecase.ListBudgetsPaginatedInput{
+		UserID: user.ID,
+		Limit:  params.Limit,
+		Cursor: params.Cursor,
+	})
+	if err != nil {
+		h.errorHandler.HandleError(w, r, err)
+		return
+	}
+
+	// Build paginated response
+	response := pagination.NewPaginatedResponse(output.Budgets, params.Limit, output.NextCursor)
+	responses.JSON(w, http.StatusOK, response)
+}
+
 func (h *BudgetHandler) Find(w http.ResponseWriter, r *http.Request) {
 	ctx, span := h.o11y.Tracer().Start(r.Context(), "budget_handler.find")
 	defer span.End()
 
-	budgetID := r.PathValue("budgetID")
+	budgetID := r.PathValue("id")
 	if budgetID == "" {
 		h.errorHandler.HandleError(w, r, fmt.Errorf("budget_id is required"))
 		return
@@ -89,7 +125,7 @@ func (h *BudgetHandler) Update(w http.ResponseWriter, r *http.Request) {
 	ctx, span := h.o11y.Tracer().Start(r.Context(), "budget_handler.update")
 	defer span.End()
 
-	budgetID := r.PathValue("budgetID")
+	budgetID := r.PathValue("id")
 	if budgetID == "" {
 		h.errorHandler.HandleError(w, r, fmt.Errorf("budget_id is required"))
 		return
@@ -114,7 +150,7 @@ func (h *BudgetHandler) Delete(w http.ResponseWriter, r *http.Request) {
 	ctx, span := h.o11y.Tracer().Start(r.Context(), "budget_handler.delete")
 	defer span.End()
 
-	budgetID := r.PathValue("budgetID")
+	budgetID := r.PathValue("id")
 	if budgetID == "" {
 		h.errorHandler.HandleError(w, r, fmt.Errorf("budget_id is required"))
 		return

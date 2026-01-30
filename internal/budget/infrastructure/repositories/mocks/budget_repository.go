@@ -9,6 +9,7 @@ import (
 
 	"github.com/JailtonJunior94/devkit-go/pkg/vos"
 	"github.com/jailtonjunior94/financial/internal/budget/domain/entities"
+	"github.com/jailtonjunior94/financial/internal/budget/domain/interfaces"
 	vos0 "github.com/jailtonjunior94/financial/internal/budget/domain/vos"
 	mock "github.com/stretchr/testify/mock"
 )
@@ -292,6 +293,74 @@ func (_c *BudgetRepository_InsertItems_Call) Return(err error) *BudgetRepository
 }
 
 func (_c *BudgetRepository_InsertItems_Call) RunAndReturn(run func(ctx context.Context, items []*entities.BudgetItem) error) *BudgetRepository_InsertItems_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
+// ListPaginated provides a mock function for the type BudgetRepository
+func (_mock *BudgetRepository) ListPaginated(ctx context.Context, params interfaces.ListBudgetsParams) ([]*entities.Budget, error) {
+	ret := _mock.Called(ctx, params)
+
+	if len(ret) == 0 {
+		panic("no return value specified for ListPaginated")
+	}
+
+	var r0 []*entities.Budget
+	var r1 error
+	if returnFunc, ok := ret.Get(0).(func(context.Context, interfaces.ListBudgetsParams) ([]*entities.Budget, error)); ok {
+		return returnFunc(ctx, params)
+	}
+	if returnFunc, ok := ret.Get(0).(func(context.Context, interfaces.ListBudgetsParams) []*entities.Budget); ok {
+		r0 = returnFunc(ctx, params)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).([]*entities.Budget)
+		}
+	}
+	if returnFunc, ok := ret.Get(1).(func(context.Context, interfaces.ListBudgetsParams) error); ok {
+		r1 = returnFunc(ctx, params)
+	} else {
+		r1 = ret.Error(1)
+	}
+	return r0, r1
+}
+
+// BudgetRepository_ListPaginated_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'ListPaginated'
+type BudgetRepository_ListPaginated_Call struct {
+	*mock.Call
+}
+
+// ListPaginated is a helper method to define mock.On call
+//   - ctx context.Context
+//   - params interfaces.ListBudgetsParams
+func (_e *BudgetRepository_Expecter) ListPaginated(ctx interface{}, params interface{}) *BudgetRepository_ListPaginated_Call {
+	return &BudgetRepository_ListPaginated_Call{Call: _e.mock.On("ListPaginated", ctx, params)}
+}
+
+func (_c *BudgetRepository_ListPaginated_Call) Run(run func(ctx context.Context, params interfaces.ListBudgetsParams)) *BudgetRepository_ListPaginated_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		var arg0 context.Context
+		if args[0] != nil {
+			arg0 = args[0].(context.Context)
+		}
+		var arg1 interfaces.ListBudgetsParams
+		if args[1] != nil {
+			arg1 = args[1].(interfaces.ListBudgetsParams)
+		}
+		run(
+			arg0,
+			arg1,
+		)
+	})
+	return _c
+}
+
+func (_c *BudgetRepository_ListPaginated_Call) Return(budgets []*entities.Budget, err error) *BudgetRepository_ListPaginated_Call {
+	_c.Call.Return(budgets, err)
+	return _c
+}
+
+func (_c *BudgetRepository_ListPaginated_Call) RunAndReturn(run func(ctx context.Context, params interfaces.ListBudgetsParams) ([]*entities.Budget, error)) *BudgetRepository_ListPaginated_Call {
 	_c.Call.Return(run)
 	return _c
 }

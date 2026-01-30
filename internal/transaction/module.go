@@ -40,6 +40,8 @@ func NewTransactionModule(
 	registerTransactionUseCase := usecase.NewRegisterTransactionUseCase(unitOfWork, transactionRepository, invoiceTotalProvider, o11y)
 	updateTransactionItemUseCase := usecase.NewUpdateTransactionItemUseCase(unitOfWork, transactionRepository, o11y)
 	deleteTransactionItemUseCase := usecase.NewDeleteTransactionItemUseCase(unitOfWork, transactionRepository, o11y)
+	listMonthlyPaginatedUseCase := usecase.NewListMonthlyPaginatedUseCase(o11y, transactionRepository)
+	getMonthlyUseCase := usecase.NewGetMonthlyUseCase(o11y, transactionRepository)
 
 	// Handler
 	transactionHandler := http.NewTransactionHandler(
@@ -48,6 +50,8 @@ func NewTransactionModule(
 		registerTransactionUseCase,
 		updateTransactionItemUseCase,
 		deleteTransactionItemUseCase,
+		listMonthlyPaginatedUseCase,
+		getMonthlyUseCase,
 	)
 
 	// Router

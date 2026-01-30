@@ -5,10 +5,18 @@ import (
 
 	"github.com/jailtonjunior94/financial/internal/transaction/domain/entities"
 	transactionVos "github.com/jailtonjunior94/financial/internal/transaction/domain/vos"
+	"github.com/jailtonjunior94/financial/pkg/pagination"
 
 	"github.com/JailtonJunior94/devkit-go/pkg/database"
 	sharedVos "github.com/JailtonJunior94/devkit-go/pkg/vos"
 )
+
+// ListMonthlyParams representa os parâmetros para paginação de monthly transactions.
+type ListMonthlyParams struct {
+	UserID sharedVos.UUID
+	Limit  int
+	Cursor pagination.Cursor
+}
 
 // TransactionRepository define o contrato de persistência para transações.
 type TransactionRepository interface {
@@ -56,4 +64,10 @@ type TransactionRepository interface {
 		userID sharedVos.UUID,
 		itemID sharedVos.UUID,
 	) (*entities.TransactionItem, error)
+
+	// ListMonthlyPaginated lista monthly transactions com paginação cursor-based.
+	ListMonthlyPaginated(ctx context.Context, params ListMonthlyParams) ([]*entities.MonthlyTransaction, error)
+
+	// GetMonthlyByID busca um monthly transaction por ID (sem executor UoW).
+	GetMonthlyByID(ctx context.Context, userID sharedVos.UUID, monthlyID sharedVos.UUID) (*entities.MonthlyTransaction, error)
 }

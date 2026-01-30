@@ -22,14 +22,14 @@ func (r InvoiceRouter) Register(router chi.Router) {
 	router.Group(func(protected chi.Router) {
 		protected.Use(r.authMiddleware.Authorization)
 
-		// Purchase routes (create, update, delete purchases)
-		protected.Post("/api/v1/purchases", r.handlers.CreatePurchase)
-		protected.Put("/api/v1/purchases/{id}", r.handlers.UpdatePurchase)
-		protected.Delete("/api/v1/purchases/{id}", r.handlers.DeletePurchase)
+		// Change 8: Renamed /purchases → /invoice-items for semantic clarity
+		protected.Post("/api/v1/invoice-items", r.handlers.CreatePurchase)
+		protected.Put("/api/v1/invoice-items/{id}", r.handlers.UpdatePurchase)
+		protected.Delete("/api/v1/invoice-items/{id}", r.handlers.DeletePurchase)
 
 		// Invoice routes (read-only - invoices are calculated from purchases)
-		protected.Get("/api/v1/invoices", r.handlers.ListInvoicesByMonth)         // ?month=YYYY-MM
-		protected.Get("/api/v1/invoices/{id}", r.handlers.GetInvoice)             // Get specific invoice
-		protected.Get("/api/v1/invoices/cards/{cardId}", r.handlers.ListInvoicesByCard) // List by card
+		// Change 6: Unified route with query params ?month= or ?cardId=
+		protected.Get("/api/v1/invoices", r.handlers.ListInvoices)    // ?month=YYYY-MM or ?cardId=uuid
+		protected.Get("/api/v1/invoices/{id}", r.handlers.GetInvoice) // Get specific invoice
 	})
 }

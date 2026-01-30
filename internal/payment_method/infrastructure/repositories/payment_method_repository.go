@@ -4,6 +4,7 @@ import (
 	"context"
 	"database/sql"
 	"errors"
+	"fmt"
 	"strings"
 
 	"github.com/jailtonjunior94/financial/internal/payment_method/domain/entities"
@@ -264,4 +265,78 @@ func (r *paymentMethodRepository) Update(ctx context.Context, paymentMethod *ent
 	}
 
 	return nil
+}
+
+// ListPaginated lista payment methods com paginação cursor-based.
+func (r *paymentMethodRepository) ListPaginated(
+	ctx context.Context,
+	params interfaces.ListPaymentMethodsParams,
+) ([]*entities.PaymentMethod, error) {
+	ctx, span := r.o11y.Tracer().Start(ctx, "payment_method_repository.list_paginated")
+	defer span.End()
+
+	// Build WHERE clause
+	whereClause := "deleted_at is null"
+	args := []interface{}{}
+	argIndex := 1
+
+	// Filter by code if provided
+	if params.Code != "" {
+		whereClause += fmt.Sprintf(" AND code = $%d", argIndex)
+		args = append(args, params.Code)
+		argIndex++
+	}
+
+	// Add cursor conditions
+	cursorName, hasName := params.Cursor.GetString("name")
+	cursorID, hasID := params.Cursor.GetString("id")
+
+	if hasName && hasID && cursorName != "" && cursorID != "" {
+		whereClause += fmt.Sprintf(` AND (
+			name > $%d
+			OR (name = $%d AND id > $%d)
+		)`, argIndex, argIndex, argIndex+1)
+		args = append(args, cursorName, cursorID)
+		argIndex += 2
+	}
+
+	query := fmt.Sprintf(`
+		SELECT
+			id, name, code, description,
+			created_at, updated_at, deleted_at
+		FROM payment_methods
+		WHERE %s
+		ORDER BY name ASC, id ASC
+		LIMIT $%d`, whereClause, argIndex)
+
+	args = append(args, params.Limit)
+
+	rows, err := r.db.QueryContext(ctx, query, args...)
+	if err != nil {
+		span.RecordError(err)
+		return nil, err
+	}
+	defer rows.Close()
+
+	var paymentMethods []*entities.PaymentMethod
+	for rows.Next() {
+		var pm entities.PaymentMethod
+		err := rows.Scan(
+			&pm.ID.Value,
+			&pm.Name.Value,
+			&pm.Code.Value,
+			&pm.Description.Value,
+			&pm.CreatedAt,
+			&pm.UpdatedAt,
+			&pm.DeletedAt,
+		)
+		if err != nil {
+			span.RecordError(err)
+			return nil, err
+		}
+
+		paymentMethods = append(paymentMethods, &pm)
+	}
+
+	return paymentMethods, rows.Err()
 }

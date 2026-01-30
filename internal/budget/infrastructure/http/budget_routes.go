@@ -19,9 +19,10 @@ func (r BudgetRouter) Register(router chi.Router) {
 	router.Group(func(protected chi.Router) {
 		protected.Use(r.authMiddleware.Authorization)
 
+		protected.Get("/api/v1/budgets", r.handlers.List)
 		protected.Post("/api/v1/budgets", r.handlers.Create)
-		protected.Get("/api/v1/budgets/{budgetID}", r.handlers.Find)
-		protected.Put("/api/v1/budgets/{budgetID}", r.handlers.Update)
-		protected.Delete("/api/v1/budgets/{budgetID}", r.handlers.Delete)
+		protected.Get("/api/v1/budgets/{id}", r.handlers.Find)
+		protected.Put("/api/v1/budgets/{id}", r.handlers.Update)
+		protected.Delete("/api/v1/budgets/{id}", r.handlers.Delete)
 	})
 }

@@ -33,6 +33,7 @@ func NewBudgetModule(db *sql.DB, o11y observability.Observability, tokenValidato
 	updateBudgetUseCase := usecase.NewUpdateBudgetUseCase(uow, o11y)
 	deleteBudgetUseCase := usecase.NewDeleteBudgetUseCase(uow, o11y)
 	findBudgetUseCase := usecase.NewFindBudgetUseCase(budgetRepository, o11y)
+	listBudgetsPaginatedUseCase := usecase.NewListBudgetsPaginatedUseCase(o11y, budgetRepository)
 
 	budgetHandler := http.NewBudgetHandler(
 		o11y,
@@ -41,6 +42,7 @@ func NewBudgetModule(db *sql.DB, o11y observability.Observability, tokenValidato
 		findBudgetUseCase,
 		updateBudgetUseCase,
 		deleteBudgetUseCase,
+		listBudgetsPaginatedUseCase,
 	)
 
 	budgetRoutes := http.NewBudgetRouter(budgetHandler, authMiddleware)

@@ -17,7 +17,7 @@ func NewPaymentMethodRouter(handlers *PaymentMethodHandler) *PaymentMethodRouter
 func (r PaymentMethodRouter) Register(router chi.Router) {
 	router.Get("/api/v1/payment-methods", r.handlers.Find)
 	router.Get("/api/v1/payment-methods/{id}", r.handlers.FindBy)
-	router.Get("/api/v1/payment-methods/code/{code}", r.handlers.FindByCode)
+	// Change 5: /code/{code} removed - use ?code={code} query param instead
 	router.Post("/api/v1/payment-methods", r.handlers.Create)
 	router.Put("/api/v1/payment-methods/{id}", r.handlers.Update)
 	router.Delete("/api/v1/payment-methods/{id}", r.handlers.Delete)

@@ -7,6 +7,7 @@ import (
 	"github.com/jailtonjunior94/financial/internal/payment_method/application/dtos"
 	"github.com/jailtonjunior94/financial/internal/payment_method/application/usecase"
 	"github.com/jailtonjunior94/financial/pkg/api/httperrors"
+	"github.com/jailtonjunior94/financial/pkg/pagination"
 
 	"github.com/JailtonJunior94/devkit-go/pkg/observability"
 	"github.com/JailtonJunior94/devkit-go/pkg/responses"
@@ -15,20 +16,22 @@ import (
 )
 
 type PaymentMethodHandler struct {
-	o11y                           observability.Observability
-	errorHandler                   httperrors.ErrorHandler
-	findPaymentMethodUseCase       usecase.FindPaymentMethodUseCase
-	createPaymentMethodUseCase     usecase.CreatePaymentMethodUseCase
-	findPaymentMethodByUseCase     usecase.FindPaymentMethodByUseCase
-	findPaymentMethodByCodeUseCase usecase.FindPaymentMethodByCodeUseCase
-	updatePaymentMethodUseCase     usecase.UpdatePaymentMethodUseCase
-	removePaymentMethodUseCase     usecase.RemovePaymentMethodUseCase
+	o11y                              observability.Observability
+	errorHandler                      httperrors.ErrorHandler
+	findPaymentMethodUseCase          usecase.FindPaymentMethodUseCase
+	findPaymentMethodPaginatedUseCase usecase.FindPaymentMethodPaginatedUseCase
+	createPaymentMethodUseCase        usecase.CreatePaymentMethodUseCase
+	findPaymentMethodByUseCase        usecase.FindPaymentMethodByUseCase
+	findPaymentMethodByCodeUseCase    usecase.FindPaymentMethodByCodeUseCase
+	updatePaymentMethodUseCase        usecase.UpdatePaymentMethodUseCase
+	removePaymentMethodUseCase        usecase.RemovePaymentMethodUseCase
 }
 
 func NewPaymentMethodHandler(
 	o11y observability.Observability,
 	errorHandler httperrors.ErrorHandler,
 	findPaymentMethodUseCase usecase.FindPaymentMethodUseCase,
+	findPaymentMethodPaginatedUseCase usecase.FindPaymentMethodPaginatedUseCase,
 	createPaymentMethodUseCase usecase.CreatePaymentMethodUseCase,
 	findPaymentMethodByUseCase usecase.FindPaymentMethodByUseCase,
 	findPaymentMethodByCodeUseCase usecase.FindPaymentMethodByCodeUseCase,
@@ -36,14 +39,15 @@ func NewPaymentMethodHandler(
 	removePaymentMethodUseCase usecase.RemovePaymentMethodUseCase,
 ) *PaymentMethodHandler {
 	return &PaymentMethodHandler{
-		o11y:                           o11y,
-		errorHandler:                   errorHandler,
-		findPaymentMethodUseCase:       findPaymentMethodUseCase,
-		createPaymentMethodUseCase:     createPaymentMethodUseCase,
-		updatePaymentMethodUseCase:     updatePaymentMethodUseCase,
-		findPaymentMethodByUseCase:     findPaymentMethodByUseCase,
-		findPaymentMethodByCodeUseCase: findPaymentMethodByCodeUseCase,
-		removePaymentMethodUseCase:     removePaymentMethodUseCase,
+		o11y:                              o11y,
+		errorHandler:                      errorHandler,
+		findPaymentMethodUseCase:          findPaymentMethodUseCase,
+		findPaymentMethodPaginatedUseCase: findPaymentMethodPaginatedUseCase,
+		createPaymentMethodUseCase:        createPaymentMethodUseCase,
+		updatePaymentMethodUseCase:        updatePaymentMethodUseCase,
+		findPaymentMethodByUseCase:        findPaymentMethodByUseCase,
+		findPaymentMethodByCodeUseCase:    findPaymentMethodByCodeUseCase,
+		removePaymentMethodUseCase:        removePaymentMethodUseCase,
 	}
 }
 
@@ -70,13 +74,29 @@ func (h *PaymentMethodHandler) Find(w http.ResponseWriter, r *http.Request) {
 	ctx, span := h.o11y.Tracer().Start(r.Context(), "payment_method_handler.find")
 	defer span.End()
 
-	output, err := h.findPaymentMethodUseCase.Execute(ctx)
+	// Parse cursor parameters (default: limit=20, max=100)
+	params, err := pagination.ParseCursorParams(r, 20, 100)
 	if err != nil {
 		h.errorHandler.HandleError(w, r, err)
 		return
 	}
 
-	responses.JSON(w, http.StatusOK, output)
+	// Get code query param if provided (Change 5: code filter via query param)
+	code := r.URL.Query().Get("code")
+
+	output, err := h.findPaymentMethodPaginatedUseCase.Execute(ctx, usecase.FindPaymentMethodPaginatedInput{
+		Limit:  params.Limit,
+		Cursor: params.Cursor,
+		Code:   code,
+	})
+	if err != nil {
+		h.errorHandler.HandleError(w, r, err)
+		return
+	}
+
+	// Build paginated response
+	response := pagination.NewPaginatedResponse(output.PaymentMethods, params.Limit, output.NextCursor)
+	responses.JSON(w, http.StatusOK, response)
 }
 
 func (h *PaymentMethodHandler) FindBy(w http.ResponseWriter, r *http.Request) {

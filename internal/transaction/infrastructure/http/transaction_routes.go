@@ -21,8 +21,11 @@ func (r TransactionRouter) Register(router chi.Router) {
 	router.Group(func(protected chi.Router) {
 		protected.Use(r.authMiddleware.Authorization)
 
+		protected.Get("/api/v1/transactions", r.handlers.List)
+		protected.Get("/api/v1/transactions/{id}", r.handlers.Get)
 		protected.Post("/api/v1/transactions", r.handlers.Register)
-		protected.Put("/api/v1/transactions/items/{id}", r.handlers.UpdateItem)
-		protected.Delete("/api/v1/transactions/items/{id}", r.handlers.DeleteItem)
+		// Change 7: Nested resource - items belong to transactions
+		protected.Put("/api/v1/transactions/{transactionId}/items/{itemId}", r.handlers.UpdateItem)
+		protected.Delete("/api/v1/transactions/{transactionId}/items/{itemId}", r.handlers.DeleteItem)
 	})
 }

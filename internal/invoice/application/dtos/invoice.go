@@ -62,3 +62,13 @@ type InvoiceListOutput struct {
 	ItemCount      int       `json:"item_count"`
 	CreatedAt      time.Time `json:"created_at"`
 }
+
+// PurchaseCreateOutput representa a resposta ao criar uma compra com parcelas.
+type PurchaseCreateOutput struct {
+	Items []InvoiceItemOutput `json:"items"`
+}
+
+// PurchaseUpdateOutput representa a resposta ao atualizar uma compra.
+type PurchaseUpdateOutput struct {
+	Items []InvoiceItemOutput `json:"items"`
+}

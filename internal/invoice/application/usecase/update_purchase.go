@@ -4,9 +4,11 @@ import (
 	"context"
 	"fmt"
 	"strconv"
+	"time"
 
 	"github.com/jailtonjunior94/financial/internal/invoice/application/dtos"
 	"github.com/jailtonjunior94/financial/internal/invoice/domain"
+	"github.com/jailtonjunior94/financial/internal/invoice/domain/entities"
 	"github.com/jailtonjunior94/financial/internal/invoice/infrastructure/repositories"
 
 	"github.com/JailtonJunior94/devkit-go/pkg/database"
@@ -17,7 +19,7 @@ import (
 
 type (
 	UpdatePurchaseUseCase interface {
-		Execute(ctx context.Context, itemID string, input *dtos.PurchaseUpdateInput) error
+		Execute(ctx context.Context, itemID string, input *dtos.PurchaseUpdateInput) (*dtos.PurchaseUpdateOutput, error)
 	}
 
 	updatePurchaseUseCase struct {
@@ -36,27 +38,30 @@ func NewUpdatePurchaseUseCase(
 	}
 }
 
-func (u *updatePurchaseUseCase) Execute(ctx context.Context, itemID string, input *dtos.PurchaseUpdateInput) error {
+func (u *updatePurchaseUseCase) Execute(ctx context.Context, itemID string, input *dtos.PurchaseUpdateInput) (*dtos.PurchaseUpdateOutput, error) {
 	ctx, span := u.o11y.Tracer().Start(ctx, "update_purchase_usecase.execute")
 	defer span.End()
 
 	// Parse itemID
 	id, err := vos.NewUUIDFromString(itemID)
 	if err != nil {
-		return fmt.Errorf("invalid item ID: %w", err)
+		return nil, fmt.Errorf("invalid item ID: %w", err)
 	}
 
 	// Parse categoryID
 	categoryID, err := vos.NewUUIDFromString(input.CategoryID)
 	if err != nil {
-		return fmt.Errorf("invalid category ID: %w", err)
+		return nil, fmt.Errorf("invalid category ID: %w", err)
 	}
 
 	// Parse totalAmount
 	totalAmountFloat, err := strconv.ParseFloat(input.TotalAmount, 64)
 	if err != nil {
-		return fmt.Errorf("invalid total amount format: %w", err)
+		return nil, fmt.Errorf("invalid total amount format: %w", err)
 	}
+
+	// Collect updated items for response
+	var updatedItems []*entities.InvoiceItem
 
 	err = u.uow.Do(ctx, func(ctx context.Context, tx database.DBTX) error {
 		invoiceRepo := repositories.NewInvoiceRepository(tx, u.o11y)
@@ -121,6 +126,9 @@ func (u *updatePurchaseUseCase) Execute(ctx context.Context, itemID string, inpu
 			affectedInvoices[item.InvoiceID.String()] = true
 		}
 
+		// Store updated items for response
+		updatedItems = items
+
 		// Recalculate totals for all affected invoices
 		for invoiceIDStr := range affectedInvoices {
 			invoiceID, _ := vos.NewUUIDFromString(invoiceIDStr)
@@ -148,8 +156,34 @@ func (u *updatePurchaseUseCase) Execute(ctx context.Context, itemID string, inpu
 
 	if err != nil {
 		u.o11y.Logger().Error(ctx, "failed to update purchase", observability.Error(err))
-		return err
+		return nil, err
 	}
 
-	return nil
+	// Convert entities to DTOs
+	itemOutputs := make([]dtos.InvoiceItemOutput, 0, len(updatedItems))
+	for _, item := range updatedItems {
+		installmentLabel := fmt.Sprintf("%d/%d", item.InstallmentNumber, item.InstallmentTotal)
+		if item.InstallmentTotal == 1 {
+			installmentLabel = "À vista"
+		}
+
+		itemOutputs = append(itemOutputs, dtos.InvoiceItemOutput{
+			ID:                item.ID.String(),
+			InvoiceID:         item.InvoiceID.String(),
+			CategoryID:        item.CategoryID.String(),
+			PurchaseDate:      item.PurchaseDate.Format("2006-01-02"),
+			Description:       item.Description,
+			TotalAmount:       item.TotalAmount.String(),
+			InstallmentNumber: item.InstallmentNumber,
+			InstallmentTotal:  item.InstallmentTotal,
+			InstallmentAmount: item.InstallmentAmount.String(),
+			InstallmentLabel:  installmentLabel,
+			CreatedAt:         item.CreatedAt,
+			UpdatedAt:         item.UpdatedAt.ValueOr(time.Time{}),
+		})
+	}
+
+	return &dtos.PurchaseUpdateOutput{
+		Items: itemOutputs,
+	}, nil
 }
