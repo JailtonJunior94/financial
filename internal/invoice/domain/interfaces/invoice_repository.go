@@ -7,7 +7,23 @@ import (
 
 	"github.com/jailtonjunior94/financial/internal/invoice/domain/entities"
 	invoiceVos "github.com/jailtonjunior94/financial/internal/invoice/domain/vos"
+	"github.com/jailtonjunior94/financial/pkg/pagination"
 )
+
+// ListInvoicesByCardParams representa os parâmetros para paginação de faturas por cartão.
+type ListInvoicesByCardParams struct {
+	CardID vos.UUID
+	Limit  int
+	Cursor pagination.Cursor
+}
+
+// ListInvoicesByMonthParams representa os parâmetros para paginação de faturas por mês.
+type ListInvoicesByMonthParams struct {
+	UserID         vos.UUID
+	ReferenceMonth invoiceVos.ReferenceMonth
+	Limit          int
+	Cursor         pagination.Cursor
+}
 
 // InvoiceRepository define as operações de persistência de Invoice.
 type InvoiceRepository interface {
@@ -37,6 +53,12 @@ type InvoiceRepository interface {
 
 	// FindByCard busca todas as faturas de um cartão
 	FindByCard(ctx context.Context, cardID vos.UUID) ([]*entities.Invoice, error)
+
+	// ListByCard busca faturas de um cartão com paginação cursor-based
+	ListByCard(ctx context.Context, params ListInvoicesByCardParams) ([]*entities.Invoice, error)
+
+	// ListByUserAndMonthPaginated busca faturas de um usuário em um mês com paginação cursor-based
+	ListByUserAndMonthPaginated(ctx context.Context, params ListInvoicesByMonthParams) ([]*entities.Invoice, error)
 
 	// Update atualiza uma fatura
 	Update(ctx context.Context, invoice *entities.Invoice) error

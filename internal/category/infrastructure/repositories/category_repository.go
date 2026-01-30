@@ -2,6 +2,7 @@ package repositories
 
 import (
 	"context"
+	"fmt"
 
 	"github.com/jailtonjunior94/financial/internal/category/domain/entities"
 	"github.com/jailtonjunior94/financial/internal/category/domain/interfaces"
@@ -54,6 +55,77 @@ func (r *categoryRepository) List(ctx context.Context, userID vos.UUID) ([]*enti
 	defer func() { _ = rows.Close() }()
 
 	var categories []*entities.Category
+	for rows.Next() {
+		var category entities.Category
+		err := rows.Scan(
+			&category.ID.Value,
+			&category.UserID.Value,
+			&category.Name.Value,
+			&category.Sequence.Sequence,
+			&category.CreatedAt,
+			&category.UpdatedAt,
+			&category.DeletedAt,
+		)
+		if err != nil {
+			span.RecordError(err)
+			return nil, err
+		}
+		categories = append(categories, &category)
+	}
+
+	if err := rows.Err(); err != nil {
+		span.RecordError(err)
+		return nil, err
+	}
+
+	return categories, nil
+}
+
+// ListPaginated lista categorias de um usuário com paginação cursor-based.
+func (r *categoryRepository) ListPaginated(ctx context.Context, params interfaces.ListCategoriesParams) ([]*entities.Category, error) {
+	ctx, span := r.o11y.Tracer().Start(ctx, "category_repository.list_paginated")
+	defer span.End()
+
+	// Build WHERE clause with cursor
+	whereClause := "user_id = $1 AND deleted_at IS NULL AND parent_id IS NULL"
+	args := []interface{}{params.UserID.String()}
+
+	cursorSequence, hasSeq := params.Cursor.GetInt("sequence")
+	cursorID, hasID := params.Cursor.GetString("id")
+
+	if hasSeq && hasID && cursorID != "" {
+		// Keyset pagination: WHERE (sequence, id) > (cursor_seq, cursor_id)
+		whereClause += ` AND (
+			sequence > $2
+			OR (sequence = $2 AND id > $3)
+		)`
+		args = append(args, cursorSequence, cursorID)
+	}
+
+	query := fmt.Sprintf(`
+		SELECT
+			id,
+			user_id,
+			name,
+			sequence,
+			created_at,
+			updated_at,
+			deleted_at
+		FROM categories
+		WHERE %s
+		ORDER BY sequence ASC, id ASC
+		LIMIT $%d`, whereClause, len(args)+1)
+
+	args = append(args, params.Limit)
+
+	rows, err := r.db.QueryContext(ctx, query, args...)
+	if err != nil {
+		span.RecordError(err)
+		return nil, err
+	}
+	defer func() { _ = rows.Close() }()
+
+	categories := make([]*entities.Category, 0)
 	for rows.Next() {
 		var category entities.Category
 		err := rows.Scan(

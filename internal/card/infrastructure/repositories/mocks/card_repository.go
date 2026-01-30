@@ -9,6 +9,7 @@ import (
 
 	"github.com/JailtonJunior94/devkit-go/pkg/vos"
 	"github.com/jailtonjunior94/financial/internal/card/domain/entities"
+	"github.com/jailtonjunior94/financial/internal/card/domain/interfaces"
 	mock "github.com/stretchr/testify/mock"
 )
 
@@ -177,6 +178,74 @@ func (_c *CardRepository_List_Call) Return(cards []*entities.Card, err error) *C
 }
 
 func (_c *CardRepository_List_Call) RunAndReturn(run func(ctx context.Context, userID vos.UUID) ([]*entities.Card, error)) *CardRepository_List_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
+// ListPaginated provides a mock function for the type CardRepository
+func (_mock *CardRepository) ListPaginated(ctx context.Context, params interfaces.ListCardsParams) ([]*entities.Card, error) {
+	ret := _mock.Called(ctx, params)
+
+	if len(ret) == 0 {
+		panic("no return value specified for ListPaginated")
+	}
+
+	var r0 []*entities.Card
+	var r1 error
+	if returnFunc, ok := ret.Get(0).(func(context.Context, interfaces.ListCardsParams) ([]*entities.Card, error)); ok {
+		return returnFunc(ctx, params)
+	}
+	if returnFunc, ok := ret.Get(0).(func(context.Context, interfaces.ListCardsParams) []*entities.Card); ok {
+		r0 = returnFunc(ctx, params)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).([]*entities.Card)
+		}
+	}
+	if returnFunc, ok := ret.Get(1).(func(context.Context, interfaces.ListCardsParams) error); ok {
+		r1 = returnFunc(ctx, params)
+	} else {
+		r1 = ret.Error(1)
+	}
+	return r0, r1
+}
+
+// CardRepository_ListPaginated_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'ListPaginated'
+type CardRepository_ListPaginated_Call struct {
+	*mock.Call
+}
+
+// ListPaginated is a helper method to define mock.On call
+//   - ctx context.Context
+//   - params interfaces.ListCardsParams
+func (_e *CardRepository_Expecter) ListPaginated(ctx interface{}, params interface{}) *CardRepository_ListPaginated_Call {
+	return &CardRepository_ListPaginated_Call{Call: _e.mock.On("ListPaginated", ctx, params)}
+}
+
+func (_c *CardRepository_ListPaginated_Call) Run(run func(ctx context.Context, params interfaces.ListCardsParams)) *CardRepository_ListPaginated_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		var arg0 context.Context
+		if args[0] != nil {
+			arg0 = args[0].(context.Context)
+		}
+		var arg1 interfaces.ListCardsParams
+		if args[1] != nil {
+			arg1 = args[1].(interfaces.ListCardsParams)
+		}
+		run(
+			arg0,
+			arg1,
+		)
+	})
+	return _c
+}
+
+func (_c *CardRepository_ListPaginated_Call) Return(cards []*entities.Card, err error) *CardRepository_ListPaginated_Call {
+	_c.Call.Return(cards, err)
+	return _c
+}
+
+func (_c *CardRepository_ListPaginated_Call) RunAndReturn(run func(ctx context.Context, params interfaces.ListCardsParams) ([]*entities.Card, error)) *CardRepository_ListPaginated_Call {
 	_c.Call.Return(run)
 	return _c
 }

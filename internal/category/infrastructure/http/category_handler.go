@@ -8,6 +8,7 @@ import (
 	"github.com/jailtonjunior94/financial/internal/category/application/usecase"
 	"github.com/jailtonjunior94/financial/pkg/api/httperrors"
 	"github.com/jailtonjunior94/financial/pkg/api/middlewares"
+	"github.com/jailtonjunior94/financial/pkg/pagination"
 
 	"github.com/JailtonJunior94/devkit-go/pkg/observability"
 	"github.com/JailtonJunior94/devkit-go/pkg/responses"
@@ -16,32 +17,35 @@ import (
 )
 
 type CategoryHandler struct {
-	o11y                  observability.Observability
-	errorHandler          httperrors.ErrorHandler
-	findCategoryUseCase   usecase.FindCategoryUseCase
-	createCategoryUseCase usecase.CreateCategoryUseCase
-	findCategoryByUseCase usecase.FindCategoryByUseCase
-	updateCategoryUseCase usecase.UpdateCategoryUseCase
-	removeCategoryUseCase usecase.RemoveCategoryUseCase
+	o11y                         observability.Observability
+	errorHandler                 httperrors.ErrorHandler
+	findCategoryUseCase          usecase.FindCategoryUseCase
+	findCategoryPaginatedUseCase usecase.FindCategoryPaginatedUseCase
+	createCategoryUseCase        usecase.CreateCategoryUseCase
+	findCategoryByUseCase        usecase.FindCategoryByUseCase
+	updateCategoryUseCase        usecase.UpdateCategoryUseCase
+	removeCategoryUseCase        usecase.RemoveCategoryUseCase
 }
 
 func NewCategoryHandler(
 	o11y observability.Observability,
 	errorHandler httperrors.ErrorHandler,
 	findCategoryUseCase usecase.FindCategoryUseCase,
+	findCategoryPaginatedUseCase usecase.FindCategoryPaginatedUseCase,
 	createCategoryUseCase usecase.CreateCategoryUseCase,
 	findCategoryByUseCase usecase.FindCategoryByUseCase,
 	updateCategoryUseCase usecase.UpdateCategoryUseCase,
 	removeCategoryUseCase usecase.RemoveCategoryUseCase,
 ) *CategoryHandler {
 	return &CategoryHandler{
-		o11y:                  o11y,
-		errorHandler:          errorHandler,
-		findCategoryUseCase:   findCategoryUseCase,
-		createCategoryUseCase: createCategoryUseCase,
-		updateCategoryUseCase: updateCategoryUseCase,
-		findCategoryByUseCase: findCategoryByUseCase,
-		removeCategoryUseCase: removeCategoryUseCase,
+		o11y:                         o11y,
+		errorHandler:                 errorHandler,
+		findCategoryUseCase:          findCategoryUseCase,
+		findCategoryPaginatedUseCase: findCategoryPaginatedUseCase,
+		createCategoryUseCase:        createCategoryUseCase,
+		updateCategoryUseCase:        updateCategoryUseCase,
+		findCategoryByUseCase:        findCategoryByUseCase,
+		removeCategoryUseCase:        removeCategoryUseCase,
 	}
 }
 
@@ -80,13 +84,26 @@ func (h *CategoryHandler) Find(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	output, err := h.findCategoryUseCase.Execute(ctx, user.ID)
+	// Parse cursor parameters (default: limit=20, max=100)
+	params, err := pagination.ParseCursorParams(r, 20, 100)
 	if err != nil {
 		h.errorHandler.HandleError(w, r, err)
 		return
 	}
 
-	responses.JSON(w, http.StatusOK, output)
+	output, err := h.findCategoryPaginatedUseCase.Execute(ctx, usecase.FindCategoryPaginatedInput{
+		UserID: user.ID,
+		Limit:  params.Limit,
+		Cursor: params.Cursor,
+	})
+	if err != nil {
+		h.errorHandler.HandleError(w, r, err)
+		return
+	}
+
+	// Build paginated response
+	response := pagination.NewPaginatedResponse(output.Categories, params.Limit, output.NextCursor)
+	responses.JSON(w, http.StatusOK, response)
 }
 
 func (h *CategoryHandler) FindBy(w http.ResponseWriter, r *http.Request) {

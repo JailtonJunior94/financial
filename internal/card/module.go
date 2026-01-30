@@ -30,6 +30,7 @@ func NewCardModule(db *sql.DB, o11y observability.Observability, tokenValidator 
 
 	cardRepository := repositories.NewCardRepository(db, o11y)
 	findCardUsecase := usecase.NewFindCardUseCase(o11y, cardRepository, cardMetrics)
+	findCardPaginatedUsecase := usecase.NewFindCardPaginatedUseCase(o11y, cardRepository, cardMetrics)
 	findCardByUsecase := usecase.NewFindCardByUseCase(o11y, cardRepository, cardMetrics)
 	createCardUsecase := usecase.NewCreateCardUseCase(o11y, cardRepository, cardMetrics)
 	updateCardUsecase := usecase.NewUpdateCardUseCase(o11y, cardRepository, cardMetrics)
@@ -39,6 +40,7 @@ func NewCardModule(db *sql.DB, o11y observability.Observability, tokenValidator 
 		o11y,
 		errorHandler,
 		findCardUsecase,
+		findCardPaginatedUsecase,
 		createCardUsecase,
 		findCardByUsecase,
 		updateCardUsecase,

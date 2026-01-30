@@ -264,6 +264,76 @@ func (r *invoiceRepository) FindByUserAndMonth(
 	return invoices, rows.Err()
 }
 
+// ListByUserAndMonthPaginated busca faturas de um usuário em um mês com paginação cursor-based.
+func (r *invoiceRepository) ListByUserAndMonthPaginated(
+	ctx context.Context,
+	params interfaces.ListInvoicesByMonthParams,
+) ([]*entities.Invoice, error) {
+	ctx, span := r.o11y.Tracer().Start(ctx, "invoice_repository.list_by_user_month_paginated")
+	defer span.End()
+
+	// Build WHERE clause with cursor
+	whereClause := `user_id = $1
+		AND to_char(reference_month, 'YYYY-MM') = $2
+		AND deleted_at IS NULL`
+	args := []interface{}{params.UserID.Value, params.ReferenceMonth.String()}
+
+	cursorDueDate, hasDueDate := params.Cursor.GetString("due_date")
+	cursorID, hasID := params.Cursor.GetString("id")
+
+	if hasDueDate && hasID && cursorDueDate != "" && cursorID != "" {
+		// Keyset pagination: WHERE (due_date, id) > (cursor_due_date, cursor_id)
+		whereClause += ` AND (
+			due_date > $3
+			OR (due_date = $3 AND id > $4)
+		)`
+		args = append(args, cursorDueDate, cursorID)
+	}
+
+	query := fmt.Sprintf(`
+		SELECT
+			id,
+			user_id,
+			card_id,
+			reference_month,
+			due_date,
+			total_amount,
+			created_at,
+			updated_at,
+			deleted_at
+		FROM invoices
+		WHERE %s
+		ORDER BY due_date ASC, id ASC
+		LIMIT $%d`, whereClause, len(args)+1)
+
+	args = append(args, params.Limit)
+
+	rows, err := r.db.QueryContext(ctx, query, args...)
+	if err != nil {
+		return nil, err
+	}
+	defer func() { _ = rows.Close() }()
+
+	invoices := make([]*entities.Invoice, 0)
+	for rows.Next() {
+		invoice, err := r.scanInvoice(rows)
+		if err != nil {
+			return nil, err
+		}
+
+		// Carregar itens
+		items, err := r.findItemsByInvoiceID(ctx, invoice.ID)
+		if err != nil {
+			return nil, err
+		}
+		invoice.Items = items
+
+		invoices = append(invoices, invoice)
+	}
+
+	return invoices, rows.Err()
+}
+
 func (r *invoiceRepository) FindByCard(ctx context.Context, cardID vos.UUID) ([]*entities.Invoice, error) {
 	ctx, span := r.o11y.Tracer().Start(ctx, "invoice_repository.find_by_card")
 	defer span.End()
@@ -306,6 +376,91 @@ func (r *invoiceRepository) FindByCard(ctx context.Context, cardID vos.UUID) ([]
 	}
 
 	return invoices, rows.Err()
+}
+
+// ListByCard busca faturas de um cartão com cursor-based pagination.
+// Ordena por reference_month DESC, id DESC (mais recentes primeiro).
+func (r *invoiceRepository) ListByCard(ctx context.Context, params interfaces.ListInvoicesByCardParams) ([]*entities.Invoice, error) {
+	ctx, span := r.o11y.Tracer().Start(ctx, "invoice_repository.list_by_card")
+	defer span.End()
+
+	// Base query com ORDER BY determinístico
+	query := `
+		SELECT
+			id,
+			user_id,
+			card_id,
+			reference_month,
+			due_date,
+			total_amount,
+			created_at,
+			updated_at,
+			deleted_at
+		FROM invoices
+		WHERE
+			card_id = $1
+			AND deleted_at IS NULL`
+
+	args := []interface{}{params.CardID}
+	argIndex := 2
+
+	// Adicionar condição de cursor (keyset pagination)
+	// Para ORDER BY DESC, usamos < em vez de >
+	if refMonth, ok := params.Cursor.GetString("reference_month"); ok {
+		if id, ok := params.Cursor.GetString("id"); ok {
+			// WHERE (reference_month, id) < (cursor_month, cursor_id)
+			query += fmt.Sprintf(` AND (reference_month, id) < ($%d, $%d)`, argIndex, argIndex+1)
+			args = append(args, refMonth, id)
+			argIndex += 2
+		}
+	}
+
+	// ORDER BY determinístico (reference_month DESC, id DESC)
+	query += ` ORDER BY reference_month DESC, id DESC`
+
+	// LIMIT
+	query += fmt.Sprintf(` LIMIT $%d`, argIndex)
+	args = append(args, params.Limit)
+
+	// Executar query
+	rows, err := r.db.QueryContext(ctx, query, args...)
+	if err != nil {
+		span.RecordError(err)
+		return nil, err
+	}
+	defer func() { _ = rows.Close() }()
+
+	// Scanear resultados
+	var invoices []*entities.Invoice
+	for rows.Next() {
+		invoice, err := r.scanInvoice(rows)
+		if err != nil {
+			span.RecordError(err)
+			return nil, err
+		}
+
+		// Carregar itens da fatura
+		items, err := r.findItemsByInvoiceID(ctx, invoice.ID)
+		if err != nil {
+			span.RecordError(err)
+			return nil, err
+		}
+		invoice.Items = items
+
+		invoices = append(invoices, invoice)
+	}
+
+	if err := rows.Err(); err != nil {
+		span.RecordError(err)
+		return nil, err
+	}
+
+	// Garantir que retorna array vazio em vez de nil
+	if invoices == nil {
+		invoices = []*entities.Invoice{}
+	}
+
+	return invoices, nil
 }
 
 func (r *invoiceRepository) Update(ctx context.Context, invoice *entities.Invoice) error {

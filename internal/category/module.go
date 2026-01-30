@@ -23,6 +23,7 @@ func NewCategoryModule(db *sql.DB, o11y observability.Observability, tokenValida
 
 	categoryRepository := repositories.NewCategoryRepository(db, o11y)
 	findCategoryUsecase := usecase.NewFindCategoryUseCase(o11y, categoryRepository)
+	findCategoryPaginatedUsecase := usecase.NewFindCategoryPaginatedUseCase(o11y, categoryRepository)
 	findCategoryByUsecase := usecase.NewFindCategoryByUseCase(o11y, categoryRepository)
 	createCategoryUsecase := usecase.NewCreateCategoryUseCase(o11y, categoryRepository)
 	updateCategoryUsecase := usecase.NewUpdateCategoryUseCase(o11y, categoryRepository)
@@ -32,6 +33,7 @@ func NewCategoryModule(db *sql.DB, o11y observability.Observability, tokenValida
 		o11y,
 		errorHandler,
 		findCategoryUsecase,
+		findCategoryPaginatedUsecase,
 		createCategoryUsecase,
 		findCategoryByUsecase,
 		updateCategoryUsecase,

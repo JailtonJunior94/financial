@@ -13,17 +13,20 @@ import (
 	"github.com/jailtonjunior94/financial/internal/invoice/application/usecase"
 	"github.com/jailtonjunior94/financial/pkg/api/httperrors"
 	"github.com/jailtonjunior94/financial/pkg/api/middlewares"
+	"github.com/jailtonjunior94/financial/pkg/pagination"
 )
 
 type InvoiceHandler struct {
-	o11y                       observability.Observability
-	errorHandler               httperrors.ErrorHandler
-	createPurchaseUseCase      usecase.CreatePurchaseUseCase
-	updatePurchaseUseCase      usecase.UpdatePurchaseUseCase
-	deletePurchaseUseCase      usecase.DeletePurchaseUseCase
-	getInvoiceUseCase          usecase.GetInvoiceUseCase
-	listInvoicesByMonthUseCase usecase.ListInvoicesByMonthUseCase
-	listInvoicesByCardUseCase  usecase.ListInvoicesByCardUseCase
+	o11y                                  observability.Observability
+	errorHandler                          httperrors.ErrorHandler
+	createPurchaseUseCase                 usecase.CreatePurchaseUseCase
+	updatePurchaseUseCase                 usecase.UpdatePurchaseUseCase
+	deletePurchaseUseCase                 usecase.DeletePurchaseUseCase
+	getInvoiceUseCase                     usecase.GetInvoiceUseCase
+	listInvoicesByMonthUseCase            usecase.ListInvoicesByMonthUseCase
+	listInvoicesByMonthPaginatedUseCase   usecase.ListInvoicesByMonthPaginatedUseCase
+	listInvoicesByCardUseCase             usecase.ListInvoicesByCardUseCase
+	listInvoicesByCardPaginatedUseCase    usecase.ListInvoicesByCardPaginatedUseCase
 }
 
 func NewInvoiceHandler(
@@ -34,17 +37,21 @@ func NewInvoiceHandler(
 	deletePurchaseUseCase usecase.DeletePurchaseUseCase,
 	getInvoiceUseCase usecase.GetInvoiceUseCase,
 	listInvoicesByMonthUseCase usecase.ListInvoicesByMonthUseCase,
+	listInvoicesByMonthPaginatedUseCase usecase.ListInvoicesByMonthPaginatedUseCase,
 	listInvoicesByCardUseCase usecase.ListInvoicesByCardUseCase,
+	listInvoicesByCardPaginatedUseCase usecase.ListInvoicesByCardPaginatedUseCase,
 ) *InvoiceHandler {
 	return &InvoiceHandler{
-		o11y:                       o11y,
-		errorHandler:               errorHandler,
-		createPurchaseUseCase:      createPurchaseUseCase,
-		updatePurchaseUseCase:      updatePurchaseUseCase,
-		deletePurchaseUseCase:      deletePurchaseUseCase,
-		getInvoiceUseCase:          getInvoiceUseCase,
-		listInvoicesByMonthUseCase: listInvoicesByMonthUseCase,
-		listInvoicesByCardUseCase:  listInvoicesByCardUseCase,
+		o11y:                                o11y,
+		errorHandler:                        errorHandler,
+		createPurchaseUseCase:               createPurchaseUseCase,
+		updatePurchaseUseCase:               updatePurchaseUseCase,
+		deletePurchaseUseCase:               deletePurchaseUseCase,
+		getInvoiceUseCase:                   getInvoiceUseCase,
+		listInvoicesByMonthUseCase:          listInvoicesByMonthUseCase,
+		listInvoicesByMonthPaginatedUseCase: listInvoicesByMonthPaginatedUseCase,
+		listInvoicesByCardUseCase:           listInvoicesByCardUseCase,
+		listInvoicesByCardPaginatedUseCase:  listInvoicesByCardPaginatedUseCase,
 	}
 }
 
@@ -144,7 +151,7 @@ func (h *InvoiceHandler) GetInvoice(w http.ResponseWriter, r *http.Request) {
 	responses.JSON(w, http.StatusOK, output)
 }
 
-// ListInvoicesByMonth lists all invoices for a user in a specific month.
+// ListInvoicesByMonth lists invoices for a user in a specific month with cursor-based pagination.
 func (h *InvoiceHandler) ListInvoicesByMonth(w http.ResponseWriter, r *http.Request) {
 	ctx, span := h.o11y.Tracer().Start(r.Context(), "invoice_handler.list_invoices_by_month")
 	defer span.End()
@@ -162,16 +169,30 @@ func (h *InvoiceHandler) ListInvoicesByMonth(w http.ResponseWriter, r *http.Requ
 		return
 	}
 
-	output, err := h.listInvoicesByMonthUseCase.Execute(ctx, user.ID, month)
+	// Parse cursor parameters (default: limit=20, max=100)
+	params, err := pagination.ParseCursorParams(r, 20, 100)
 	if err != nil {
 		h.errorHandler.HandleError(w, r, err)
 		return
 	}
 
-	responses.JSON(w, http.StatusOK, output)
+	output, err := h.listInvoicesByMonthPaginatedUseCase.Execute(ctx, usecase.ListInvoicesByMonthPaginatedInput{
+		UserID:         user.ID,
+		ReferenceMonth: month,
+		Limit:          params.Limit,
+		Cursor:         params.Cursor,
+	})
+	if err != nil {
+		h.errorHandler.HandleError(w, r, err)
+		return
+	}
+
+	// Build paginated response
+	response := pagination.NewPaginatedResponse(output.Invoices, params.Limit, output.NextCursor)
+	responses.JSON(w, http.StatusOK, response)
 }
 
-// ListInvoicesByCard lists all invoices for a specific card.
+// ListInvoicesByCard lists invoices for a specific card with cursor-based pagination.
 func (h *InvoiceHandler) ListInvoicesByCard(w http.ResponseWriter, r *http.Request) {
 	ctx, span := h.o11y.Tracer().Start(r.Context(), "invoice_handler.list_invoices_by_card")
 	defer span.End()
@@ -182,12 +203,25 @@ func (h *InvoiceHandler) ListInvoicesByCard(w http.ResponseWriter, r *http.Reque
 		return
 	}
 
-	cardID := chi.URLParam(r, "cardId")
-	output, err := h.listInvoicesByCardUseCase.Execute(ctx, cardID)
+	// Parse cursor parameters (default: limit=10, max=100)
+	params, err := pagination.ParseCursorParams(r, 10, 100)
 	if err != nil {
 		h.errorHandler.HandleError(w, r, err)
 		return
 	}
 
-	responses.JSON(w, http.StatusOK, output)
+	cardID := chi.URLParam(r, "cardId")
+	output, err := h.listInvoicesByCardPaginatedUseCase.Execute(ctx, usecase.ListInvoicesByCardPaginatedInput{
+		CardID: cardID,
+		Limit:  params.Limit,
+		Cursor: params.Cursor,
+	})
+	if err != nil {
+		h.errorHandler.HandleError(w, r, err)
+		return
+	}
+
+	// Build paginated response
+	response := pagination.NewPaginatedResponse(output.Invoices, params.Limit, output.NextCursor)
+	responses.JSON(w, http.StatusOK, response)
 }

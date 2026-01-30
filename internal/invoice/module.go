@@ -47,7 +47,9 @@ func NewInvoiceModule(
 	deletePurchaseUseCase := usecase.NewDeletePurchaseUseCase(uow, o11y)
 	getInvoiceUseCase := usecase.NewGetInvoiceUseCase(invoiceRepository, o11y)
 	listInvoicesByMonthUseCase := usecase.NewListInvoicesByMonthUseCase(invoiceRepository, o11y)
+	listInvoicesByMonthPaginatedUseCase := usecase.NewListInvoicesByMonthPaginatedUseCase(invoiceRepository, o11y)
 	listInvoicesByCardUseCase := usecase.NewListInvoicesByCardUseCase(invoiceRepository, o11y)
+	listInvoicesByCardPaginatedUseCase := usecase.NewListInvoicesByCardPaginatedUseCase(invoiceRepository, o11y)
 
 	// Create handler
 	invoiceHandler := http.NewInvoiceHandler(
@@ -58,7 +60,9 @@ func NewInvoiceModule(
 		deletePurchaseUseCase,
 		getInvoiceUseCase,
 		listInvoicesByMonthUseCase,
+		listInvoicesByMonthPaginatedUseCase,
 		listInvoicesByCardUseCase,
+		listInvoicesByCardPaginatedUseCase,
 	)
 
 	// Create router

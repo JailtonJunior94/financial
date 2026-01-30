@@ -4,6 +4,7 @@ import (
 	"context"
 	"database/sql"
 	"errors"
+	"fmt"
 
 	"github.com/jailtonjunior94/financial/internal/card/domain/entities"
 	"github.com/jailtonjunior94/financial/internal/card/domain/interfaces"
@@ -76,6 +77,78 @@ func (r *cardRepository) List(ctx context.Context, userID vos.UUID) ([]*entities
 		}
 		cards = append(cards, &card)
 	}
+	return cards, nil
+}
+
+// ListPaginated lista cards de um usuário com paginação cursor-based.
+func (r *cardRepository) ListPaginated(ctx context.Context, params interfaces.ListCardsParams) ([]*entities.Card, error) {
+	ctx, span := r.o11y.Tracer().Start(ctx, "card_repository.list_paginated")
+	defer span.End()
+
+	// Build WHERE clause with cursor
+	whereClause := "user_id = $1 AND deleted_at IS NULL"
+	args := []interface{}{params.UserID.String()}
+
+	cursorName, hasName := params.Cursor.GetString("name")
+	cursorID, hasID := params.Cursor.GetString("id")
+
+	if hasName && hasID && cursorName != "" && cursorID != "" {
+		// Keyset pagination: WHERE (name, id) > (cursor_name, cursor_id)
+		whereClause += ` AND (
+			name > $2
+			OR (name = $2 AND id > $3)
+		)`
+		args = append(args, cursorName, cursorID)
+	}
+
+	query := fmt.Sprintf(`
+		SELECT
+			id,
+			user_id,
+			name,
+			due_day,
+			closing_offset_days,
+			created_at,
+			updated_at,
+			deleted_at
+		FROM cards
+		WHERE %s
+		ORDER BY name ASC, id ASC
+		LIMIT $%d`, whereClause, len(args)+1)
+
+	args = append(args, params.Limit)
+
+	rows, err := r.db.QueryContext(ctx, query, args...)
+	if err != nil {
+		span.RecordError(err)
+		return nil, err
+	}
+	defer func() {
+		if closeErr := rows.Close(); closeErr != nil {
+			span.RecordError(closeErr)
+		}
+	}()
+
+	cards := make([]*entities.Card, 0)
+	for rows.Next() {
+		var card entities.Card
+		err := rows.Scan(
+			&card.ID.Value,
+			&card.UserID.Value,
+			&card.Name.Value,
+			&card.DueDay.Value,
+			&card.ClosingOffsetDays.Value,
+			&card.CreatedAt,
+			&card.UpdatedAt,
+			&card.DeletedAt,
+		)
+		if err != nil {
+			span.RecordError(err)
+			return nil, err
+		}
+		cards = append(cards, &card)
+	}
+
 	return cards, nil
 }
 
