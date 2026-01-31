@@ -13,25 +13,17 @@ import (
 // Constantes de porcentagem usadas em validações e cálculos.
 var (
 	// hundredPercent representa 100% com scale 3 (100.000).
-	hundredPercent = mustNewPercentage(100000)
+	// Ignoramos o erro pois sabemos que 100000 é um valor válido.
+	hundredPercent, _ = vos.NewPercentage(100000)
 	// zeroPercentage representa 0%.
-	zeroPercentage = mustNewPercentage(0)
+	// Ignoramos o erro pois sabemos que 0 é um valor válido.
+	zeroPercentage, _ = vos.NewPercentage(0)
 )
 
 const (
 	// percentageScale é usado para converter decimal para porcentagem (0.XX * 100 = XX%).
 	percentageScale = 100.0
 )
-
-// mustNewPercentage cria uma Percentage ou entra em panic se falhar.
-// Usado apenas para constantes package-level que devem sempre funcionar.
-func mustNewPercentage(value int64) vos.Percentage {
-	p, err := vos.NewPercentage(value)
-	if err != nil {
-		panic("failed to create percentage constant: " + err.Error())
-	}
-	return p
-}
 
 // Budget é o Aggregate Root que garante a integridade do orçamento.
 type Budget struct {

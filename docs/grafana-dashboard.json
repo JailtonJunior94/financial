@@ -1,0 +1,202 @@
+{
+  "dashboard": {
+    "title": "Financial System - HTTP Metrics",
+    "tags": ["financial", "http", "performance"],
+    "timezone": "browser",
+    "refresh": "30s",
+    "time": {
+      "from": "now-1h",
+      "to": "now"
+    },
+    "panels": [
+      {
+        "title": "Request Rate (QPS)",
+        "type": "graph",
+        "targets": [
+          {
+            "expr": "sum(rate(financial_http_requests_total[5m]))",
+            "legendFormat": "Total QPS"
+          },
+          {
+            "expr": "sum by(route) (rate(financial_http_requests_total[5m]))",
+            "legendFormat": "{{ route }}"
+          }
+        ],
+        "gridPos": {"h": 8, "w": 12, "x": 0, "y": 0}
+      },
+      {
+        "title": "Error Rate (%)",
+        "type": "graph",
+        "targets": [
+          {
+            "expr": "sum(rate(financial_http_requests_total{status=~\"5..\"}[5m])) / sum(rate(financial_http_requests_total[5m])) * 100",
+            "legendFormat": "5xx Error Rate"
+          },
+          {
+            "expr": "sum(rate(financial_http_requests_total{status=~\"4..\"}[5m])) / sum(rate(financial_http_requests_total[5m])) * 100",
+            "legendFormat": "4xx Error Rate"
+          }
+        ],
+        "gridPos": {"h": 8, "w": 12, "x": 12, "y": 0},
+        "yaxes": [
+          {"format": "percent", "min": 0}
+        ]
+      },
+      {
+        "title": "Latency Percentiles",
+        "type": "graph",
+        "targets": [
+          {
+            "expr": "histogram_quantile(0.50, sum(rate(financial_http_request_duration_seconds_bucket[5m])) by (le))",
+            "legendFormat": "P50"
+          },
+          {
+            "expr": "histogram_quantile(0.95, sum(rate(financial_http_request_duration_seconds_bucket[5m])) by (le))",
+            "legendFormat": "P95"
+          },
+          {
+            "expr": "histogram_quantile(0.99, sum(rate(financial_http_request_duration_seconds_bucket[5m])) by (le))",
+            "legendFormat": "P99"
+          }
+        ],
+        "gridPos": {"h": 8, "w": 12, "x": 0, "y": 8},
+        "yaxes": [
+          {"format": "s"}
+        ]
+      },
+      {
+        "title": "Active Requests",
+        "type": "graph",
+        "targets": [
+          {
+            "expr": "financial_http_active_requests",
+            "legendFormat": "Active Requests"
+          }
+        ],
+        "gridPos": {"h": 8, "w": 12, "x": 12, "y": 8}
+      },
+      {
+        "title": "Request Rate by Route",
+        "type": "table",
+        "targets": [
+          {
+            "expr": "sum by(route, method) (rate(financial_http_requests_total[5m]))",
+            "format": "table",
+            "instant": true
+          }
+        ],
+        "gridPos": {"h": 8, "w": 12, "x": 0, "y": 16},
+        "transformations": [
+          {
+            "id": "organize",
+            "options": {
+              "excludeByName": {"Time": true},
+              "indexByName": {"route": 0, "method": 1, "Value": 2},
+              "renameByName": {"Value": "QPS"}
+            }
+          }
+        ]
+      },
+      {
+        "title": "P95 Latency by Route",
+        "type": "table",
+        "targets": [
+          {
+            "expr": "histogram_quantile(0.95, sum by(route, le) (rate(financial_http_request_duration_seconds_bucket[5m])))",
+            "format": "table",
+            "instant": true
+          }
+        ],
+        "gridPos": {"h": 8, "w": 12, "x": 12, "y": 16},
+        "transformations": [
+          {
+            "id": "organize",
+            "options": {
+              "excludeByName": {"Time": true, "le": true},
+              "renameByName": {"Value": "P95 Latency (s)"}
+            }
+          }
+        ]
+      },
+      {
+        "title": "Status Code Distribution",
+        "type": "piechart",
+        "targets": [
+          {
+            "expr": "sum by(status) (rate(financial_http_requests_total[5m]))",
+            "legendFormat": "{{ status }}"
+          }
+        ],
+        "gridPos": {"h": 8, "w": 8, "x": 0, "y": 24}
+      },
+      {
+        "title": "Card Operations Rate",
+        "type": "graph",
+        "targets": [
+          {
+            "expr": "sum by(operation) (rate(financial_card_operations_total[5m]))",
+            "legendFormat": "{{ operation }}"
+          }
+        ],
+        "gridPos": {"h": 8, "w": 8, "x": 8, "y": 24}
+      },
+      {
+        "title": "Active Cards",
+        "type": "stat",
+        "targets": [
+          {
+            "expr": "financial_card_active_total"
+          }
+        ],
+        "gridPos": {"h": 8, "w": 8, "x": 16, "y": 24}
+      },
+      {
+        "title": "Card Error Rate by Type",
+        "type": "graph",
+        "targets": [
+          {
+            "expr": "sum by(error_type) (rate(financial_card_errors_total[5m]))",
+            "legendFormat": "{{ error_type }}"
+          }
+        ],
+        "gridPos": {"h": 8, "w": 12, "x": 0, "y": 32}
+      },
+      {
+        "title": "Card Operation P95 Latency",
+        "type": "graph",
+        "targets": [
+          {
+            "expr": "histogram_quantile(0.95, sum by(operation, le) (rate(financial_card_operation_duration_seconds_bucket[5m])))",
+            "legendFormat": "{{ operation }}"
+          }
+        ],
+        "gridPos": {"h": 8, "w": 12, "x": 12, "y": 32},
+        "yaxes": [
+          {"format": "s"}
+        ]
+      },
+      {
+        "title": "Top 5 Slowest Endpoints",
+        "type": "bargauge",
+        "targets": [
+          {
+            "expr": "topk(5, histogram_quantile(0.95, sum by(route, le) (rate(financial_http_request_duration_seconds_bucket[5m]))))",
+            "legendFormat": "{{ route }}"
+          }
+        ],
+        "gridPos": {"h": 8, "w": 12, "x": 0, "y": 40}
+      },
+      {
+        "title": "Top 5 Endpoints with Most Errors",
+        "type": "bargauge",
+        "targets": [
+          {
+            "expr": "topk(5, sum by(route) (rate(financial_http_requests_total{status=~\"5..\"}[5m])))",
+            "legendFormat": "{{ route }}"
+          }
+        ],
+        "gridPos": {"h": 8, "w": 12, "x": 12, "y": 40}
+      }
+    ]
+  }
+}

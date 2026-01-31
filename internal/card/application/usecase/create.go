@@ -41,19 +41,11 @@ func (u *createCardUseCase) Execute(ctx context.Context, userID string, input *d
 	defer span.End()
 
 	start := time.Now()
-	defer func() {
-		duration := time.Since(start)
-		if err := recover(); err != nil {
-			u.metrics.RecordOperationFailure(ctx, metrics.OperationCreate, duration)
-			panic(err)
-		}
-	}()
 
 	card, err := factories.CreateCard(userID, input.Name, input.DueDay)
 	if err != nil {
 		duration := time.Since(start)
-		u.metrics.RecordOperationFailure(ctx, metrics.OperationCreate, duration)
-		u.metrics.RecordError(ctx, metrics.OperationCreate, metrics.ClassifyError(err))
+		u.metrics.RecordOperationFailure(ctx, metrics.OperationCreate, duration, metrics.ClassifyError(err))
 
 		span.AddEvent(
 			"error creating card entity",
@@ -66,8 +58,7 @@ func (u *createCardUseCase) Execute(ctx context.Context, userID string, input *d
 
 	if err := u.repository.Save(ctx, card); err != nil {
 		duration := time.Since(start)
-		u.metrics.RecordOperationFailure(ctx, metrics.OperationCreate, duration)
-		u.metrics.RecordError(ctx, metrics.OperationCreate, metrics.ClassifyError(err))
+		u.metrics.RecordOperationFailure(ctx, metrics.OperationCreate, duration, metrics.ClassifyError(err))
 
 		span.AddEvent(
 			"error saving card to repository",

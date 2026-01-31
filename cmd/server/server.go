@@ -16,6 +16,7 @@ import (
 	"github.com/jailtonjunior94/financial/internal/payment_method"
 	"github.com/jailtonjunior94/financial/internal/transaction"
 	"github.com/jailtonjunior94/financial/internal/user"
+	"github.com/jailtonjunior94/financial/pkg/api/middlewares"
 	"github.com/jailtonjunior94/financial/pkg/auth"
 	"github.com/jailtonjunior94/financial/pkg/database"
 
@@ -65,6 +66,8 @@ func Run() error {
 	}
 	o11y.Logger().Info(ctx, "database connection established with OpenTelemetry instrumentation")
 
+	metricsMiddleware := middlewares.NewMetricsMiddleware(o11y)
+
 	jwtAdapter := auth.NewJwtAdapter(cfg, o11y)
 	userModule := user.NewUserModule(dbManager.DB(), cfg, o11y)
 	cardModule := card.NewCardModule(dbManager.DB(), o11y, jwtAdapter)
@@ -95,6 +98,7 @@ func Run() error {
 		httpserver.WithServiceName(cfg.HTTPConfig.ServiceName),
 		httpserver.WithServiceVersion(cfg.O11yConfig.ServiceVersion),
 		httpserver.WithHealthChecks(map[string]httpserver.HealthCheckFunc{"database": dbManager.Ping}),
+		httpserver.WithMiddleware(metricsMiddleware.Handler),
 	)
 	if err != nil {
 		return fmt.Errorf("run: failed to create http server: %v", err)

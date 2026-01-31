@@ -41,19 +41,11 @@ func (u *removeCardUseCase) Execute(ctx context.Context, userID, id string) erro
 	defer span.End()
 
 	start := time.Now()
-	defer func() {
-		duration := time.Since(start)
-		if err := recover(); err != nil {
-			u.metrics.RecordOperationFailure(ctx, metrics.OperationDelete, duration)
-			panic(err)
-		}
-	}()
 
 	user, err := vos.NewUUIDFromString(userID)
 	if err != nil {
 		duration := time.Since(start)
-		u.metrics.RecordOperationFailure(ctx, metrics.OperationDelete, duration)
-		u.metrics.RecordError(ctx, metrics.OperationDelete, metrics.ClassifyError(err))
+		u.metrics.RecordOperationFailure(ctx, metrics.OperationDelete, duration, metrics.ClassifyError(err))
 
 		span.AddEvent(
 			"error parsing user id",
@@ -67,8 +59,7 @@ func (u *removeCardUseCase) Execute(ctx context.Context, userID, id string) erro
 	cardID, err := vos.NewUUIDFromString(id)
 	if err != nil {
 		duration := time.Since(start)
-		u.metrics.RecordOperationFailure(ctx, metrics.OperationDelete, duration)
-		u.metrics.RecordError(ctx, metrics.OperationDelete, metrics.ClassifyError(err))
+		u.metrics.RecordOperationFailure(ctx, metrics.OperationDelete, duration, metrics.ClassifyError(err))
 
 		span.AddEvent(
 			"error parsing card id",
@@ -82,8 +73,7 @@ func (u *removeCardUseCase) Execute(ctx context.Context, userID, id string) erro
 	card, err := u.repository.FindByID(ctx, user, cardID)
 	if err != nil {
 		duration := time.Since(start)
-		u.metrics.RecordOperationFailure(ctx, metrics.OperationDelete, duration)
-		u.metrics.RecordError(ctx, metrics.OperationDelete, metrics.ClassifyError(err))
+		u.metrics.RecordOperationFailure(ctx, metrics.OperationDelete, duration, metrics.ClassifyError(err))
 
 		span.AddEvent(
 			"error finding card by id",
@@ -101,8 +91,7 @@ func (u *removeCardUseCase) Execute(ctx context.Context, userID, id string) erro
 
 	if card == nil {
 		duration := time.Since(start)
-		u.metrics.RecordOperationFailure(ctx, metrics.OperationDelete, duration)
-		u.metrics.RecordError(ctx, metrics.OperationDelete, metrics.ErrorTypeNotFound)
+		u.metrics.RecordOperationFailure(ctx, metrics.OperationDelete, duration, metrics.ErrorTypeNotFound)
 
 		span.AddEvent(
 			"card not found",
@@ -121,8 +110,7 @@ func (u *removeCardUseCase) Execute(ctx context.Context, userID, id string) erro
 
 	if err := u.repository.Update(ctx, card.Delete()); err != nil {
 		duration := time.Since(start)
-		u.metrics.RecordOperationFailure(ctx, metrics.OperationDelete, duration)
-		u.metrics.RecordError(ctx, metrics.OperationDelete, metrics.ClassifyError(err))
+		u.metrics.RecordOperationFailure(ctx, metrics.OperationDelete, duration, metrics.ClassifyError(err))
 
 		span.AddEvent(
 			"error deleting card in repository",

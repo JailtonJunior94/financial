@@ -43,19 +43,11 @@ func (u *findCardUseCase) Execute(ctx context.Context, userID string) ([]*dtos.C
 	defer span.End()
 
 	start := time.Now()
-	defer func() {
-		duration := time.Since(start)
-		if err := recover(); err != nil {
-			u.metrics.RecordOperationFailure(ctx, metrics.OperationFind, duration)
-			panic(err)
-		}
-	}()
 
 	user, err := vos.NewUUIDFromString(userID)
 	if err != nil {
 		duration := time.Since(start)
-		u.metrics.RecordOperationFailure(ctx, metrics.OperationFind, duration)
-		u.metrics.RecordError(ctx, metrics.OperationFind, metrics.ClassifyError(err))
+		u.metrics.RecordOperationFailure(ctx, metrics.OperationFind, duration, metrics.ClassifyError(err))
 
 		span.AddEvent(
 			"error parsing user id",
@@ -69,8 +61,7 @@ func (u *findCardUseCase) Execute(ctx context.Context, userID string) ([]*dtos.C
 	cards, err := u.repository.List(ctx, user)
 	if err != nil {
 		duration := time.Since(start)
-		u.metrics.RecordOperationFailure(ctx, metrics.OperationFind, duration)
-		u.metrics.RecordError(ctx, metrics.OperationFind, metrics.ClassifyError(err))
+		u.metrics.RecordOperationFailure(ctx, metrics.OperationFind, duration, metrics.ClassifyError(err))
 
 		span.AddEvent(
 			"error listing cards from repository",

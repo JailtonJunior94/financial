@@ -13,7 +13,6 @@ type CardMetrics struct {
 
 	// Instrumentos OpenTelemetry
 	operationsTotal   observability.Counter
-	errorsTotal       observability.Counter
 	operationDuration observability.Histogram
 	activeCardsTotal  observability.UpDownCounter
 }
@@ -24,32 +23,25 @@ func NewCardMetrics(o11y observability.Observability) *CardMetrics {
 		o11y: o11y,
 	}
 
-	// Counter: Operações executadas
+	// Counter: Operações executadas (inclui status e error_type quando aplicável)
 	metrics.operationsTotal = o11y.Metrics().Counter(
 		"financial.card.operations.total",
-		"Total number of card operations executed by type (create, update, delete, find, find_by)",
+		"Total number of card operations by type, status, and error_type",
 		"operation",
 	)
 
-	// Counter: Erros detalhados
-	metrics.errorsTotal = o11y.Metrics().Counter(
-		"financial.card.errors.total",
-		"Total number of errors by operation and error type",
-		"error",
-	)
-
-	// Histogram: Latência com buckets customizados
+	// Histogram: Latência com buckets customizados (inclui status para separar sucesso/falha)
 	metrics.operationDuration = o11y.Metrics().HistogramWithBuckets(
 		"financial.card.operation.duration.seconds",
-		"Duration of card operations in seconds",
+		"Duration of card operations in seconds by status",
 		"s",
 		[]float64{.001, .005, .01, .025, .05, .1, .25, .5, 1, 2.5, 5},
 	)
 
-	// UpDownCounter: Cartões ativos (substitui Gauge)
+	// UpDownCounter: Cartões ativos (incrementa +1 em create, decrementa -1 em delete)
 	metrics.activeCardsTotal = o11y.Metrics().UpDownCounter(
 		"financial.card.active.total",
-		"Current number of active cards in the system",
+		"Active cards counter (incremented on create, decremented on delete)",
 		"card",
 	)
 
@@ -59,37 +51,26 @@ func NewCardMetrics(o11y observability.Observability) *CardMetrics {
 // RecordOperation registra uma operação bem-sucedida
 func (m *CardMetrics) RecordOperation(ctx context.Context, operation string, duration time.Duration) {
 	m.operationsTotal.Increment(ctx,
-		observability.Field{Key: "operation", Value: operation},
-		observability.Field{Key: "status", Value: "success"},
+		observability.String("operation", operation),
+		observability.String("status", "success"),
 	)
 	m.operationDuration.Record(ctx, duration.Seconds(),
-		observability.Field{Key: "operation", Value: operation},
+		observability.String("operation", operation),
+		observability.String("status", "success"),
 	)
 }
 
-// RecordOperationFailure registra uma operação com falha
-func (m *CardMetrics) RecordOperationFailure(ctx context.Context, operation string, duration time.Duration) {
+// RecordOperationFailure registra uma operação com falha incluindo tipo de erro
+func (m *CardMetrics) RecordOperationFailure(ctx context.Context, operation string, duration time.Duration, errorType string) {
 	m.operationsTotal.Increment(ctx,
-		observability.Field{Key: "operation", Value: operation},
-		observability.Field{Key: "status", Value: "failure"},
+		observability.String("operation", operation),
+		observability.String("status", "failure"),
+		observability.String("error_type", errorType),
 	)
 	m.operationDuration.Record(ctx, duration.Seconds(),
-		observability.Field{Key: "operation", Value: operation},
+		observability.String("operation", operation),
+		observability.String("status", "failure"),
 	)
-}
-
-// RecordError registra um erro específico
-func (m *CardMetrics) RecordError(ctx context.Context, operation, errorType string) {
-	m.errorsTotal.Increment(ctx,
-		observability.Field{Key: "operation", Value: operation},
-		observability.Field{Key: "error_type", Value: errorType},
-	)
-}
-
-// SetActiveCards atualiza o total de cartões ativos
-func (m *CardMetrics) SetActiveCards(ctx context.Context, count float64) {
-	// UpDownCounter não tem Set(), mas Add() funciona para ajustes
-	m.activeCardsTotal.Add(ctx, int64(count))
 }
 
 // IncActiveCards incrementa o contador de cartões ativos

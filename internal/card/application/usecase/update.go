@@ -42,19 +42,11 @@ func (u *updateCardUseCase) Execute(ctx context.Context, userID, id string, inpu
 	defer span.End()
 
 	start := time.Now()
-	defer func() {
-		duration := time.Since(start)
-		if err := recover(); err != nil {
-			u.metrics.RecordOperationFailure(ctx, metrics.OperationUpdate, duration)
-			panic(err)
-		}
-	}()
 
 	user, err := vos.NewUUIDFromString(userID)
 	if err != nil {
 		duration := time.Since(start)
-		u.metrics.RecordOperationFailure(ctx, metrics.OperationUpdate, duration)
-		u.metrics.RecordError(ctx, metrics.OperationUpdate, metrics.ClassifyError(err))
+		u.metrics.RecordOperationFailure(ctx, metrics.OperationUpdate, duration, metrics.ClassifyError(err))
 
 		span.AddEvent(
 			"error parsing user id",
@@ -68,8 +60,7 @@ func (u *updateCardUseCase) Execute(ctx context.Context, userID, id string, inpu
 	cardID, err := vos.NewUUIDFromString(id)
 	if err != nil {
 		duration := time.Since(start)
-		u.metrics.RecordOperationFailure(ctx, metrics.OperationUpdate, duration)
-		u.metrics.RecordError(ctx, metrics.OperationUpdate, metrics.ClassifyError(err))
+		u.metrics.RecordOperationFailure(ctx, metrics.OperationUpdate, duration, metrics.ClassifyError(err))
 
 		span.AddEvent(
 			"error parsing card id",
@@ -83,8 +74,7 @@ func (u *updateCardUseCase) Execute(ctx context.Context, userID, id string, inpu
 	card, err := u.repository.FindByID(ctx, user, cardID)
 	if err != nil {
 		duration := time.Since(start)
-		u.metrics.RecordOperationFailure(ctx, metrics.OperationUpdate, duration)
-		u.metrics.RecordError(ctx, metrics.OperationUpdate, metrics.ClassifyError(err))
+		u.metrics.RecordOperationFailure(ctx, metrics.OperationUpdate, duration, metrics.ClassifyError(err))
 
 		span.AddEvent(
 			"error finding card by id",
@@ -104,8 +94,7 @@ func (u *updateCardUseCase) Execute(ctx context.Context, userID, id string, inpu
 
 	if card == nil {
 		duration := time.Since(start)
-		u.metrics.RecordOperationFailure(ctx, metrics.OperationUpdate, duration)
-		u.metrics.RecordError(ctx, metrics.OperationUpdate, metrics.ErrorTypeNotFound)
+		u.metrics.RecordOperationFailure(ctx, metrics.OperationUpdate, duration, metrics.ClassifyError(err))
 
 		span.AddEvent(
 			"card not found",
@@ -130,8 +119,7 @@ func (u *updateCardUseCase) Execute(ctx context.Context, userID, id string, inpu
 
 	if err := card.Update(input.Name, input.DueDay, closingOffsetDays); err != nil {
 		duration := time.Since(start)
-		u.metrics.RecordOperationFailure(ctx, metrics.OperationUpdate, duration)
-		u.metrics.RecordError(ctx, metrics.OperationUpdate, metrics.ClassifyError(err))
+		u.metrics.RecordOperationFailure(ctx, metrics.OperationUpdate, duration, metrics.ClassifyError(err))
 
 		span.AddEvent(
 			"error validating card update",
@@ -151,8 +139,7 @@ func (u *updateCardUseCase) Execute(ctx context.Context, userID, id string, inpu
 
 	if err := u.repository.Update(ctx, card); err != nil {
 		duration := time.Since(start)
-		u.metrics.RecordOperationFailure(ctx, metrics.OperationUpdate, duration)
-		u.metrics.RecordError(ctx, metrics.OperationUpdate, metrics.ClassifyError(err))
+		u.metrics.RecordOperationFailure(ctx, metrics.OperationUpdate, duration, metrics.ClassifyError(err))
 
 		span.AddEvent(
 			"error updating card in repository",

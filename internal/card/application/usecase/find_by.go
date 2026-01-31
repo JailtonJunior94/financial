@@ -42,19 +42,11 @@ func (u *findCardByUseCase) Execute(ctx context.Context, userID, id string) (*dt
 	defer span.End()
 
 	start := time.Now()
-	defer func() {
-		duration := time.Since(start)
-		if err := recover(); err != nil {
-			u.metrics.RecordOperationFailure(ctx, metrics.OperationFindBy, duration)
-			panic(err)
-		}
-	}()
 
 	user, err := vos.NewUUIDFromString(userID)
 	if err != nil {
 		duration := time.Since(start)
-		u.metrics.RecordOperationFailure(ctx, metrics.OperationFindBy, duration)
-		u.metrics.RecordError(ctx, metrics.OperationFindBy, metrics.ClassifyError(err))
+		u.metrics.RecordOperationFailure(ctx, metrics.OperationFindBy, duration, metrics.ClassifyError(err))
 
 		span.AddEvent(
 			"error parsing user id",
@@ -68,8 +60,7 @@ func (u *findCardByUseCase) Execute(ctx context.Context, userID, id string) (*dt
 	cardID, err := vos.NewUUIDFromString(id)
 	if err != nil {
 		duration := time.Since(start)
-		u.metrics.RecordOperationFailure(ctx, metrics.OperationFindBy, duration)
-		u.metrics.RecordError(ctx, metrics.OperationFindBy, metrics.ClassifyError(err))
+		u.metrics.RecordOperationFailure(ctx, metrics.OperationFindBy, duration, metrics.ClassifyError(err))
 
 		span.AddEvent(
 			"error parsing card id",
@@ -83,8 +74,7 @@ func (u *findCardByUseCase) Execute(ctx context.Context, userID, id string) (*dt
 	card, err := u.repository.FindByID(ctx, user, cardID)
 	if err != nil {
 		duration := time.Since(start)
-		u.metrics.RecordOperationFailure(ctx, metrics.OperationFindBy, duration)
-		u.metrics.RecordError(ctx, metrics.OperationFindBy, metrics.ClassifyError(err))
+		u.metrics.RecordOperationFailure(ctx, metrics.OperationFindBy, duration, metrics.ClassifyError(err))
 
 		span.AddEvent(
 			"error finding card by id",
@@ -102,8 +92,7 @@ func (u *findCardByUseCase) Execute(ctx context.Context, userID, id string) (*dt
 
 	if card == nil {
 		duration := time.Since(start)
-		u.metrics.RecordOperationFailure(ctx, metrics.OperationFindBy, duration)
-		u.metrics.RecordError(ctx, metrics.OperationFindBy, metrics.ErrorTypeNotFound)
+		u.metrics.RecordOperationFailure(ctx, metrics.OperationFindBy, duration, metrics.ClassifyError(err))
 
 		span.AddEvent(
 			"card not found",

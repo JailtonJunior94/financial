@@ -61,20 +61,12 @@ func (u *findCardPaginatedUseCase) Execute(
 	defer span.End()
 
 	start := time.Now()
-	defer func() {
-		duration := time.Since(start)
-		if err := recover(); err != nil {
-			u.metrics.RecordOperationFailure(ctx, metrics.OperationFind, duration)
-			panic(err)
-		}
-	}()
 
 	// Parse user ID
 	userID, err := vos.NewUUIDFromString(input.UserID)
 	if err != nil {
 		duration := time.Since(start)
-		u.metrics.RecordOperationFailure(ctx, metrics.OperationFind, duration)
-		u.metrics.RecordError(ctx, metrics.OperationFind, metrics.ClassifyError(err))
+		u.metrics.RecordOperationFailure(ctx, metrics.OperationFind, duration, metrics.ClassifyError(err))
 
 		span.AddEvent(
 			"error parsing user id",
@@ -89,8 +81,7 @@ func (u *findCardPaginatedUseCase) Execute(
 	cursor, err := pagination.DecodeCursor(input.Cursor)
 	if err != nil {
 		duration := time.Since(start)
-		u.metrics.RecordOperationFailure(ctx, metrics.OperationFind, duration)
-		u.metrics.RecordError(ctx, metrics.OperationFind, metrics.ClassifyError(err))
+		u.metrics.RecordOperationFailure(ctx, metrics.OperationFind, duration, metrics.ClassifyError(err))
 
 		span.AddEvent(
 			"error decoding cursor",
@@ -109,8 +100,7 @@ func (u *findCardPaginatedUseCase) Execute(
 	})
 	if err != nil {
 		duration := time.Since(start)
-		u.metrics.RecordOperationFailure(ctx, metrics.OperationFind, duration)
-		u.metrics.RecordError(ctx, metrics.OperationFind, metrics.ClassifyError(err))
+		u.metrics.RecordOperationFailure(ctx, metrics.OperationFind, duration, metrics.ClassifyError(err))
 
 		span.AddEvent(
 			"error listing cards from repository",
@@ -142,8 +132,7 @@ func (u *findCardPaginatedUseCase) Execute(
 		encoded, err := pagination.EncodeCursor(newCursor)
 		if err != nil {
 			duration := time.Since(start)
-			u.metrics.RecordOperationFailure(ctx, metrics.OperationFind, duration)
-			u.metrics.RecordError(ctx, metrics.OperationFind, metrics.ClassifyError(err))
+			u.metrics.RecordOperationFailure(ctx, metrics.OperationFind, duration, metrics.ClassifyError(err))
 
 			span.AddEvent(
 				"error encoding cursor",
