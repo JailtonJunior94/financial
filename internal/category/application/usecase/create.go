@@ -51,6 +51,11 @@ func (u *createCategoryUseCase) Execute(ctx context.Context, userID string, inpu
 
 	// Validate parent_id exists if provided
 	if input.ParentID != "" {
+		u.o11y.Logger().Info(ctx, "validating parent category",
+			observability.String("user_id", userID),
+			observability.String("parent_id", input.ParentID),
+			observability.String("category_name", input.Name))
+
 		parentID, err := vos.NewUUIDFromString(input.ParentID)
 		if err != nil {
 			span.AddEvent(
@@ -58,6 +63,10 @@ func (u *createCategoryUseCase) Execute(ctx context.Context, userID string, inpu
 				observability.Field{Key: "parent_id", Value: input.ParentID},
 				observability.Field{Key: "error", Value: err},
 			)
+			u.o11y.Logger().Error(ctx, "invalid parent_id format",
+				observability.Error(err),
+				observability.String("user_id", userID),
+				observability.String("parent_id", input.ParentID))
 			return nil, err
 		}
 
@@ -70,7 +79,7 @@ func (u *createCategoryUseCase) Execute(ctx context.Context, userID string, inpu
 				observability.Field{Key: "parent_id", Value: input.ParentID},
 				observability.Field{Key: "error", Value: err},
 			)
-			u.o11y.Logger().Error(ctx, "error finding parent category",
+			u.o11y.Logger().Error(ctx, "database error while finding parent category",
 				observability.Error(err),
 				observability.String("user_id", userID),
 				observability.String("parent_id", input.ParentID))
@@ -83,12 +92,18 @@ func (u *createCategoryUseCase) Execute(ctx context.Context, userID string, inpu
 				observability.Field{Key: "user_id", Value: userID},
 				observability.Field{Key: "parent_id", Value: input.ParentID},
 			)
-			u.o11y.Logger().Error(ctx, "parent category not found",
+			u.o11y.Logger().Error(ctx, "parent category does not exist or belongs to different user",
 				observability.Error(customErrors.ErrCategoryNotFound),
 				observability.String("user_id", userID),
-				observability.String("parent_id", input.ParentID))
+				observability.String("parent_id", input.ParentID),
+				observability.String("requested_child_name", input.Name))
 			return nil, customErrors.ErrCategoryNotFound
 		}
+
+		u.o11y.Logger().Info(ctx, "parent category validated successfully",
+			observability.String("user_id", userID),
+			observability.String("parent_id", input.ParentID),
+			observability.String("parent_name", parentCategory.Name.String()))
 	}
 
 	category, err := factories.CreateCategory(userID, input.ParentID, input.Name, input.Sequence)

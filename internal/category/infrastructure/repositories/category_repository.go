@@ -173,11 +173,16 @@ func (r *categoryRepository) FindByID(ctx context.Context, userID, id vos.UUID) 
 			AND id = $2
 			AND deleted_at IS NULL`
 
+	r.o11y.Logger().Info(ctx, "FindByID - searching category",
+		observability.String("user_id", userID.String()),
+		observability.String("category_id", id.String()))
+
 	var category entities.Category
+	var parentIDStr sql.NullString
 	err := r.db.QueryRowContext(ctx, queryCategory, userID.String(), id.String()).Scan(
 		&category.ID.Value,
 		&category.UserID.Value,
-		&category.ParentID,
+		&parentIDStr,
 		&category.Name.Value,
 		&category.Sequence.Sequence,
 		&category.CreatedAt,
@@ -185,14 +190,45 @@ func (r *categoryRepository) FindByID(ctx context.Context, userID, id vos.UUID) 
 		&category.DeletedAt,
 	)
 
+	// Convert sql.NullString to *vos.UUID
+	if parentIDStr.Valid && parentIDStr.String != "" {
+		parentUUID, parseErr := vos.NewUUIDFromString(parentIDStr.String)
+		if parseErr == nil {
+			category.ParentID = &parentUUID
+		}
+	}
+
 	if err == sql.ErrNoRows {
-		// Categoria não encontrada
+		// Check if category exists but belongs to a different user
+		var existsForOtherUser bool
+		checkQuery := `SELECT EXISTS(SELECT 1 FROM categories WHERE id = $1)`
+		_ = r.db.QueryRowContext(ctx, checkQuery, id.String()).Scan(&existsForOtherUser)
+
+		if existsForOtherUser {
+			r.o11y.Logger().Warn(ctx, "FindByID - category exists but belongs to different user",
+				observability.String("requested_user_id", userID.String()),
+				observability.String("category_id", id.String()))
+		} else {
+			r.o11y.Logger().Warn(ctx, "FindByID - category does not exist in database",
+				observability.String("user_id", userID.String()),
+				observability.String("category_id", id.String()))
+		}
 		return nil, nil
 	}
 	if err != nil {
+		r.o11y.Logger().Error(ctx, "FindByID - scan error",
+			observability.Error(err),
+			observability.String("user_id", userID.String()),
+			observability.String("category_id", id.String()))
 		span.RecordError(err)
 		return nil, err
 	}
+
+	r.o11y.Logger().Info(ctx, "FindByID - category found successfully",
+		observability.String("user_id", userID.String()),
+		observability.String("category_id", id.String()),
+		observability.String("category_name", category.Name.String()),
+		observability.String("has_parent", fmt.Sprintf("%v", category.ParentID != nil)))
 
 	// 2. Buscar subcategorias (filhos)
 	queryChildren := `
