@@ -7,8 +7,10 @@ import (
 	"github.com/jailtonjunior94/financial/internal/category/application/dtos"
 	"github.com/jailtonjunior94/financial/internal/category/domain/factories"
 	"github.com/jailtonjunior94/financial/internal/category/domain/interfaces"
+	customErrors "github.com/jailtonjunior94/financial/pkg/custom_errors"
 
 	"github.com/JailtonJunior94/devkit-go/pkg/observability"
+	"github.com/JailtonJunior94/devkit-go/pkg/vos"
 )
 
 type (
@@ -35,6 +37,59 @@ func NewCreateCategoryUseCase(
 func (u *createCategoryUseCase) Execute(ctx context.Context, userID string, input *dtos.CategoryInput) (*dtos.CategoryOutput, error) {
 	ctx, span := u.o11y.Tracer().Start(ctx, "create_category_usecase.execute")
 	defer span.End()
+
+	// Validate user_id
+	user, err := vos.NewUUIDFromString(userID)
+	if err != nil {
+		span.AddEvent(
+			"error parsing user id",
+			observability.Field{Key: "user_id", Value: userID},
+			observability.Field{Key: "error", Value: err},
+		)
+		return nil, err
+	}
+
+	// Validate parent_id exists if provided
+	if input.ParentID != "" {
+		parentID, err := vos.NewUUIDFromString(input.ParentID)
+		if err != nil {
+			span.AddEvent(
+				"error parsing parent id",
+				observability.Field{Key: "parent_id", Value: input.ParentID},
+				observability.Field{Key: "error", Value: err},
+			)
+			return nil, err
+		}
+
+		// Check if parent category exists
+		parentCategory, err := u.repository.FindByID(ctx, user, parentID)
+		if err != nil {
+			span.AddEvent(
+				"error finding parent category",
+				observability.Field{Key: "user_id", Value: userID},
+				observability.Field{Key: "parent_id", Value: input.ParentID},
+				observability.Field{Key: "error", Value: err},
+			)
+			u.o11y.Logger().Error(ctx, "error finding parent category",
+				observability.Error(err),
+				observability.String("user_id", userID),
+				observability.String("parent_id", input.ParentID))
+			return nil, err
+		}
+
+		if parentCategory == nil {
+			span.AddEvent(
+				"parent category not found",
+				observability.Field{Key: "user_id", Value: userID},
+				observability.Field{Key: "parent_id", Value: input.ParentID},
+			)
+			u.o11y.Logger().Error(ctx, "parent category not found",
+				observability.Error(customErrors.ErrCategoryNotFound),
+				observability.String("user_id", userID),
+				observability.String("parent_id", input.ParentID))
+			return nil, customErrors.ErrCategoryNotFound
+		}
+	}
 
 	category, err := factories.CreateCategory(userID, input.ParentID, input.Name, input.Sequence)
 	if err != nil {

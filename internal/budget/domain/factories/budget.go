@@ -24,12 +24,6 @@ func CreateBudget(userID string, input *dtos.BudgetCreateInput) (*entities.Budge
 		return nil, fmt.Errorf("create_budget: failed to generate budget ID: %w", err)
 	}
 
-	// Parse total amount from string
-	totalAmountFloat, err := strconv.ParseFloat(input.TotalAmount, 64)
-	if err != nil {
-		return nil, fmt.Errorf("create_budget: invalid total amount format: %w", err)
-	}
-
 	// Map currency string to Currency type
 	var currency vos.Currency
 	switch input.Currency {
@@ -43,10 +37,10 @@ func CreateBudget(userID string, input *dtos.BudgetCreateInput) (*entities.Budge
 		return nil, fmt.Errorf("create_budget: unsupported currency: %s", input.Currency)
 	}
 
-	// Create Money value object
-	totalAmount, err := vos.NewMoneyFromFloat(totalAmountFloat, currency)
+	// Parse total amount from string (preserves precision)
+	totalAmount, err := vos.NewMoneyFromString(input.TotalAmount, currency)
 	if err != nil {
-		return nil, fmt.Errorf("create_budget: invalid money value: %w", err)
+		return nil, fmt.Errorf("create_budget: invalid total amount: %w", err)
 	}
 
 	// Parse reference month
@@ -72,17 +66,10 @@ func CreateBudget(userID string, input *dtos.BudgetCreateInput) (*entities.Budge
 			return nil, fmt.Errorf("create_budget: failed to generate item ID: %w", err)
 		}
 
-		// Parse percentage from string (e.g., "25.50" -> 25500 with scale 3)
-		percentageFloat, err := strconv.ParseFloat(itemInput.PercentageGoal, 64)
+		// Parse percentage from string (e.g., "25.50" -> Percentage VO)
+		percentage, err := parsePercentage(itemInput.PercentageGoal)
 		if err != nil {
-			return nil, fmt.Errorf("create_budget: invalid percentage format: %w", err)
-		}
-
-		// Convert to int64 with scale 3 (25.5% → 25500)
-		percentageInt := int64(percentageFloat * 1000)
-		percentage, err := vos.NewPercentage(percentageInt)
-		if err != nil {
-			return nil, fmt.Errorf("create_budget: invalid percentage value: %w", err)
+			return nil, fmt.Errorf("create_budget: invalid percentage: %w", err)
 		}
 
 		newItem := entities.NewBudgetItem(budget, category, percentage)
@@ -97,4 +84,20 @@ func CreateBudget(userID string, input *dtos.BudgetCreateInput) (*entities.Budge
 	}
 
 	return budget, nil
+}
+
+// parsePercentage converts a string percentage (e.g., "25.50") to a Percentage VO.
+// This avoids float precision issues by parsing the string directly to scaled int64.
+func parsePercentage(s string) (vos.Percentage, error) {
+	// Parse string to float64
+	percentageFloat, err := strconv.ParseFloat(s, 64)
+	if err != nil {
+		return vos.Percentage{}, fmt.Errorf("invalid percentage format: %w", err)
+	}
+
+	// Convert to int64 with scale 3 (25.5% → 25500)
+	// Using round to avoid truncation issues
+	percentageInt := int64(percentageFloat*1000 + 0.5)
+
+	return vos.NewPercentage(percentageInt)
 }

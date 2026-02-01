@@ -6,7 +6,9 @@ import (
 	"net/http"
 	"strings"
 
+	budgetdomain "github.com/jailtonjunior94/financial/internal/budget/domain"
 	invoicedomain "github.com/jailtonjunior94/financial/internal/invoice/domain"
+	transactiondomain "github.com/jailtonjunior94/financial/internal/transaction/domain"
 	customerrors "github.com/jailtonjunior94/financial/pkg/custom_errors"
 )
 
@@ -170,10 +172,94 @@ func buildDomainErrorMappings() map[error]ErrorMapping {
 			Message: "Invoice total amount cannot be negative",
 		},
 
+		// Budget validation errors → 400 Bad Request
+		budgetdomain.ErrBudgetInvalidTotal: {
+			Status:  http.StatusBadRequest,
+			Message: "Sum of budget item percentages must equal 100%",
+		},
+		budgetdomain.ErrBudgetPercentageExceeds100: {
+			Status:  http.StatusBadRequest,
+			Message: "Sum of budget item percentages exceeds 100%",
+		},
+		budgetdomain.ErrBudgetNoItems: {
+			Status:  http.StatusBadRequest,
+			Message: "Budget must have at least one item",
+		},
+		budgetdomain.ErrInvalidPercentage: {
+			Status:  http.StatusBadRequest,
+			Message: "Percentage must be between 0 and 100",
+		},
+		budgetdomain.ErrNegativeAmount: {
+			Status:  http.StatusBadRequest,
+			Message: "Amount cannot be negative",
+		},
+		budgetdomain.ErrInvalidCategoryID: {
+			Status:  http.StatusBadRequest,
+			Message: "Invalid category ID",
+		},
+
+		// Transaction validation errors → 400 Bad Request
+		transactiondomain.ErrInvalidReferenceMonth: {
+			Status:  http.StatusBadRequest,
+			Message: "Invalid reference month",
+		},
+		transactiondomain.ErrTransactionItemDeleted: {
+			Status:  http.StatusBadRequest,
+			Message: "Transaction item has been deleted",
+		},
+		transactiondomain.ErrInvalidTransactionTitle: {
+			Status:  http.StatusBadRequest,
+			Message: "Invalid transaction title",
+		},
+		transactiondomain.ErrInvalidTransactionAmount: {
+			Status:  http.StatusBadRequest,
+			Message: "Invalid transaction amount",
+		},
+		transactiondomain.ErrInvalidTransactionDirection: {
+			Status:  http.StatusBadRequest,
+			Message: "Invalid transaction direction",
+		},
+		transactiondomain.ErrInvalidTransactionType: {
+			Status:  http.StatusBadRequest,
+			Message: "Invalid transaction type",
+		},
+		transactiondomain.ErrItemDoesNotBelongToMonth: {
+			Status:  http.StatusBadRequest,
+			Message: "Item does not belong to this monthly transaction",
+		},
+		transactiondomain.ErrCannotUpdateDeletedItem: {
+			Status:  http.StatusBadRequest,
+			Message: "Cannot update a deleted item",
+		},
+		transactiondomain.ErrCannotDeleteDeletedItem: {
+			Status:  http.StatusBadRequest,
+			Message: "Cannot delete an already deleted item",
+		},
+		transactiondomain.ErrNegativeAmount: {
+			Status:  http.StatusBadRequest,
+			Message: "Amount cannot be negative",
+		},
+
 		// Not found errors → 404 Not Found
 		customerrors.ErrBudgetNotFound: {
 			Status:  http.StatusNotFound,
 			Message: "Budget not found",
+		},
+		budgetdomain.ErrBudgetNotFound: {
+			Status:  http.StatusNotFound,
+			Message: "Budget not found",
+		},
+		budgetdomain.ErrBudgetItemNotFound: {
+			Status:  http.StatusNotFound,
+			Message: "Budget item not found",
+		},
+		transactiondomain.ErrMonthlyTransactionNotFound: {
+			Status:  http.StatusNotFound,
+			Message: "Monthly transaction not found",
+		},
+		transactiondomain.ErrTransactionItemNotFound: {
+			Status:  http.StatusNotFound,
+			Message: "Transaction item not found",
 		},
 		customerrors.ErrCardNotFound: {
 			Status:  http.StatusNotFound,
@@ -213,6 +299,18 @@ func buildDomainErrorMappings() map[error]ErrorMapping {
 			Status:  http.StatusConflict,
 			Message: "Invoice already exists for this card and month",
 		},
+		budgetdomain.ErrBudgetAlreadyExistsForMonth: {
+			Status:  http.StatusConflict,
+			Message: "Budget already exists for this month",
+		},
+		budgetdomain.ErrDuplicateCategory: {
+			Status:  http.StatusConflict,
+			Message: "Category already exists in budget",
+		},
+		transactiondomain.ErrMonthlyTransactionAlreadyExists: {
+			Status:  http.StatusConflict,
+			Message: "Monthly transaction already exists for this month",
+		},
 
 		// Authentication errors → 401 Unauthorized
 		customerrors.ErrUnauthorized: {
@@ -250,6 +348,12 @@ func buildDomainErrorMappings() map[error]ErrorMapping {
 		customerrors.ErrCheckHash: {
 			Status:  http.StatusUnauthorized,
 			Message: "Invalid credentials",
+		},
+
+		// Service errors → 503 Service Unavailable
+		transactiondomain.ErrInvoiceProviderUnavailable: {
+			Status:  http.StatusServiceUnavailable,
+			Message: "Invoice provider is currently unavailable",
 		},
 	}
 }

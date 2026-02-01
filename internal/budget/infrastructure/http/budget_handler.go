@@ -16,12 +16,12 @@ import (
 )
 
 type BudgetHandler struct {
-	o11y                       observability.Observability
-	errorHandler               httperrors.ErrorHandler
-	createBudgetUseCase        usecase.CreateBudgetUseCase
-	findBudgetUseCase          usecase.FindBudgetUseCase
-	updateBudgetUseCase        usecase.UpdateBudgetUseCase
-	deleteBudgetUseCase        usecase.DeleteBudgetUseCase
+	o11y                        observability.Observability
+	errorHandler                httperrors.ErrorHandler
+	createBudgetUseCase         usecase.CreateBudgetUseCase
+	findBudgetUseCase           usecase.FindBudgetUseCase
+	updateBudgetUseCase         usecase.UpdateBudgetUseCase
+	deleteBudgetUseCase         usecase.DeleteBudgetUseCase
 	listBudgetsPaginatedUseCase usecase.ListBudgetsPaginatedUseCase
 }
 
@@ -35,12 +35,12 @@ func NewBudgetHandler(
 	listBudgetsPaginatedUseCase usecase.ListBudgetsPaginatedUseCase,
 ) *BudgetHandler {
 	return &BudgetHandler{
-		o11y:                       o11y,
-		errorHandler:               errorHandler,
-		createBudgetUseCase:        createBudgetUseCase,
-		findBudgetUseCase:          findBudgetUseCase,
-		updateBudgetUseCase:        updateBudgetUseCase,
-		deleteBudgetUseCase:        deleteBudgetUseCase,
+		o11y:                        o11y,
+		errorHandler:                errorHandler,
+		createBudgetUseCase:         createBudgetUseCase,
+		findBudgetUseCase:           findBudgetUseCase,
+		updateBudgetUseCase:         updateBudgetUseCase,
+		deleteBudgetUseCase:         deleteBudgetUseCase,
 		listBudgetsPaginatedUseCase: listBudgetsPaginatedUseCase,
 	}
 }

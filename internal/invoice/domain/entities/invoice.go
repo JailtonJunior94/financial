@@ -1,6 +1,7 @@
 package entities
 
 import (
+	"slices"
 	"time"
 
 	"github.com/JailtonJunior94/devkit-go/pkg/entity"
@@ -74,20 +75,14 @@ func (inv *Invoice) AddItems(items []*InvoiceItem) error {
 
 // RemoveItem remove um item da fatura e recalcula o total.
 func (inv *Invoice) RemoveItem(itemID vos.UUID) error {
-	itemIndex := -1
-	for i, item := range inv.Items {
-		if item.ID.String() == itemID.String() {
-			itemIndex = i
-			break
-		}
-	}
+	originalLen := len(inv.Items)
+	inv.Items = slices.DeleteFunc(inv.Items, func(item *InvoiceItem) bool {
+		return item.ID.String() == itemID.String()
+	})
 
-	if itemIndex == -1 {
+	if len(inv.Items) == originalLen {
 		return domain.ErrInvoiceItemNotFound
 	}
-
-	// Remove o item
-	inv.Items = append(inv.Items[:itemIndex], inv.Items[itemIndex+1:]...)
 
 	// Recalcula o total
 	inv.recalculateTotalAmount()
@@ -97,12 +92,13 @@ func (inv *Invoice) RemoveItem(itemID vos.UUID) error {
 
 // FindItemByID busca um item pelo ID.
 func (inv *Invoice) FindItemByID(itemID vos.UUID) *InvoiceItem {
-	for _, item := range inv.Items {
-		if item.ID.String() == itemID.String() {
-			return item
-		}
+	idx := slices.IndexFunc(inv.Items, func(item *InvoiceItem) bool {
+		return item.ID.String() == itemID.String()
+	})
+	if idx == -1 {
+		return nil
 	}
-	return nil
+	return inv.Items[idx]
 }
 
 // RecalculateTotal recalcula o valor total da fatura com base nos itens.

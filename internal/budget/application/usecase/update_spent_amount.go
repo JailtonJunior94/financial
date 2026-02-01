@@ -3,7 +3,6 @@ package usecase
 import (
 	"context"
 	"fmt"
-	"strconv"
 
 	"github.com/jailtonjunior94/financial/internal/budget/application/dtos"
 	"github.com/jailtonjunior94/financial/internal/budget/domain"
@@ -52,12 +51,6 @@ func (u *updateSpentAmountUseCase) Execute(ctx context.Context, budgetID, itemID
 		return fmt.Errorf("invalid item ID: %w", err)
 	}
 
-	// Parse spent amount from string
-	spentFloat, err := strconv.ParseFloat(input.SpentAmount, 64)
-	if err != nil {
-		return fmt.Errorf("invalid spent amount format: %w", err)
-	}
-
 	err = u.uow.Do(ctx, func(ctx context.Context, tx database.DBTX) error {
 		// Criar repositório com a transação
 		budgetRepository := repositories.NewBudgetRepository(tx, u.o11y)
@@ -77,10 +70,10 @@ func (u *updateSpentAmountUseCase) Execute(ctx context.Context, budgetID, itemID
 			return domain.ErrBudgetItemNotFound
 		}
 
-		// Criar Money a partir do float (usando a moeda do orçamento)
-		spentMoney, err := vos.NewMoneyFromFloat(spentFloat, budget.TotalAmount.Currency())
+		// Parse spent amount from string (preserves precision)
+		spentMoney, err := vos.NewMoneyFromString(input.SpentAmount, budget.TotalAmount.Currency())
 		if err != nil {
-			return fmt.Errorf("failed to create money value: %w", err)
+			return fmt.Errorf("invalid spent amount: %w", err)
 		}
 
 		// Atualizar o gasto através do aggregate root (aplica validações de negócio)

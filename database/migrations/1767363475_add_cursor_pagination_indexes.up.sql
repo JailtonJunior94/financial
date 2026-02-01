@@ -9,7 +9,7 @@
 -- Query: SELECT * FROM cards WHERE user_id = ? AND (name, id) > (?, ?) ORDER BY name, id LIMIT ?
 -- Benefício: Elimina filesort, permite keyset pagination eficiente
 
-CREATE INDEX CONCURRENTLY IF NOT EXISTS idx_cards_user_name_id
+CREATE INDEX IF NOT EXISTS idx_cards_user_name_id
 ON cards(user_id, name, id)
 WHERE deleted_at IS NULL;
 
@@ -20,7 +20,7 @@ WHERE deleted_at IS NULL;
 -- Query: SELECT * FROM categories WHERE user_id = ? AND parent_id IS NULL AND (sequence, id) > (?, ?) ORDER BY sequence, id LIMIT ?
 -- Benefício: Keyset pagination em ordem customizável (sequence) com desempate por id
 
-CREATE INDEX CONCURRENTLY IF NOT EXISTS idx_categories_user_seq_id
+CREATE INDEX IF NOT EXISTS idx_categories_user_seq_id
 ON categories(user_id, sequence, id)
 WHERE parent_id IS NULL AND deleted_at IS NULL;
 
@@ -31,7 +31,7 @@ WHERE parent_id IS NULL AND deleted_at IS NULL;
 -- Query: SELECT * FROM invoices WHERE user_id = ? AND reference_month = ? AND (due_date, id) > (?, ?) ORDER BY due_date, id LIMIT ?
 -- Benefício: Paginação eficiente de faturas do mês ordenadas por vencimento
 
-CREATE INDEX CONCURRENTLY IF NOT EXISTS idx_invoices_user_month_due_id
+CREATE INDEX IF NOT EXISTS idx_invoices_user_month_due_id
 ON invoices(user_id, reference_month, due_date, id)
 WHERE deleted_at IS NULL;
 
@@ -43,7 +43,7 @@ WHERE deleted_at IS NULL;
 -- Benefício: Histórico do cartão (mais recentes primeiro) com paginação eficiente
 -- Nota: DESC no índice permite PostgreSQL usar index scan sem reverse scan
 
-CREATE INDEX CONCURRENTLY IF NOT EXISTS idx_invoices_card_month_id
+CREATE INDEX IF NOT EXISTS idx_invoices_card_month_id
 ON invoices(card_id, reference_month DESC, id DESC)
 WHERE deleted_at IS NULL;
 
@@ -64,7 +64,5 @@ WHERE deleted_at IS NULL;
 --   Index Scan using idx_cards_user_name_id  (cost=0.29..4.31 rows=20)
 --     ← Sem sort, direto do índice
 
-COMMENT ON INDEX idx_cards_user_name_id IS 'Suporta cursor-based pagination de cards (ORDER BY name, id)';
-COMMENT ON INDEX idx_categories_user_seq_id IS 'Suporta cursor-based pagination de categorias (ORDER BY sequence, id)';
-COMMENT ON INDEX idx_invoices_user_month_due_id IS 'Suporta cursor-based pagination de invoices por mês (ORDER BY due_date, id)';
-COMMENT ON INDEX idx_invoices_card_month_id IS 'Suporta cursor-based pagination de invoices por cartão (ORDER BY reference_month DESC, id DESC)';
+-- Comments removed: COMMENT ON INDEX doesn't work well with IF NOT EXISTS
+-- Index names are self-documenting

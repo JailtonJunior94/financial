@@ -5,7 +5,7 @@ services:
     restart: always
     ports:
       - "26257:26257"
-      - "8080:8080"
+      - "8081:8080"
     healthcheck:
       test: ["CMD", "cockroach", "node", "status", "--insecure"]
       interval: 30s
@@ -13,19 +13,18 @@ services:
       retries: 5
       start_period: 30s
     volumes:
-      - ./cockroachdb_data:/cockroach/cockroach-data
+      - cockroachdb_data:/cockroach/cockroach-data
     environment:
-      COCKROACH_DATABASE: financial
-      COCKROACH_USER: root
-      COCKROACH_PASSWORD: financial@password
+      COCKROACH_DATABASE: ${DB_NAME:-financial}
+      COCKROACH_USER: ${DB_USER:-root}
+      COCKROACH_PASSWORD: ${DB_PASSWORD:-financial@dev}
 
   rabbitmq:
     image: rabbitmq:4.0.2-management-alpine
+    restart: always
     environment:
-      RABBITMQ_USER: guest
-      RABBITMQ_PASSWORD: pass@rabbitmq
       RABBITMQ_DEFAULT_USER: guest
-      RABBITMQ_DEFAULT_PASS: pass@rabbitmq
+      RABBITMQ_DEFAULT_PASS: rabbitmq@dev
     ports:
       - "5672:5672"
       - "15672:15672"
@@ -42,21 +41,16 @@ services:
           cpus: "0.50"
           memory: 512M
 
-  # ============================================================================
-  # Observability stack
-  # ============================================================================
   otel-lgtm:
-    # Pinned to specific version for reproducible deployments
-    # Version 0.7.5 - Update this version across all environments together
     image: grafana/otel-lgtm:0.7.5
     restart: always
     environment:
-      GF_SECURITY_ADMIN_USER: ${OTEL_LGTM_ADMIN_USER}
-      GF_SECURITY_ADMIN_PASSWORD: ${OTEL_LGTM_ADMIN_PASSWORD}
+      GF_SECURITY_ADMIN_USER: ${OTEL_LGTM_ADMIN_USER:-admin}
+      GF_SECURITY_ADMIN_PASSWORD: ${OTEL_LGTM_ADMIN_PASSWORD:-admin@dev}
     ports:
-      - ${OTEL_LGTM_EXTERNAL_PORT}:${OTEL_LGTM_INTERNAL_PORT}
-      - ${OTEL_LGTM_RECEIVER_GRPC_PORT}:${OTEL_LGTM_RECEIVER_GRPC_PORT}
-      - ${OTEL_LGTM_RECEIVER_HTTP_PORT}:${OTEL_LGTM_RECEIVER_HTTP_PORT}
+      - "3000:3000"
+      - "4317:4317"
+      - "4318:4318"
     volumes:
       - ./telemetry/grafana/otelcol-config.yaml:/otel-lgtm/otelcol-config.yaml:ro
       - ./telemetry/grafana/run-grafana.sh:/otel-lgtm/run-grafana.sh
@@ -68,9 +62,86 @@ services:
       dockerfile: deployment/Dockerfile
     command: migrate
     env_file:
-      - .env
+      - ../.env
+    environment:
+      # Override hosts for Docker network
+      DB_HOST: cockroachdb
+      RABBITMQ_URL: amqp://guest:rabbitmq@dev@rabbitmq:5672/
+      OTEL_EXPORTER_OTLP_ENDPOINT: otel-lgtm:4317
     depends_on:
-      - cockroachdb
+      cockroachdb:
+        condition: service_healthy
+
+  financial_api:
+    build:
+      context: ..
+      dockerfile: deployment/Dockerfile
+    command: api
+    env_file:
+      - ../.env
+    environment:
+      # Override hosts for Docker network
+      DB_HOST: cockroachdb
+      RABBITMQ_URL: amqp://guest:rabbitmq@dev@rabbitmq:5672/
+      OTEL_EXPORTER_OTLP_ENDPOINT: otel-lgtm:4317
+    ports:
+      - "${HTTP_PORT:-8080}:8080"
+    depends_on:
+      cockroachdb:
+        condition: service_healthy
+      rabbitmq:
+        condition: service_healthy
+      otel-lgtm:
+        condition: service_started
+      financial_migration:
+        condition: service_completed_successfully
+    restart: unless-stopped
+
+  financial_consumer:
+    build:
+      context: ..
+      dockerfile: deployment/Dockerfile
+    command: consumer
+    env_file:
+      - ../.env
+    environment:
+      # Override hosts for Docker network
+      DB_HOST: cockroachdb
+      RABBITMQ_URL: amqp://guest:rabbitmq@dev@rabbitmq:5672/
+      OTEL_EXPORTER_OTLP_ENDPOINT: otel-lgtm:4317
+    depends_on:
+      cockroachdb:
+        condition: service_healthy
+      rabbitmq:
+        condition: service_healthy
+      otel-lgtm:
+        condition: service_started
+      financial_migration:
+        condition: service_completed_successfully
+    restart: unless-stopped
+
+  financial_worker:
+    build:
+      context: ..
+      dockerfile: deployment/Dockerfile
+    command: worker
+    env_file:
+      - ../.env
+    environment:
+      # Override hosts for Docker network
+      DB_HOST: cockroachdb
+      RABBITMQ_URL: amqp://guest:rabbitmq@dev@rabbitmq:5672/
+      OTEL_EXPORTER_OTLP_ENDPOINT: otel-lgtm:4317
+    depends_on:
+      cockroachdb:
+        condition: service_healthy
+      rabbitmq:
+        condition: service_healthy
+      otel-lgtm:
+        condition: service_started
+      financial_migration:
+        condition: service_completed_successfully
+    restart: unless-stopped
 
 volumes:
   rabbitmq_data:

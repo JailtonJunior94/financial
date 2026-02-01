@@ -17,7 +17,7 @@ func TestEncodeCursor(t *testing.T) {
 		{
 			name: "valid cursor with string and id",
 			cursor: Cursor{
-				Fields: map[string]interface{}{
+				Fields: map[string]any{
 					"name": "Nubank",
 					"id":   "uuid-123",
 				},
@@ -27,7 +27,7 @@ func TestEncodeCursor(t *testing.T) {
 		{
 			name: "empty cursor",
 			cursor: Cursor{
-				Fields: map[string]interface{}{},
+				Fields: map[string]any{},
 			},
 			wantErr: false,
 		},
@@ -75,7 +75,7 @@ func TestDecodeCursor(t *testing.T) {
 			name:    "empty string",
 			encoded: "",
 			want: Cursor{
-				Fields: map[string]interface{}{},
+				Fields: map[string]any{},
 			},
 			wantErr: false,
 		},
@@ -232,7 +232,7 @@ func TestCursor_GetString(t *testing.T) {
 		{
 			name: "existing string field",
 			cursor: Cursor{
-				Fields: map[string]interface{}{
+				Fields: map[string]any{
 					"name": "Nubank",
 				},
 			},
@@ -243,7 +243,7 @@ func TestCursor_GetString(t *testing.T) {
 		{
 			name: "non-existing field",
 			cursor: Cursor{
-				Fields: map[string]interface{}{
+				Fields: map[string]any{
 					"name": "Nubank",
 				},
 			},
@@ -263,7 +263,7 @@ func TestCursor_GetString(t *testing.T) {
 		{
 			name: "wrong type",
 			cursor: Cursor{
-				Fields: map[string]interface{}{
+				Fields: map[string]any{
 					"count": 123,
 				},
 			},
@@ -293,7 +293,7 @@ func TestCursor_GetInt(t *testing.T) {
 		{
 			name: "existing int field",
 			cursor: Cursor{
-				Fields: map[string]interface{}{
+				Fields: map[string]any{
 					"sequence": 10,
 				},
 			},
@@ -304,7 +304,7 @@ func TestCursor_GetInt(t *testing.T) {
 		{
 			name: "existing float64 field (from JSON)",
 			cursor: Cursor{
-				Fields: map[string]interface{}{
+				Fields: map[string]any{
 					"sequence": float64(10),
 				},
 			},
@@ -315,7 +315,7 @@ func TestCursor_GetInt(t *testing.T) {
 		{
 			name: "non-existing field",
 			cursor: Cursor{
-				Fields: map[string]interface{}{
+				Fields: map[string]any{
 					"sequence": 10,
 				},
 			},
@@ -326,7 +326,7 @@ func TestCursor_GetInt(t *testing.T) {
 		{
 			name: "wrong type",
 			cursor: Cursor{
-				Fields: map[string]interface{}{
+				Fields: map[string]any{
 					"name": "text",
 				},
 			},

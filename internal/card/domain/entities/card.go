@@ -8,14 +8,14 @@ import (
 )
 
 type Card struct {
-	ID                 sharedVos.UUID
-	UserID             sharedVos.UUID
-	Name               vos.CardName
-	DueDay             vos.DueDay
-	ClosingOffsetDays  vos.ClosingOffsetDays
-	CreatedAt          sharedVos.NullableTime
-	UpdatedAt          sharedVos.NullableTime
-	DeletedAt          sharedVos.NullableTime
+	ID                sharedVos.UUID
+	UserID            sharedVos.UUID
+	Name              vos.CardName
+	DueDay            vos.DueDay
+	ClosingOffsetDays vos.ClosingOffsetDays
+	CreatedAt         sharedVos.NullableTime
+	UpdatedAt         sharedVos.NullableTime
+	DeletedAt         sharedVos.NullableTime
 }
 
 func NewCard(userID sharedVos.UUID, name vos.CardName, dueDay vos.DueDay) (*Card, error) {

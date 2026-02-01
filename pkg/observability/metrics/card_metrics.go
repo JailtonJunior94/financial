@@ -7,7 +7,7 @@ import (
 	"github.com/JailtonJunior94/devkit-go/pkg/observability"
 )
 
-// CardMetrics agrupa todas as métricas do módulo de cartões (OpenTelemetry)
+// CardMetrics agrupa todas as métricas do módulo de cartões (OpenTelemetry).
 type CardMetrics struct {
 	o11y observability.Observability
 
@@ -17,7 +17,7 @@ type CardMetrics struct {
 	activeCardsTotal  observability.UpDownCounter
 }
 
-// NewCardMetrics inicializa métricas OpenTelemetry para o módulo de cartões
+// NewCardMetrics inicializa métricas OpenTelemetry para o módulo de cartões.
 func NewCardMetrics(o11y observability.Observability) *CardMetrics {
 	metrics := &CardMetrics{
 		o11y: o11y,
@@ -48,7 +48,7 @@ func NewCardMetrics(o11y observability.Observability) *CardMetrics {
 	return metrics
 }
 
-// RecordOperation registra uma operação bem-sucedida
+// RecordOperation registra uma operação bem-sucedida.
 func (m *CardMetrics) RecordOperation(ctx context.Context, operation string, duration time.Duration) {
 	m.operationsTotal.Increment(ctx,
 		observability.String("operation", operation),
@@ -60,7 +60,7 @@ func (m *CardMetrics) RecordOperation(ctx context.Context, operation string, dur
 	)
 }
 
-// RecordOperationFailure registra uma operação com falha incluindo tipo de erro
+// RecordOperationFailure registra uma operação com falha incluindo tipo de erro.
 func (m *CardMetrics) RecordOperationFailure(ctx context.Context, operation string, duration time.Duration, errorType string) {
 	m.operationsTotal.Increment(ctx,
 		observability.String("operation", operation),
@@ -73,17 +73,17 @@ func (m *CardMetrics) RecordOperationFailure(ctx context.Context, operation stri
 	)
 }
 
-// IncActiveCards incrementa o contador de cartões ativos
+// IncActiveCards incrementa o contador de cartões ativos.
 func (m *CardMetrics) IncActiveCards(ctx context.Context) {
 	m.activeCardsTotal.Add(ctx, 1)
 }
 
-// DecActiveCards decrementa o contador de cartões ativos
+// DecActiveCards decrementa o contador de cartões ativos.
 func (m *CardMetrics) DecActiveCards(ctx context.Context) {
 	m.activeCardsTotal.Add(ctx, -1)
 }
 
-// Constantes para tipos de operação
+// Constantes para tipos de operação.
 const (
 	OperationCreate = "create"
 	OperationUpdate = "update"
@@ -92,7 +92,7 @@ const (
 	OperationFindBy = "find_by"
 )
 
-// Constantes para tipos de erro
+// Constantes para tipos de erro.
 const (
 	ErrorTypeValidation = "validation"
 	ErrorTypeNotFound   = "not_found"

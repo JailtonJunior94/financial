@@ -86,7 +86,7 @@ func (u *deletePurchaseUseCase) Execute(ctx context.Context, itemID string) erro
 		}
 
 		// Track affected invoices for total recalculation
-		affectedInvoices := make(map[string]bool)
+		affectedInvoices := make(map[string]struct{})
 
 		// Delete all items from the purchase
 		for _, item := range items {
@@ -95,7 +95,7 @@ func (u *deletePurchaseUseCase) Execute(ctx context.Context, itemID string) erro
 			}
 
 			// Track affected invoice
-			affectedInvoices[item.InvoiceID.String()] = true
+			affectedInvoices[item.InvoiceID.String()] = struct{}{}
 		}
 
 		// Recalculate totals for all affected invoices

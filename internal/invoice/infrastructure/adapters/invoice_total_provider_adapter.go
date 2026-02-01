@@ -43,7 +43,13 @@ func (a *InvoiceTotalProviderAdapter) GetClosedInvoiceTotal(
 	}
 
 	// Buscar todas as faturas do usuário no mês
-	// TODO: Quando implementar status, filtrar por status="closed"
+	// TODO: Implementar filtragem por status="closed"
+	// Pendências para implementar este TODO:
+	// 1. Adicionar migration: ALTER TABLE invoices ADD COLUMN status VARCHAR(20) DEFAULT 'open'
+	// 2. Adicionar campo Status na entidade Invoice (domain/entities/invoice.go)
+	// 3. Criar InvoiceStatus VO (domain/vos/invoice_status.go) com valores: open, closed, paid
+	// 4. Adicionar parâmetro status no método FindByUserAndMonth do repository
+	// 5. Atualizar esta chamada para: FindByUserAndMonth(ctx, userID, invoiceRefMonth, InvoiceStatusClosed)
 	invoices, err := a.invoiceRepository.FindByUserAndMonth(ctx, userID, invoiceRefMonth)
 	if err != nil {
 		return sharedVos.Money{}, fmt.Errorf("failed to find invoices: %w", err)

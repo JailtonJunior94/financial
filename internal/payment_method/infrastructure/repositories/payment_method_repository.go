@@ -316,7 +316,7 @@ func (r *paymentMethodRepository) ListPaginated(
 		span.RecordError(err)
 		return nil, err
 	}
-	defer rows.Close()
+	defer func() { _ = rows.Close() }()
 
 	var paymentMethods []*entities.PaymentMethod
 	for rows.Next() {

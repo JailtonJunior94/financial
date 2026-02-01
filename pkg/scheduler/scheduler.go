@@ -26,7 +26,7 @@ type Scheduler struct {
 	ctx        context.Context
 	cancel     context.CancelFunc
 	wg         sync.WaitGroup
-	jobsMux    sync.Mutex         // protege jobs slice
+	jobsMux    sync.Mutex // protege jobs slice
 	runningMux sync.Mutex
 	running    map[string]int // rastreia jobs em execução por nome
 }

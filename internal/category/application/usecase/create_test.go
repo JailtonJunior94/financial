@@ -9,10 +9,12 @@ import (
 	"github.com/stretchr/testify/suite"
 
 	"github.com/JailtonJunior94/devkit-go/pkg/observability"
-	"github.com/jailtonjunior94/financial/internal/category/application/dtos"
-	mocks "github.com/jailtonjunior94/financial/internal/category/infrastructure/repositories/mocks"
-
 	"github.com/JailtonJunior94/devkit-go/pkg/observability/fake"
+	"github.com/JailtonJunior94/devkit-go/pkg/vos"
+	"github.com/jailtonjunior94/financial/internal/category/application/dtos"
+	"github.com/jailtonjunior94/financial/internal/category/domain/entities"
+	mocks "github.com/jailtonjunior94/financial/internal/category/infrastructure/repositories/mocks"
+	customErrors "github.com/jailtonjunior94/financial/pkg/custom_errors"
 )
 
 type CreateCategoryUseCaseSuite struct {
@@ -89,6 +91,14 @@ func (s *CreateCategoryUseCaseSuite) TestExecute() {
 			},
 			dependencies: dependencies{
 				categoryRepository: func() *mocks.CategoryRepository {
+					parentCategoryID, _ := vos.NewUUIDFromString("660e8400-e29b-41d4-a716-446655440000")
+					parentCategory := &entities.Category{ID: parentCategoryID}
+
+					s.categoryRepository.
+						EXPECT().
+						FindByID(s.ctx, mock.AnythingOfType("vos.UUID"), mock.AnythingOfType("vos.UUID")).
+						Return(parentCategory, nil).
+						Once()
 					s.categoryRepository.
 						EXPECT().
 						Save(s.ctx, mock.AnythingOfType("*entities.Category")).
@@ -101,6 +111,32 @@ func (s *CreateCategoryUseCaseSuite) TestExecute() {
 				s.NoError(err)
 				s.NotNil(output)
 				s.Equal("Uber", output.Name)
+			},
+		},
+		{
+			name: "deve retornar erro quando parent_id não existir",
+			args: args{
+				userID: "550e8400-e29b-41d4-a716-446655440000",
+				input: &dtos.CategoryInput{
+					Name:     "Uber",
+					Sequence: 1,
+					ParentID: "770e8400-e29b-41d4-a716-446655440000",
+				},
+			},
+			dependencies: dependencies{
+				categoryRepository: func() *mocks.CategoryRepository {
+					s.categoryRepository.
+						EXPECT().
+						FindByID(s.ctx, mock.AnythingOfType("vos.UUID"), mock.AnythingOfType("vos.UUID")).
+						Return(nil, nil).
+						Once()
+					return s.categoryRepository
+				}(),
+			},
+			expect: func(output *dtos.CategoryOutput, err error) {
+				s.Error(err)
+				s.Nil(output)
+				s.Equal(customErrors.ErrCategoryNotFound, err)
 			},
 		},
 		{
@@ -179,7 +215,7 @@ func (s *CreateCategoryUseCaseSuite) TestExecute() {
 			expect: func(output *dtos.CategoryOutput, err error) {
 				s.Error(err)
 				s.Nil(output)
-				s.Contains(err.Error(), "invalid user_id")
+				s.Contains(err.Error(), "invalid UUID")
 			},
 		},
 	}

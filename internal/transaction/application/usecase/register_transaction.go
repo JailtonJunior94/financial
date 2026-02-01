@@ -88,7 +88,7 @@ func (u *registerTransactionUseCase) Execute(
 	}
 
 	// Parse amount (Money VO)
-	amount, err := sharedVos.NewMoneyFromFloat(input.Amount, sharedVos.CurrencyBRL)
+	amount, err := sharedVos.NewMoneyFromString(input.Amount, sharedVos.CurrencyBRL)
 	if err != nil {
 		u.o11y.Logger().Error(ctx, "invalid amount", observability.Error(err))
 		return nil, fmt.Errorf("invalid amount: %w", err)
@@ -217,7 +217,7 @@ func (u *registerTransactionUseCase) toOutput(aggregate any) *dtos.MonthlyTransa
 			CategoryID:  item.CategoryID.String(),
 			Title:       item.Title,
 			Description: item.Description,
-			Amount:      float64(item.Amount.Cents()) / 100.0,
+			Amount:      item.Amount.String(),
 			Direction:   item.Direction.String(),
 			Type:        item.Type.String(),
 			IsPaid:      item.IsPaid,
@@ -229,9 +229,9 @@ func (u *registerTransactionUseCase) toOutput(aggregate any) *dtos.MonthlyTransa
 	return &dtos.MonthlyTransactionOutput{
 		ID:             monthly.ID.String(),
 		ReferenceMonth: monthly.ReferenceMonth.String(),
-		TotalIncome:    float64(monthly.TotalIncome.Cents()) / 100.0,
-		TotalExpense:   float64(monthly.TotalExpense.Cents()) / 100.0,
-		TotalAmount:    float64(monthly.TotalAmount.Cents()) / 100.0,
+		TotalIncome:    monthly.TotalIncome.String(),
+		TotalExpense:   monthly.TotalExpense.String(),
+		TotalAmount:    monthly.TotalAmount.String(),
 		Items:          items,
 		CreatedAt:      monthly.CreatedAt.ValueOr(time.Time{}),
 		UpdatedAt:      monthly.UpdatedAt.ValueOr(time.Time{}),

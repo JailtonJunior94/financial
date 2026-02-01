@@ -21,14 +21,14 @@ import (
 // - amount: Valor da parcela (usado para calcular spent_amount)
 // - reference_month: Mês de referência da fatura (formato: "2024-01").
 type InvoiceItemAddedEvent struct {
-	eventID       sharedVos.UUID
-	invoiceItemID sharedVos.UUID
-	invoiceID     sharedVos.UUID
-	userID        sharedVos.UUID
-	categoryID    sharedVos.UUID
-	amount        sharedVos.Money
+	eventID        sharedVos.UUID
+	invoiceItemID  sharedVos.UUID
+	invoiceID      sharedVos.UUID
+	userID         sharedVos.UUID
+	categoryID     sharedVos.UUID
+	amount         sharedVos.Money
 	referenceMonth invoiceVos.ReferenceMonth
-	occurredAt    time.Time
+	occurredAt     time.Time
 }
 
 // NewInvoiceItemAddedEvent cria um novo evento InvoiceItemAdded.

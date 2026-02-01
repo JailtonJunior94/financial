@@ -14,7 +14,7 @@ var (
 var referenceMonthRegex = regexp.MustCompile(`^\d{4}-(0[1-9]|1[0-2])$`)
 
 // ReferenceMonth representa um mês de referência no formato YYYY-MM.
-type ReferenceMonth struct{
+type ReferenceMonth struct {
 	value string
 	year  int
 	month time.Month

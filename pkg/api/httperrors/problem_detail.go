@@ -12,14 +12,14 @@ import (
 // ProblemDetail represents an RFC 7807 Problem Details for HTTP APIs response
 // See: https://tools.ietf.org/html/rfc7807
 type ProblemDetail struct {
-	Type      string                 `json:"type"`
-	Title     string                 `json:"title"`
-	Status    int                    `json:"status"`
-	Detail    string                 `json:"detail"`
-	Instance  string                 `json:"instance"`
-	Timestamp time.Time              `json:"timestamp"`
-	RequestID string                 `json:"request_id,omitempty"`
-	TraceID   string                 `json:"trace_id,omitempty"`
+	Type      string         `json:"type"`
+	Title     string         `json:"title"`
+	Status    int            `json:"status"`
+	Detail    string         `json:"detail"`
+	Instance  string         `json:"instance"`
+	Timestamp time.Time      `json:"timestamp"`
+	RequestID string         `json:"request_id,omitempty"`
+	TraceID   string         `json:"trace_id,omitempty"`
 	Errors    map[string]any `json:"errors,omitempty"`
 }
 

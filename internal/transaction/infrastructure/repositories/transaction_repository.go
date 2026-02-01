@@ -586,7 +586,7 @@ func (r *transactionRepository) ListMonthlyPaginated(
 		r.o11y.Logger().Error(ctx, "failed to list monthly transactions", observability.Error(err))
 		return nil, err
 	}
-	defer rows.Close()
+	defer func() { _ = rows.Close() }()
 
 	var monthlyList []*entities.MonthlyTransaction
 

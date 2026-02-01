@@ -166,33 +166,18 @@ func (r *budgetRepository) FindByID(ctx context.Context, id vos.UUID) (*entities
 		return nil, err
 	}
 
-	// Parse NUMERIC values from strings
-	amountGoalFloat, err := strconv.ParseFloat(amountGoal, 64)
-	if err != nil {
-		return nil, fmt.Errorf("failed to parse amount_goal: %w", err)
-	}
-
-	amountUsedFloat, err := strconv.ParseFloat(amountUsed, 64)
-	if err != nil {
-		return nil, fmt.Errorf("failed to parse amount_used: %w", err)
-	}
-
-	percentageUsedFloat, err := strconv.ParseFloat(percentageUsed, 64)
-	if err != nil {
-		return nil, fmt.Errorf("failed to parse percentage_used: %w", err)
-	}
-
-	budget.TotalAmount, err = vos.NewMoneyFromFloat(amountGoalFloat, "BRL")
+	// Parse NUMERIC values from strings - using string conversion directly for precision
+	budget.TotalAmount, err = vos.NewMoneyFromString(amountGoal, "BRL")
 	if err != nil {
 		return nil, fmt.Errorf("failed to create Money from amount_goal: %w", err)
 	}
 
-	budget.SpentAmount, err = vos.NewMoneyFromFloat(amountUsedFloat, "BRL")
+	budget.SpentAmount, err = vos.NewMoneyFromString(amountUsed, "BRL")
 	if err != nil {
 		return nil, fmt.Errorf("failed to create Money from amount_used: %w", err)
 	}
 
-	budget.PercentageUsed, err = vos.NewPercentageFromFloat(percentageUsedFloat)
+	budget.PercentageUsed, err = parsePercentageFromString(percentageUsed)
 	if err != nil {
 		return nil, fmt.Errorf("failed to create Percentage from percentage_used: %w", err)
 	}
@@ -260,33 +245,18 @@ func (r *budgetRepository) FindByUserIDAndReferenceMonth(ctx context.Context, us
 		return nil, err
 	}
 
-	// Parse NUMERIC values from strings
-	amountGoalFloat, err := strconv.ParseFloat(amountGoal, 64)
-	if err != nil {
-		return nil, fmt.Errorf("failed to parse amount_goal: %w", err)
-	}
-
-	amountUsedFloat, err := strconv.ParseFloat(amountUsed, 64)
-	if err != nil {
-		return nil, fmt.Errorf("failed to parse amount_used: %w", err)
-	}
-
-	percentageUsedFloat, err := strconv.ParseFloat(percentageUsed, 64)
-	if err != nil {
-		return nil, fmt.Errorf("failed to parse percentage_used: %w", err)
-	}
-
-	budget.TotalAmount, err = vos.NewMoneyFromFloat(amountGoalFloat, "BRL")
+	// Parse NUMERIC values from strings - using string conversion directly for precision
+	budget.TotalAmount, err = vos.NewMoneyFromString(amountGoal, "BRL")
 	if err != nil {
 		return nil, fmt.Errorf("failed to create Money from amount_goal: %w", err)
 	}
 
-	budget.SpentAmount, err = vos.NewMoneyFromFloat(amountUsedFloat, "BRL")
+	budget.SpentAmount, err = vos.NewMoneyFromString(amountUsed, "BRL")
 	if err != nil {
 		return nil, fmt.Errorf("failed to create Money from amount_used: %w", err)
 	}
 
-	budget.PercentageUsed, err = vos.NewPercentageFromFloat(percentageUsedFloat)
+	budget.PercentageUsed, err = parsePercentageFromString(percentageUsed)
 	if err != nil {
 		return nil, fmt.Errorf("failed to create Percentage from percentage_used: %w", err)
 	}
@@ -521,33 +491,18 @@ func (r *budgetRepository) findItemsByBudgetID(ctx context.Context, budgetID vos
 			return nil, err
 		}
 
-		// Parse NUMERIC values from strings
-		percentageGoalFloat, err := strconv.ParseFloat(percentageGoal, 64)
-		if err != nil {
-			return nil, fmt.Errorf("failed to parse percentage_goal: %w", err)
-		}
-
-		amountGoalFloat, err := strconv.ParseFloat(amountGoal, 64)
-		if err != nil {
-			return nil, fmt.Errorf("failed to parse amount_goal: %w", err)
-		}
-
-		amountUsedFloat, err := strconv.ParseFloat(amountUsed, 64)
-		if err != nil {
-			return nil, fmt.Errorf("failed to parse amount_used: %w", err)
-		}
-
-		item.PlannedAmount, err = vos.NewMoneyFromFloat(amountGoalFloat, "BRL")
+		// Parse NUMERIC values from strings - using string conversion directly for precision
+		item.PlannedAmount, err = vos.NewMoneyFromString(amountGoal, "BRL")
 		if err != nil {
 			return nil, fmt.Errorf("failed to create Money from amount_goal: %w", err)
 		}
 
-		item.SpentAmount, err = vos.NewMoneyFromFloat(amountUsedFloat, "BRL")
+		item.SpentAmount, err = vos.NewMoneyFromString(amountUsed, "BRL")
 		if err != nil {
 			return nil, fmt.Errorf("failed to create Money from amount_used: %w", err)
 		}
 
-		item.PercentageGoal, err = vos.NewPercentageFromFloat(percentageGoalFloat)
+		item.PercentageGoal, err = parsePercentageFromString(percentageGoal)
 		if err != nil {
 			return nil, fmt.Errorf("failed to create Percentage from percentage_goal: %w", err)
 		}
@@ -563,4 +518,19 @@ func (r *budgetRepository) findItemsByBudgetID(ctx context.Context, budgetID vos
 	}
 
 	return items, rows.Err()
+}
+
+// parsePercentageFromString converts a string percentage (e.g., "25.50") to a Percentage VO.
+// This avoids float precision issues by parsing the string directly to scaled int64.
+func parsePercentageFromString(s string) (vos.Percentage, error) {
+	percentageFloat, err := strconv.ParseFloat(s, 64)
+	if err != nil {
+		return vos.Percentage{}, fmt.Errorf("invalid percentage format: %w", err)
+	}
+
+	// Convert to int64 with scale 3 (25.5% → 25500)
+	// Using round to avoid truncation issues
+	percentageInt := int64(percentageFloat*1000 + 0.5)
+
+	return vos.NewPercentage(percentageInt)
 }

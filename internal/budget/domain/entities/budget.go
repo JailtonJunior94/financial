@@ -1,6 +1,7 @@
 package entities
 
 import (
+	"slices"
 	"time"
 
 	"github.com/JailtonJunior94/devkit-go/pkg/entity"
@@ -168,22 +169,20 @@ func (b *Budget) FindItemByID(itemID vos.UUID) *BudgetItem {
 
 // hasCategoryID verifica se já existe um item com a categoria informada.
 func (b *Budget) hasCategoryID(categoryID vos.UUID) bool {
-	for _, item := range b.Items {
-		if item.CategoryID.String() == categoryID.String() {
-			return true
-		}
-	}
-	return false
+	return slices.ContainsFunc(b.Items, func(item *BudgetItem) bool {
+		return item.CategoryID.String() == categoryID.String()
+	})
 }
 
 // findItemByID busca um item pelo ID.
 func (b *Budget) findItemByID(itemID vos.UUID) *BudgetItem {
-	for _, item := range b.Items {
-		if item.ID.String() == itemID.String() {
-			return item
-		}
+	idx := slices.IndexFunc(b.Items, func(item *BudgetItem) bool {
+		return item.ID.String() == itemID.String()
+	})
+	if idx == -1 {
+		return nil
 	}
-	return nil
+	return b.Items[idx]
 }
 
 // recalculateSpentAmount recalcula o valor total gasto.
@@ -219,6 +218,13 @@ func (b *Budget) recalculatePercentageUsed() {
 	}
 
 	b.PercentageUsed = percentageUsed
+}
+
+// RecalculateTotals recalcula todos os totais do budget.
+// Útil após modificações manuais nos items ou quando sincronizando com eventos externos.
+func (b *Budget) RecalculateTotals() {
+	b.recalculateSpentAmount()
+	b.recalculatePercentageUsed()
 }
 
 // TotalPercentageAllocated retorna a porcentagem total alocada nos itens.

@@ -17,16 +17,16 @@ import (
 )
 
 type InvoiceHandler struct {
-	o11y                                  observability.Observability
-	errorHandler                          httperrors.ErrorHandler
-	createPurchaseUseCase                 usecase.CreatePurchaseUseCase
-	updatePurchaseUseCase                 usecase.UpdatePurchaseUseCase
-	deletePurchaseUseCase                 usecase.DeletePurchaseUseCase
-	getInvoiceUseCase                     usecase.GetInvoiceUseCase
-	listInvoicesByMonthUseCase            usecase.ListInvoicesByMonthUseCase
-	listInvoicesByMonthPaginatedUseCase   usecase.ListInvoicesByMonthPaginatedUseCase
-	listInvoicesByCardUseCase             usecase.ListInvoicesByCardUseCase
-	listInvoicesByCardPaginatedUseCase    usecase.ListInvoicesByCardPaginatedUseCase
+	o11y                                observability.Observability
+	errorHandler                        httperrors.ErrorHandler
+	createPurchaseUseCase               usecase.CreatePurchaseUseCase
+	updatePurchaseUseCase               usecase.UpdatePurchaseUseCase
+	deletePurchaseUseCase               usecase.DeletePurchaseUseCase
+	getInvoiceUseCase                   usecase.GetInvoiceUseCase
+	listInvoicesByMonthUseCase          usecase.ListInvoicesByMonthUseCase
+	listInvoicesByMonthPaginatedUseCase usecase.ListInvoicesByMonthPaginatedUseCase
+	listInvoicesByCardUseCase           usecase.ListInvoicesByCardUseCase
+	listInvoicesByCardPaginatedUseCase  usecase.ListInvoicesByCardPaginatedUseCase
 }
 
 func NewInvoiceHandler(

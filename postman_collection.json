@@ -1,0 +1,1118 @@
+{
+	"info": {
+		"name": "Financial API - Complete",
+		"description": "API completa para gerenciamento financeiro pessoal com transações, orçamentos, faturas e cartões",
+		"schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
+		"_exporter_id": "financial-api"
+	},
+	"auth": {
+		"type": "bearer",
+		"bearer": [
+			{
+				"key": "token",
+				"value": "{{token}}",
+				"type": "string"
+			}
+		]
+	},
+	"item": [
+		{
+			"name": "Auth",
+			"item": [
+				{
+					"name": "Create User",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"if (pm.response.code === 201) {",
+									"    const response = pm.response.json();",
+									"    pm.collectionVariables.set('user_id', response.id);",
+									"    pm.collectionVariables.set('user_email', response.email);",
+									"}"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"auth": {
+							"type": "noauth"
+						},
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"name\": \"João Silva\",\n  \"email\": \"joao.silva@example.com\",\n  \"password\": \"SenhaSegura123!\"\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/api/v1/users",
+							"host": ["{{base_url}}"],
+							"path": ["api", "v1", "users"]
+						},
+						"description": "Cria um novo usuário no sistema"
+					},
+					"response": []
+				},
+				{
+					"name": "Login (Get Token)",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"if (pm.response.code === 200) {",
+									"    const response = pm.response.json();",
+									"    pm.collectionVariables.set('token', response.token);",
+									"    console.log('Token set:', response.token);",
+									"}"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"auth": {
+							"type": "noauth"
+						},
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"email\": \"joao.silva@example.com\",\n  \"password\": \"SenhaSegura123!\"\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/api/v1/token",
+							"host": ["{{base_url}}"],
+							"path": ["api", "v1", "token"]
+						},
+						"description": "Autentica usuário e retorna token JWT"
+					},
+					"response": []
+				}
+			],
+			"description": "Endpoints de autenticação e criação de usuários"
+		},
+		{
+			"name": "Categories",
+			"item": [
+				{
+					"name": "List Categories",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"if (pm.response.code === 200) {",
+									"    const response = pm.response.json();",
+									"    if (response.length > 0) {",
+									"        pm.collectionVariables.set('category_id', response[0].id);",
+									"    }",
+									"}"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/api/v1/categories",
+							"host": ["{{base_url}}"],
+							"path": ["api", "v1", "categories"]
+						},
+						"description": "Lista todas as categorias com estrutura hierárquica"
+					},
+					"response": []
+				},
+				{
+					"name": "Get Category by ID",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/api/v1/categories/{{category_id}}",
+							"host": ["{{base_url}}"],
+							"path": ["api", "v1", "categories", "{{category_id}}"]
+						},
+						"description": "Retorna uma categoria específica por ID"
+					},
+					"response": []
+				},
+				{
+					"name": "Create Category",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"if (pm.response.code === 201) {",
+									"    const response = pm.response.json();",
+									"    pm.collectionVariables.set('category_id', response.id);",
+									"}"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"name\": \"Alimentação\",\n  \"sequence\": 1\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/api/v1/categories",
+							"host": ["{{base_url}}"],
+							"path": ["api", "v1", "categories"]
+						},
+						"description": "Cria uma nova categoria. parent_id é opcional para subcategorias"
+					},
+					"response": []
+				},
+				{
+					"name": "Create Subcategory",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"parent_id\": \"{{category_id}}\",\n  \"name\": \"Restaurantes\",\n  \"sequence\": 1\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/api/v1/categories",
+							"host": ["{{base_url}}"],
+							"path": ["api", "v1", "categories"]
+						},
+						"description": "Cria uma subcategoria vinculada a uma categoria pai"
+					},
+					"response": []
+				},
+				{
+					"name": "Update Category",
+					"request": {
+						"method": "PUT",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"name\": \"Alimentação e Bebidas\",\n  \"sequence\": 1\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/api/v1/categories/{{category_id}}",
+							"host": ["{{base_url}}"],
+							"path": ["api", "v1", "categories", "{{category_id}}"]
+						},
+						"description": "Atualiza uma categoria existente"
+					},
+					"response": []
+				},
+				{
+					"name": "Delete Category",
+					"request": {
+						"method": "DELETE",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/api/v1/categories/{{category_id}}",
+							"host": ["{{base_url}}"],
+							"path": ["api", "v1", "categories", "{{category_id}}"]
+						},
+						"description": "Remove uma categoria (soft delete)"
+					},
+					"response": []
+				}
+			],
+			"description": "Gerenciamento de categorias hierárquicas para transações e compras"
+		},
+		{
+			"name": "Cards",
+			"item": [
+				{
+					"name": "List Cards",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"if (pm.response.code === 200) {",
+									"    const response = pm.response.json();",
+									"    if (response.data && response.data.length > 0) {",
+									"        pm.collectionVariables.set('card_id', response.data[0].id);",
+									"    }",
+									"}"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/api/v1/cards?limit=10",
+							"host": ["{{base_url}}"],
+							"path": ["api", "v1", "cards"],
+							"query": [
+								{
+									"key": "limit",
+									"value": "10",
+									"description": "Número de itens por página"
+								},
+								{
+									"key": "cursor",
+									"value": "",
+									"description": "Cursor para próxima página (base64)",
+									"disabled": true
+								}
+							]
+						},
+						"description": "Lista cartões com paginação cursor-based"
+					},
+					"response": []
+				},
+				{
+					"name": "Get Card by ID",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/api/v1/cards/{{card_id}}",
+							"host": ["{{base_url}}"],
+							"path": ["api", "v1", "cards", "{{card_id}}"]
+						},
+						"description": "Retorna um cartão específico por ID"
+					},
+					"response": []
+				},
+				{
+					"name": "Create Card",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"if (pm.response.code === 201) {",
+									"    const response = pm.response.json();",
+									"    pm.collectionVariables.set('card_id', response.id);",
+									"}"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"name\": \"Nubank Mastercard\",\n  \"due_day\": 15,\n  \"closing_offset_days\": 7\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/api/v1/cards",
+							"host": ["{{base_url}}"],
+							"path": ["api", "v1", "cards"]
+						},
+						"description": "Cria um novo cartão de crédito. closing_offset_days define quantos dias antes do vencimento a fatura fecha (padrão: 7)"
+					},
+					"response": []
+				},
+				{
+					"name": "Update Card",
+					"request": {
+						"method": "PUT",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"name\": \"Nubank Gold\",\n  \"due_day\": 20,\n  \"closing_offset_days\": 7\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/api/v1/cards/{{card_id}}",
+							"host": ["{{base_url}}"],
+							"path": ["api", "v1", "cards", "{{card_id}}"]
+						},
+						"description": "Atualiza informações de um cartão existente"
+					},
+					"response": []
+				},
+				{
+					"name": "Delete Card",
+					"request": {
+						"method": "DELETE",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/api/v1/cards/{{card_id}}",
+							"host": ["{{base_url}}"],
+							"path": ["api", "v1", "cards", "{{card_id}}"]
+						},
+						"description": "Remove um cartão (soft delete)"
+					},
+					"response": []
+				}
+			],
+			"description": "Gerenciamento de cartões de crédito com controle de vencimento e fechamento"
+		},
+		{
+			"name": "Payment Methods",
+			"item": [
+				{
+					"name": "List Payment Methods",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"if (pm.response.code === 200) {",
+									"    const response = pm.response.json();",
+									"    if (response.length > 0) {",
+									"        pm.collectionVariables.set('payment_method_id', response[0].id);",
+									"    }",
+									"}"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"auth": {
+							"type": "noauth"
+						},
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/api/v1/payment-methods",
+							"host": ["{{base_url}}"],
+							"path": ["api", "v1", "payment-methods"]
+						},
+						"description": "Lista todos os métodos de pagamento disponíveis"
+					},
+					"response": []
+				},
+				{
+					"name": "Get Payment Method by ID",
+					"request": {
+						"auth": {
+							"type": "noauth"
+						},
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/api/v1/payment-methods/{{payment_method_id}}",
+							"host": ["{{base_url}}"],
+							"path": ["api", "v1", "payment-methods", "{{payment_method_id}}"]
+						},
+						"description": "Retorna um método de pagamento específico"
+					},
+					"response": []
+				},
+				{
+					"name": "Create Payment Method",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"if (pm.response.code === 201) {",
+									"    const response = pm.response.json();",
+									"    pm.collectionVariables.set('payment_method_id', response.id);",
+									"}"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"auth": {
+							"type": "noauth"
+						},
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"name\": \"PIX\",\n  \"code\": \"PIX\",\n  \"description\": \"Pagamento instantâneo\"\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/api/v1/payment-methods",
+							"host": ["{{base_url}}"],
+							"path": ["api", "v1", "payment-methods"]
+						},
+						"description": "Cria um novo método de pagamento"
+					},
+					"response": []
+				},
+				{
+					"name": "Update Payment Method",
+					"request": {
+						"auth": {
+							"type": "noauth"
+						},
+						"method": "PUT",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"name\": \"PIX - Transferência Instantânea\",\n  \"description\": \"Sistema de pagamento instantâneo brasileiro\"\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/api/v1/payment-methods/{{payment_method_id}}",
+							"host": ["{{base_url}}"],
+							"path": ["api", "v1", "payment-methods", "{{payment_method_id}}"]
+						},
+						"description": "Atualiza um método de pagamento (code não pode ser alterado)"
+					},
+					"response": []
+				},
+				{
+					"name": "Delete Payment Method",
+					"request": {
+						"auth": {
+							"type": "noauth"
+						},
+						"method": "DELETE",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/api/v1/payment-methods/{{payment_method_id}}",
+							"host": ["{{base_url}}"],
+							"path": ["api", "v1", "payment-methods", "{{payment_method_id}}"]
+						},
+						"description": "Remove um método de pagamento (soft delete)"
+					},
+					"response": []
+				}
+			],
+			"description": "Métodos de pagamento (PIX, Boleto, Transferência, etc.)"
+		},
+		{
+			"name": "Transactions",
+			"item": [
+				{
+					"name": "List Transactions",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"if (pm.response.code === 200) {",
+									"    const response = pm.response.json();",
+									"    if (response.data && response.data.length > 0) {",
+									"        pm.collectionVariables.set('transaction_id', response.data[0].id);",
+									"        if (response.data[0].items && response.data[0].items.length > 0) {",
+									"            pm.collectionVariables.set('transaction_item_id', response.data[0].items[0].id);",
+									"        }",
+									"    }",
+									"}"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/api/v1/transactions?limit=10",
+							"host": ["{{base_url}}"],
+							"path": ["api", "v1", "transactions"],
+							"query": [
+								{
+									"key": "limit",
+									"value": "10",
+									"description": "Número de itens por página"
+								},
+								{
+									"key": "cursor",
+									"value": "",
+									"description": "Cursor para próxima página (base64)",
+									"disabled": true
+								}
+							]
+						},
+						"description": "Lista transações mensais com paginação cursor-based"
+					},
+					"response": []
+				},
+				{
+					"name": "Get Transaction by ID",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/api/v1/transactions/{{transaction_id}}",
+							"host": ["{{base_url}}"],
+							"path": ["api", "v1", "transactions", "{{transaction_id}}"]
+						},
+						"description": "Retorna uma transação mensal específica com todos os itens"
+					},
+					"response": []
+				},
+				{
+					"name": "Create Transaction",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"if (pm.response.code === 201) {",
+									"    const response = pm.response.json();",
+									"    pm.collectionVariables.set('transaction_id', response.id);",
+									"    if (response.items && response.items.length > 0) {",
+									"        pm.collectionVariables.set('transaction_item_id', response.items[0].id);",
+									"    }",
+									"}"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"reference_month\": \"2026-02\",\n  \"category_id\": \"{{category_id}}\",\n  \"title\": \"Salário\",\n  \"description\": \"Salário mensal\",\n  \"amount\": \"5000.00\",\n  \"direction\": \"INCOME\",\n  \"type\": \"TRANSFER\",\n  \"is_paid\": true\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/api/v1/transactions",
+							"host": ["{{base_url}}"],
+							"path": ["api", "v1", "transactions"]
+						},
+						"description": "Cria uma nova transação. Direction: INCOME ou EXPENSE. Type: PIX, BOLETO, TRANSFER, CREDIT_CARD"
+					},
+					"response": []
+				},
+				{
+					"name": "Create Expense Transaction",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"reference_month\": \"2026-02\",\n  \"category_id\": \"{{category_id}}\",\n  \"title\": \"Conta de Luz\",\n  \"description\": \"Energia elétrica fevereiro\",\n  \"amount\": \"250.75\",\n  \"direction\": \"EXPENSE\",\n  \"type\": \"BOLETO\",\n  \"is_paid\": true\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/api/v1/transactions",
+							"host": ["{{base_url}}"],
+							"path": ["api", "v1", "transactions"]
+						},
+						"description": "Exemplo de criação de despesa"
+					},
+					"response": []
+				},
+				{
+					"name": "Update Transaction Item",
+					"request": {
+						"method": "PUT",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"title\": \"Conta de Luz - Atualizada\",\n  \"description\": \"Energia elétrica fevereiro - corrigido\",\n  \"amount\": \"255.50\",\n  \"direction\": \"EXPENSE\",\n  \"type\": \"BOLETO\",\n  \"is_paid\": true\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/api/v1/transactions/{{transaction_id}}/items/{{transaction_item_id}}",
+							"host": ["{{base_url}}"],
+							"path": ["api", "v1", "transactions", "{{transaction_id}}", "items", "{{transaction_item_id}}"]
+						},
+						"description": "Atualiza um item de transação específico"
+					},
+					"response": []
+				},
+				{
+					"name": "Delete Transaction Item",
+					"request": {
+						"method": "DELETE",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/api/v1/transactions/{{transaction_id}}/items/{{transaction_item_id}}",
+							"host": ["{{base_url}}"],
+							"path": ["api", "v1", "transactions", "{{transaction_id}}", "items", "{{transaction_item_id}}"]
+						},
+						"description": "Remove um item de transação (soft delete)"
+					},
+					"response": []
+				}
+			],
+			"description": "Gerenciamento de transações mensais (receitas e despesas)"
+		},
+		{
+			"name": "Budgets",
+			"item": [
+				{
+					"name": "List Budgets",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"if (pm.response.code === 200) {",
+									"    const response = pm.response.json();",
+									"    if (response.data && response.data.length > 0) {",
+									"        pm.collectionVariables.set('budget_id', response.data[0].id);",
+									"    }",
+									"}"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/api/v1/budgets?limit=10",
+							"host": ["{{base_url}}"],
+							"path": ["api", "v1", "budgets"],
+							"query": [
+								{
+									"key": "limit",
+									"value": "10",
+									"description": "Número de itens por página"
+								},
+								{
+									"key": "cursor",
+									"value": "",
+									"description": "Cursor para próxima página (base64)",
+									"disabled": true
+								}
+							]
+						},
+						"description": "Lista orçamentos com paginação cursor-based"
+					},
+					"response": []
+				},
+				{
+					"name": "Get Budget by ID",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/api/v1/budgets/{{budget_id}}",
+							"host": ["{{base_url}}"],
+							"path": ["api", "v1", "budgets", "{{budget_id}}"]
+						},
+						"description": "Retorna um orçamento específico com todos os itens"
+					},
+					"response": []
+				},
+				{
+					"name": "Create Budget",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"if (pm.response.code === 201) {",
+									"    const response = pm.response.json();",
+									"    pm.collectionVariables.set('budget_id', response.id);",
+									"}"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"reference_month\": \"2026-02\",\n  \"total_amount\": \"5000.00\",\n  \"currency\": \"BRL\",\n  \"items\": [\n    {\n      \"category_id\": \"{{category_id}}\",\n      \"percentage_goal\": \"30.00\"\n    }\n  ]\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/api/v1/budgets",
+							"host": ["{{base_url}}"],
+							"path": ["api", "v1", "budgets"]
+						},
+						"description": "Cria um orçamento mensal com distribuição por categoria. A soma dos percentuais deve ser <= 100%"
+					},
+					"response": []
+				},
+				{
+					"name": "Create Budget - Multiple Categories",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"reference_month\": \"2026-03\",\n  \"total_amount\": \"5000.00\",\n  \"currency\": \"BRL\",\n  \"items\": [\n    {\n      \"category_id\": \"{{category_id}}\",\n      \"percentage_goal\": \"30.00\"\n    },\n    {\n      \"category_id\": \"{{category_id}}\",\n      \"percentage_goal\": \"25.00\"\n    },\n    {\n      \"category_id\": \"{{category_id}}\",\n      \"percentage_goal\": \"20.00\"\n    }\n  ]\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/api/v1/budgets",
+							"host": ["{{base_url}}"],
+							"path": ["api", "v1", "budgets"]
+						},
+						"description": "Exemplo com múltiplas categorias (total: 75%)"
+					},
+					"response": []
+				},
+				{
+					"name": "Update Budget",
+					"request": {
+						"method": "PUT",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"total_amount\": \"5500.00\",\n  \"items\": [\n    {\n      \"category_id\": \"{{category_id}}\",\n      \"percentage_goal\": \"35.00\"\n    }\n  ]\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/api/v1/budgets/{{budget_id}}",
+							"host": ["{{base_url}}"],
+							"path": ["api", "v1", "budgets", "{{budget_id}}"]
+						},
+						"description": "Atualiza um orçamento existente e recalcula valores planejados"
+					},
+					"response": []
+				},
+				{
+					"name": "Delete Budget",
+					"request": {
+						"method": "DELETE",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/api/v1/budgets/{{budget_id}}",
+							"host": ["{{base_url}}"],
+							"path": ["api", "v1", "budgets", "{{budget_id}}"]
+						},
+						"description": "Remove um orçamento (soft delete)"
+					},
+					"response": []
+				}
+			],
+			"description": "Orçamentos mensais com distribuição percentual por categoria"
+		},
+		{
+			"name": "Invoices",
+			"item": [
+				{
+					"name": "List Invoices by Month",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"if (pm.response.code === 200) {",
+									"    const response = pm.response.json();",
+									"    if (response.data && response.data.length > 0) {",
+									"        pm.collectionVariables.set('invoice_id', response.data[0].id);",
+									"    }",
+									"}"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/api/v1/invoices?month=2026-02&limit=10",
+							"host": ["{{base_url}}"],
+							"path": ["api", "v1", "invoices"],
+							"query": [
+								{
+									"key": "month",
+									"value": "2026-02",
+									"description": "Mês de referência (YYYY-MM)"
+								},
+								{
+									"key": "limit",
+									"value": "10",
+									"description": "Número de itens por página"
+								},
+								{
+									"key": "cursor",
+									"value": "",
+									"description": "Cursor para próxima página",
+									"disabled": true
+								}
+							]
+						},
+						"description": "Lista faturas de um mês específico com paginação"
+					},
+					"response": []
+				},
+				{
+					"name": "List Invoices by Card",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/api/v1/invoices?cardId={{card_id}}&limit=10",
+							"host": ["{{base_url}}"],
+							"path": ["api", "v1", "invoices"],
+							"query": [
+								{
+									"key": "cardId",
+									"value": "{{card_id}}",
+									"description": "ID do cartão"
+								},
+								{
+									"key": "limit",
+									"value": "10",
+									"description": "Número de itens por página"
+								},
+								{
+									"key": "cursor",
+									"value": "",
+									"description": "Cursor para próxima página",
+									"disabled": true
+								}
+							]
+						},
+						"description": "Lista faturas de um cartão específico com paginação"
+					},
+					"response": []
+				},
+				{
+					"name": "Get Invoice by ID",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/api/v1/invoices/{{invoice_id}}",
+							"host": ["{{base_url}}"],
+							"path": ["api", "v1", "invoices", "{{invoice_id}}"]
+						},
+						"description": "Retorna uma fatura específica com todos os itens"
+					},
+					"response": []
+				},
+				{
+					"name": "Create Purchase (Single)",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"if (pm.response.code === 201) {",
+									"    const response = pm.response.json();",
+									"    if (response.items && response.items.length > 0) {",
+									"        pm.collectionVariables.set('invoice_item_id', response.items[0].id);",
+									"    }",
+									"}"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"card_id\": \"{{card_id}}\",\n  \"category_id\": \"{{category_id}}\",\n  \"purchase_date\": \"2026-02-15\",\n  \"description\": \"Mercado\",\n  \"total_amount\": \"350.50\",\n  \"currency\": \"BRL\",\n  \"installment_total\": 1\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/api/v1/invoice-items",
+							"host": ["{{base_url}}"],
+							"path": ["api", "v1", "invoice-items"]
+						},
+						"description": "Cria uma compra à vista (installment_total: 1). A fatura é criada automaticamente se não existir"
+					},
+					"response": []
+				},
+				{
+					"name": "Create Purchase (Installments)",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"card_id\": \"{{card_id}}\",\n  \"category_id\": \"{{category_id}}\",\n  \"purchase_date\": \"2026-02-20\",\n  \"description\": \"Notebook Dell\",\n  \"total_amount\": \"3600.00\",\n  \"currency\": \"BRL\",\n  \"installment_total\": 12\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/api/v1/invoice-items",
+							"host": ["{{base_url}}"],
+							"path": ["api", "v1", "invoice-items"]
+						},
+						"description": "Cria uma compra parcelada. Cada parcela é distribuída nas faturas dos meses seguintes"
+					},
+					"response": []
+				},
+				{
+					"name": "Update Purchase",
+					"request": {
+						"method": "PUT",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"category_id\": \"{{category_id}}\",\n  \"description\": \"Mercado - Atualizado\",\n  \"total_amount\": \"360.00\"\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/api/v1/invoice-items/{{invoice_item_id}}",
+							"host": ["{{base_url}}"],
+							"path": ["api", "v1", "invoice-items", "{{invoice_item_id}}"]
+						},
+						"description": "Atualiza uma compra. Todas as parcelas relacionadas são atualizadas proporcionalmente"
+					},
+					"response": []
+				},
+				{
+					"name": "Delete Purchase",
+					"request": {
+						"method": "DELETE",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/api/v1/invoice-items/{{invoice_item_id}}",
+							"host": ["{{base_url}}"],
+							"path": ["api", "v1", "invoice-items", "{{invoice_item_id}}"]
+						},
+						"description": "Remove uma compra. Todas as parcelas relacionadas são removidas (soft delete)"
+					},
+					"response": []
+				}
+			],
+			"description": "Faturas de cartão de crédito com compras à vista e parceladas"
+		}
+	],
+	"variable": [
+		{
+			"key": "base_url",
+			"value": "http://localhost:8080",
+			"type": "string"
+		},
+		{
+			"key": "token",
+			"value": "",
+			"type": "string"
+		},
+		{
+			"key": "user_id",
+			"value": "",
+			"type": "string"
+		},
+		{
+			"key": "user_email",
+			"value": "",
+			"type": "string"
+		},
+		{
+			"key": "category_id",
+			"value": "",
+			"type": "string"
+		},
+		{
+			"key": "card_id",
+			"value": "",
+			"type": "string"
+		},
+		{
+			"key": "payment_method_id",
+			"value": "",
+			"type": "string"
+		},
+		{
+			"key": "transaction_id",
+			"value": "",
+			"type": "string"
+		},
+		{
+			"key": "transaction_item_id",
+			"value": "",
+			"type": "string"
+		},
+		{
+			"key": "budget_id",
+			"value": "",
+			"type": "string"
+		},
+		{
+			"key": "invoice_id",
+			"value": "",
+			"type": "string"
+		},
+		{
+			"key": "invoice_item_id",
+			"value": "",
+			"type": "string"
+		}
+	]
+}

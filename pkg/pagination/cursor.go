@@ -29,7 +29,7 @@ type Pagination struct {
 
 // Cursor representa o estado interno do cursor (não exposto diretamente ao cliente).
 // Exemplo para cards ordenados por name, id:
-// {"f": {"name": "Nubank", "id": "uuid-123"}}
+// {"f": {"name": "Nubank", "id": "uuid-123"}}.
 type Cursor struct {
 	Fields map[string]any `json:"f"` // Campos do último item (para keyset pagination)
 }

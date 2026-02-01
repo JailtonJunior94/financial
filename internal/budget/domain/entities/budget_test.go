@@ -18,8 +18,8 @@ func TestNewBudget(t *testing.T) {
 	amount, _ := vos.NewMoneyFromFloat(14_400.00, vos.CurrencyBRL)
 
 	type args struct {
-		userID          vos.UUID
-		amount          vos.Money
+		userID         vos.UUID
+		amount         vos.Money
 		referenceMonth budgetVos.ReferenceMonth
 	}
 

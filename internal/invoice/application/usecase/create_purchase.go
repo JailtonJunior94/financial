@@ -3,7 +3,6 @@ package usecase
 import (
 	"context"
 	"fmt"
-	"strconv"
 	"time"
 
 	"github.com/jailtonjunior94/financial/internal/invoice/application/dtos"
@@ -73,15 +72,10 @@ func (u *createPurchaseUseCase) Execute(ctx context.Context, userID string, inpu
 		return nil, fmt.Errorf("invalid purchase date format: %w", err)
 	}
 
-	// Parse totalAmount
-	totalAmountFloat, err := strconv.ParseFloat(input.TotalAmount, 64)
+	// Parse totalAmount from string (preserves precision)
+	totalAmount, err := vos.NewMoneyFromString(input.TotalAmount, vos.CurrencyBRL)
 	if err != nil {
-		return nil, fmt.Errorf("invalid total amount format: %w", err)
-	}
-
-	totalAmount, err := vos.NewMoneyFromFloat(totalAmountFloat, vos.CurrencyBRL)
-	if err != nil {
-		return nil, fmt.Errorf("invalid money value: %w", err)
+		return nil, fmt.Errorf("invalid total amount: %w", err)
 	}
 
 	// ✅ Obter informações de faturamento do cartão via CardProvider (desacoplado)

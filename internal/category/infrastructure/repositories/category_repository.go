@@ -2,6 +2,7 @@ package repositories
 
 import (
 	"context"
+	"database/sql"
 	"fmt"
 
 	"github.com/jailtonjunior94/financial/internal/category/domain/entities"
@@ -153,92 +154,85 @@ func (r *categoryRepository) ListPaginated(ctx context.Context, params interface
 }
 
 func (r *categoryRepository) FindByID(ctx context.Context, userID, id vos.UUID) (*entities.Category, error) {
-	// Removido WithTimeout: confiar no timeout do contexto pai (HTTP request ou transação)
 	ctx, span := r.o11y.Tracer().Start(ctx, "category_repository.find_by_id")
 	defer span.End()
 
-	query := `select
-					c.id,
-					c.user_id,
-					c.parent_id,
-					c.name,
-					c.sequence,
-					c.created_at,
-					c.updated_at,
-					c.deleted_at,
-					c2.id,
-					c2.user_id,
-					c2.name,
-					c2.sequence,
-					c2.created_at,
-					c2.updated_at,
-					c2.deleted_at
-				from
-					categories c
-					left join categories c2 on c.id = c2.parent_id AND c2.deleted_at IS NULL
-				where
-					c.user_id = $1
-					and c.deleted_at is null
-					and c.id = $2
-				order by
-					c.sequence;`
+	// 1. Buscar categoria principal
+	queryCategory := `
+		SELECT
+			id,
+			user_id,
+			parent_id,
+			name,
+			sequence,
+			created_at,
+			updated_at,
+			deleted_at
+		FROM categories
+		WHERE user_id = $1
+			AND id = $2
+			AND deleted_at IS NULL`
 
-	rows, err := r.db.QueryContext(ctx, query, userID.String(), id.String())
+	var category entities.Category
+	err := r.db.QueryRowContext(ctx, queryCategory, userID.String(), id.String()).Scan(
+		&category.ID.Value,
+		&category.UserID.Value,
+		&category.ParentID,
+		&category.Name.Value,
+		&category.Sequence.Sequence,
+		&category.CreatedAt,
+		&category.UpdatedAt,
+		&category.DeletedAt,
+	)
+
+	if err == sql.ErrNoRows {
+		// Categoria não encontrada
+		return nil, nil
+	}
 	if err != nil {
 		span.RecordError(err)
+		return nil, err
+	}
 
+	// 2. Buscar subcategorias (filhos)
+	queryChildren := `
+		SELECT
+			id,
+			user_id,
+			name,
+			sequence,
+			created_at,
+			updated_at,
+			deleted_at
+		FROM categories
+		WHERE parent_id = $1
+			AND deleted_at IS NULL
+		ORDER BY sequence`
+
+	rows, err := r.db.QueryContext(ctx, queryChildren, id.String())
+	if err != nil {
+		span.RecordError(err)
 		return nil, err
 	}
 	defer func() { _ = rows.Close() }()
 
-	var category entities.Category
-	var subCategory entities.Category
-	var subCategories = make(map[vos.UUID][]entities.Category)
-
-	hasRows := false
+	var children []entities.Category
 	for rows.Next() {
-		hasRows = true
+		var child entities.Category
 		err := rows.Scan(
-			&category.ID.Value,
-			&category.UserID.Value,
-			&category.ParentID,
-			&category.Name.Value,
-			&category.Sequence.Sequence,
-			&category.CreatedAt,
-			&category.UpdatedAt,
-			&category.DeletedAt,
-			&subCategory.ID.Value,
-			&subCategory.UserID.Value,
-			&subCategory.Name.Value,
-			&subCategory.Sequence.Sequence,
-			&subCategory.CreatedAt,
-			&subCategory.UpdatedAt,
-			&subCategory.DeletedAt,
+			&child.ID.Value,
+			&child.UserID.Value,
+			&child.Name.Value,
+			&child.Sequence.Sequence,
+			&child.CreatedAt,
+			&child.UpdatedAt,
+			&child.DeletedAt,
 		)
-
 		if err != nil {
 			span.RecordError(err)
-
 			return nil, err
 		}
-
-		if subCategory.ID.IsEmpty() {
-			continue
-		}
-
-		if _, ok := subCategories[category.ID]; !ok {
-			subCategories[category.ID] = []entities.Category{subCategory}
-			continue
-		}
-		subCategories[category.ID] = append(subCategories[category.ID], subCategory)
-	}
-
-	if !hasRows {
-		if err := rows.Err(); err != nil {
-			span.RecordError(err)
-			return nil, err
-		}
-		return nil, nil
+		children = append(children, child)
 	}
 
 	if err := rows.Err(); err != nil {
@@ -246,7 +240,11 @@ func (r *categoryRepository) FindByID(ctx context.Context, userID, id vos.UUID) 
 		return nil, err
 	}
 
-	category.AddChildrens(subCategories[category.ID])
+	// Adicionar filhos se houver
+	if len(children) > 0 {
+		category.AddChildrens(children)
+	}
+
 	return &category, nil
 }
 

@@ -93,22 +93,8 @@ func (u *updateBudgetUseCase) Execute(ctx context.Context, budgetID string, inpu
 			}
 		}
 
-		// Recalculate budget percentage used (spent/total)
-		// Note: SpentAmount is kept as-is (not recalculated here)
-		// Note: recalculatePercentageUsed is private, so we'll do it manually here
-		if !budget.TotalAmount.IsZero() {
-			spentFloat := budget.SpentAmount.Float()
-			totalFloat := budget.TotalAmount.Float()
-			percentageFloat := (spentFloat / totalFloat) * 100.0  // TODO: use entity method instead
-
-			percentageUsed, err := vos.NewPercentageFromFloat(percentageFloat)
-			if err != nil {
-				// Se falhar ao criar percentage, mantem valor atual
-				// Log seria útil aqui mas mantemos silencioso por simplicidade
-			} else {
-				budget.PercentageUsed = percentageUsed
-			}
-		}
+		// Recalculate budget totals (spent amount and percentage used)
+		budget.RecalculateTotals()
 
 		// Update budget in database
 		if err := budgetRepository.Update(ctx, budget); err != nil {

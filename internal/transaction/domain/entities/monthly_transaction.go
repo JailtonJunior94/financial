@@ -1,6 +1,7 @@
 package entities
 
 import (
+	"slices"
 	"time"
 
 	sharedVos "github.com/JailtonJunior94/devkit-go/pkg/vos"
@@ -195,22 +196,24 @@ func (m *MonthlyTransaction) activeItems() []*TransactionItem {
 
 // findItemByID encontra um item pelo ID.
 func (m *MonthlyTransaction) findItemByID(itemID sharedVos.UUID) *TransactionItem {
-	for _, item := range m.Items {
-		if item.ID.String() == itemID.String() {
-			return item
-		}
+	idx := slices.IndexFunc(m.Items, func(item *TransactionItem) bool {
+		return item.ID.String() == itemID.String()
+	})
+	if idx == -1 {
+		return nil
 	}
-	return nil
+	return m.Items[idx]
 }
 
 // findCreditCardItem encontra o item CREDIT_CARD (se existir).
 func (m *MonthlyTransaction) findCreditCardItem() *TransactionItem {
-	for _, item := range m.activeItems() {
-		if item.Type.IsCreditCard() {
-			return item
-		}
+	idx := slices.IndexFunc(m.activeItems(), func(item *TransactionItem) bool {
+		return item.Type.IsCreditCard()
+	})
+	if idx == -1 {
+		return nil
 	}
-	return nil
+	return m.activeItems()[idx]
 }
 
 // hasCreditCardItem verifica se já existe um item CREDIT_CARD ativo.

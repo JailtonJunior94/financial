@@ -276,7 +276,7 @@ func (m *mockLogger) Info(ctx context.Context, msg string, fields ...observabili
 func (m *mockLogger) Debug(ctx context.Context, msg string, fields ...observability.Field) {}
 func (m *mockLogger) Warn(ctx context.Context, msg string, fields ...observability.Field)  {}
 func (m *mockLogger) Error(ctx context.Context, msg string, fields ...observability.Field) {}
-func (m *mockLogger) With(fields ...observability.Field) observability.Logger             { return m }
+func (m *mockLogger) With(fields ...observability.Field) observability.Logger              { return m }
 
 type mockTracer struct{}
 
@@ -294,9 +294,9 @@ func (m *mockTracer) SpanFromContext(ctx context.Context) observability.Span {
 
 type mockSpan struct{}
 
-func (m *mockSpan) End()                                                      {}
-func (m *mockSpan) AddEvent(name string, fields ...observability.Field)      {}
-func (m *mockSpan) SetAttributes(attrs ...observability.Field)                {}
-func (m *mockSpan) RecordError(err error, fields ...observability.Field)      {}
-func (m *mockSpan) SetStatus(code observability.StatusCode, msg string)       {}
-func (m *mockSpan) Context() observability.SpanContext                        { return nil }
+func (m *mockSpan) End()                                                 {}
+func (m *mockSpan) AddEvent(name string, fields ...observability.Field)  {}
+func (m *mockSpan) SetAttributes(attrs ...observability.Field)           {}
+func (m *mockSpan) RecordError(err error, fields ...observability.Field) {}
+func (m *mockSpan) SetStatus(code observability.StatusCode, msg string)  {}
+func (m *mockSpan) Context() observability.SpanContext                   { return nil }

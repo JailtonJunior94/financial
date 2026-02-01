@@ -7,7 +7,7 @@ import (
 	customErrors "github.com/jailtonjunior94/financial/pkg/custom_errors"
 )
 
-// ClassifyError classifica um erro em categorias para métricas
+// ClassifyError classifica um erro em categorias para métricas.
 func ClassifyError(err error) string {
 	if err == nil {
 		return ""

@@ -86,7 +86,7 @@ func (j *jwtAdapter) Validate(ctx context.Context, token string) (*Authenticated
 	}
 
 	secret := []byte(j.config.AuthConfig.AuthSecretKey)
-	parsedToken, err := jwt.Parse(token, func(t *jwt.Token) (interface{}, error) {
+	parsedToken, err := jwt.Parse(token, func(t *jwt.Token) (any, error) {
 		// Valida o método de assinatura
 		if _, ok := t.Method.(*jwt.SigningMethodHMAC); !ok {
 			span.AddEvent(

@@ -21,16 +21,16 @@ import (
 // - direction: Direção (income/expense) - budget ignora income
 // - type: Tipo da transação (regular/credit_card/transfer)
 // - reference_month: Mês de referência (formato: "2024-01").
-type TransactionCreatedEvent struct{
-	eventID        sharedVos.UUID
-	transactionID  sharedVos.UUID
-	userID         sharedVos.UUID
-	categoryID     sharedVos.UUID
-	amount         sharedVos.Money
-	direction      transactionVos.TransactionDirection
+type TransactionCreatedEvent struct {
+	eventID         sharedVos.UUID
+	transactionID   sharedVos.UUID
+	userID          sharedVos.UUID
+	categoryID      sharedVos.UUID
+	amount          sharedVos.Money
+	direction       transactionVos.TransactionDirection
 	transactionType transactionVos.TransactionType
-	referenceMonth transactionVos.ReferenceMonth
-	occurredAt     time.Time
+	referenceMonth  transactionVos.ReferenceMonth
+	occurredAt      time.Time
 }
 
 // NewTransactionCreatedEvent cria um novo evento TransactionCreated.

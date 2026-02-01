@@ -5,7 +5,6 @@ import (
 	"database/sql"
 	"errors"
 	"fmt"
-	"strconv"
 	"strings"
 	"time"
 
@@ -626,12 +625,7 @@ func (r *invoiceRepository) scanInvoice(s scanner) (*entities.Invoice, error) {
 		return nil, err
 	}
 
-	totalAmountFloat, err := strconv.ParseFloat(totalAmount, 64)
-	if err != nil {
-		return nil, fmt.Errorf("failed to parse total_amount: %w", err)
-	}
-
-	invoice.TotalAmount, err = vos.NewMoneyFromFloat(totalAmountFloat, "BRL")
+	invoice.TotalAmount, err = vos.NewMoneyFromString(totalAmount, "BRL")
 	if err != nil {
 		return nil, fmt.Errorf("failed to create Money from total_amount: %w", err)
 	}
@@ -671,22 +665,12 @@ func (r *invoiceRepository) scanInvoiceItemFromRows(rows *sql.Rows) (*entities.I
 		return nil, err
 	}
 
-	totalAmountFloat, err := strconv.ParseFloat(totalAmount, 64)
-	if err != nil {
-		return nil, fmt.Errorf("failed to parse total_amount: %w", err)
-	}
-
-	installmentAmountFloat, err := strconv.ParseFloat(installmentAmount, 64)
-	if err != nil {
-		return nil, fmt.Errorf("failed to parse installment_amount: %w", err)
-	}
-
-	item.TotalAmount, err = vos.NewMoneyFromFloat(totalAmountFloat, "BRL")
+	item.TotalAmount, err = vos.NewMoneyFromString(totalAmount, "BRL")
 	if err != nil {
 		return nil, fmt.Errorf("failed to create Money from total_amount: %w", err)
 	}
 
-	item.InstallmentAmount, err = vos.NewMoneyFromFloat(installmentAmountFloat, "BRL")
+	item.InstallmentAmount, err = vos.NewMoneyFromString(installmentAmount, "BRL")
 	if err != nil {
 		return nil, fmt.Errorf("failed to create Money from installment_amount: %w", err)
 	}

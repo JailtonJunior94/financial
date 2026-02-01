@@ -3,7 +3,6 @@ package usecase
 import (
 	"context"
 	"fmt"
-	"strconv"
 	"time"
 
 	"github.com/jailtonjunior94/financial/internal/invoice/application/dtos"
@@ -54,12 +53,6 @@ func (u *updatePurchaseUseCase) Execute(ctx context.Context, itemID string, inpu
 		return nil, fmt.Errorf("invalid category ID: %w", err)
 	}
 
-	// Parse totalAmount
-	totalAmountFloat, err := strconv.ParseFloat(input.TotalAmount, 64)
-	if err != nil {
-		return nil, fmt.Errorf("invalid total amount format: %w", err)
-	}
-
 	// Collect updated items for response
 	var updatedItems []*entities.InvoiceItem
 
@@ -96,11 +89,11 @@ func (u *updatePurchaseUseCase) Execute(ctx context.Context, itemID string, inpu
 			return fmt.Errorf("no items found for purchase")
 		}
 
-		// Parse new total amount and calculate new installment amount
+		// Parse new total amount from string (preserves precision)
 		currency := items[0].TotalAmount.Currency()
-		newTotalAmount, err := vos.NewMoneyFromFloat(totalAmountFloat, currency)
+		newTotalAmount, err := vos.NewMoneyFromString(input.TotalAmount, currency)
 		if err != nil {
-			return fmt.Errorf("invalid money value: %w", err)
+			return fmt.Errorf("invalid total amount: %w", err)
 		}
 
 		newInstallmentAmount, err := newTotalAmount.Divide(int64(len(items)))
@@ -109,7 +102,7 @@ func (u *updatePurchaseUseCase) Execute(ctx context.Context, itemID string, inpu
 		}
 
 		// Track affected invoices for total recalculation
-		affectedInvoices := make(map[string]bool)
+		affectedInvoices := make(map[string]struct{})
 
 		// Update each item
 		for _, item := range items {
@@ -123,7 +116,7 @@ func (u *updatePurchaseUseCase) Execute(ctx context.Context, itemID string, inpu
 			}
 
 			// Track affected invoice
-			affectedInvoices[item.InvoiceID.String()] = true
+			affectedInvoices[item.InvoiceID.String()] = struct{}{}
 		}
 
 		// Store updated items for response

@@ -4,13 +4,13 @@ import "time"
 
 // PurchaseCreateInput representa o input para criar uma compra.
 type PurchaseCreateInput struct {
-	CardID            string                `json:"card_id"`
-	CategoryID        string                `json:"category_id"`
-	PurchaseDate      string                `json:"purchase_date"` // YYYY-MM-DD
-	Description       string                `json:"description"`
-	TotalAmount       string                `json:"total_amount"`     // String decimal (e.g., "1200.00")
-	Currency          string                `json:"currency"`         // ISO 4217 (e.g., "BRL")
-	InstallmentTotal  int                   `json:"installment_total"` // 1 para à vista
+	CardID           string `json:"card_id"`
+	CategoryID       string `json:"category_id"`
+	PurchaseDate     string `json:"purchase_date"` // YYYY-MM-DD
+	Description      string `json:"description"`
+	TotalAmount      string `json:"total_amount"`      // String decimal (e.g., "1200.00")
+	Currency         string `json:"currency"`          // ISO 4217 (e.g., "BRL")
+	InstallmentTotal int    `json:"installment_total"` // 1 para à vista
 }
 
 // PurchaseUpdateInput representa o input para atualizar uma compra.
@@ -40,7 +40,7 @@ type InvoiceItemOutput struct {
 	ID                string    `json:"id"`
 	InvoiceID         string    `json:"invoice_id"`
 	CategoryID        string    `json:"category_id"`
-	PurchaseDate      string    `json:"purchase_date"`      // YYYY-MM-DD
+	PurchaseDate      string    `json:"purchase_date"` // YYYY-MM-DD
 	Description       string    `json:"description"`
 	TotalAmount       string    `json:"total_amount"`       // Valor total da compra original
 	InstallmentNumber int       `json:"installment_number"` // 1 a N
