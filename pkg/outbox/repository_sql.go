@@ -57,14 +57,15 @@ func (r *sqlRepository) Save(ctx context.Context, event *OutboxEvent) error {
 
 // FindPendingBatch busca eventos pendentes usando SELECT FOR UPDATE SKIP LOCKED.
 // Esta query evita lock contention em ambientes concorrentes.
+// Ordenação determinística garante que eventos criados no mesmo momento sejam processados em ordem previsível.
 func (r *sqlRepository) FindPendingBatch(ctx context.Context, limit int) ([]*OutboxEvent, error) {
 	query := `
-		SELECT 
+		SELECT
 			id, aggregate_id, aggregate_type, event_type,
 			payload, status, retry_count, published_at, failed_at, created_at
 		FROM outbox_events
 		WHERE status = $1
-		ORDER BY created_at ASC
+		ORDER BY created_at ASC, id ASC
 		LIMIT $2
 		FOR UPDATE SKIP LOCKED
 	`

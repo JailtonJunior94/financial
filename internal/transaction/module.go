@@ -4,20 +4,24 @@ import (
 	"database/sql"
 	"fmt"
 
+	"github.com/JailtonJunior94/devkit-go/pkg/database/uow"
+	"github.com/JailtonJunior94/devkit-go/pkg/observability"
+
 	"github.com/jailtonjunior94/financial/internal/transaction/application/usecase"
 	"github.com/jailtonjunior94/financial/internal/transaction/domain/interfaces"
+	"github.com/jailtonjunior94/financial/internal/transaction/infrastructure/adapters"
 	"github.com/jailtonjunior94/financial/internal/transaction/infrastructure/http"
+	"github.com/jailtonjunior94/financial/internal/transaction/infrastructure/messaging"
 	"github.com/jailtonjunior94/financial/internal/transaction/infrastructure/repositories"
 	"github.com/jailtonjunior94/financial/pkg/api/httperrors"
 	"github.com/jailtonjunior94/financial/pkg/api/middlewares"
 	"github.com/jailtonjunior94/financial/pkg/auth"
-
-	"github.com/JailtonJunior94/devkit-go/pkg/database/uow"
-	"github.com/JailtonJunior94/devkit-go/pkg/observability"
 )
 
 type TransactionModule struct {
-	TransactionRouter *http.TransactionRouter
+	TransactionRouter        *http.TransactionRouter
+	SyncMonthlyUseCase       usecase.SyncMonthlyFromInvoicesUseCase
+	PurchaseEventConsumer    *messaging.PurchaseEventConsumer
 }
 
 func NewTransactionModule(
@@ -26,6 +30,10 @@ func NewTransactionModule(
 	tokenValidator auth.TokenValidator,
 	invoiceTotalProvider interfaces.InvoiceTotalProvider,
 ) (TransactionModule, error) {
+	// Use NoOp provider if nil (resolves circular dependency during initialization)
+	if invoiceTotalProvider == nil {
+		invoiceTotalProvider = adapters.NewNoOpInvoiceTotalProvider()
+	}
 	errorHandler := httperrors.NewErrorHandler(o11y)
 	authMiddleware := middlewares.NewAuthorization(tokenValidator, o11y, errorHandler)
 	unitOfWork, err := uow.NewUnitOfWork(db)
@@ -42,6 +50,7 @@ func NewTransactionModule(
 	deleteTransactionItemUseCase := usecase.NewDeleteTransactionItemUseCase(unitOfWork, transactionRepository, o11y)
 	listMonthlyPaginatedUseCase := usecase.NewListMonthlyPaginatedUseCase(o11y, transactionRepository)
 	getMonthlyUseCase := usecase.NewGetMonthlyUseCase(o11y, transactionRepository)
+	syncMonthlyFromInvoicesUseCase := usecase.NewSyncMonthlyFromInvoicesUseCase(unitOfWork, transactionRepository, invoiceTotalProvider, o11y)
 
 	// Handler
 	transactionHandler := http.NewTransactionHandler(
@@ -57,5 +66,12 @@ func NewTransactionModule(
 	// Router
 	transactionRouter := http.NewTransactionRouter(transactionHandler, authMiddleware)
 
-	return TransactionModule{TransactionRouter: transactionRouter}, nil
+	// Consumer (with DB for idempotency tracking)
+	purchaseEventConsumer := messaging.NewPurchaseEventConsumer(syncMonthlyFromInvoicesUseCase, db, o11y)
+
+	return TransactionModule{
+		TransactionRouter:     transactionRouter,
+		SyncMonthlyUseCase:    syncMonthlyFromInvoicesUseCase,
+		PurchaseEventConsumer: purchaseEventConsumer,
+	}, nil
 }
