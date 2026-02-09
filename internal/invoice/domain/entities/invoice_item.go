@@ -14,7 +14,6 @@ import (
 // Nota: Mutações devem passar pelo Invoice (aggregate root).
 type InvoiceItem struct {
 	entity.Base
-	Invoice           *Invoice
 	InvoiceID         vos.UUID
 	CategoryID        vos.UUID
 	PurchaseDate      time.Time
@@ -25,9 +24,39 @@ type InvoiceItem struct {
 	InstallmentAmount vos.Money // Valor desta parcela
 }
 
+// validateInvoiceItemFields valida os campos de um InvoiceItem
+func validateInvoiceItemFields(description string, totalAmount, installmentAmount vos.Money, installmentNumber, installmentTotal int) error {
+	if description == "" {
+		return domain.ErrEmptyDescription
+	}
+	if totalAmount.IsNegative() || totalAmount.IsZero() {
+		return domain.ErrNegativeAmount
+	}
+	if installmentTotal < 1 {
+		return domain.ErrInvalidInstallmentTotal
+	}
+	if installmentNumber < 1 || installmentNumber > installmentTotal {
+		return domain.ErrInvalidInstallment
+	}
+	if installmentAmount.IsNegative() || installmentAmount.IsZero() {
+		return domain.ErrNegativeAmount
+	}
+
+	// Valida que o valor da parcela é correto (total / parcelas)
+	expectedTotal, _ := installmentAmount.Multiply(int64(installmentTotal))
+	if !expectedTotal.Equals(totalAmount) {
+		// Permite uma diferença de centavos devido a arredondamento
+		diff, _ := expectedTotal.Subtract(totalAmount)
+		if diff.Abs().Cents() > int64(installmentTotal) {
+			return domain.ErrInstallmentAmountInvalid
+		}
+	}
+	return nil
+}
+
 // NewInvoiceItem cria um novo item de fatura com validações.
 func NewInvoiceItem(
-	invoice *Invoice,
+	invoiceID vos.UUID,
 	categoryID vos.UUID,
 	purchaseDate time.Time,
 	description string,
@@ -36,45 +65,12 @@ func NewInvoiceItem(
 	installmentTotal int,
 	installmentAmount vos.Money,
 ) (*InvoiceItem, error) {
-	// Validações de negócio
-	if purchaseDate.After(time.Now()) {
-		return nil, domain.ErrInvalidPurchaseDate
-	}
-
-	if description == "" {
-		return nil, domain.ErrEmptyDescription
-	}
-
-	if totalAmount.IsNegative() || totalAmount.IsZero() {
-		return nil, domain.ErrNegativeAmount
-	}
-
-	if installmentTotal < 1 {
-		return nil, domain.ErrInvalidInstallmentTotal
-	}
-
-	if installmentNumber < 1 || installmentNumber > installmentTotal {
-		return nil, domain.ErrInvalidInstallment
-	}
-
-	if installmentAmount.IsNegative() || installmentAmount.IsZero() {
-		return nil, domain.ErrNegativeAmount
-	}
-
-	// Valida que o valor da parcela é correto (total / parcelas)
-	// Para evitar problemas de arredondamento, validamos que a soma está correta
-	expectedTotal, _ := installmentAmount.Multiply(int64(installmentTotal))
-	if !expectedTotal.Equals(totalAmount) {
-		// Permite uma diferença de centavos devido a arredondamento
-		diff, _ := expectedTotal.Subtract(totalAmount)
-		if diff.Abs().Cents() > int64(installmentTotal) {
-			return nil, domain.ErrInstallmentAmountInvalid
-		}
+	if err := validateInvoiceItemFields(description, totalAmount, installmentAmount, installmentNumber, installmentTotal); err != nil {
+		return nil, err
 	}
 
 	return &InvoiceItem{
-		Invoice:           invoice,
-		InvoiceID:         invoice.ID,
+		InvoiceID:         invoiceID,
 		CategoryID:        categoryID,
 		PurchaseDate:      purchaseDate,
 		Description:       description,

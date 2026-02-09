@@ -101,17 +101,17 @@ func (r *transactionRepository) FindMonthlyByID(
 
 	var monthly entities.MonthlyTransaction
 	var refMonthStr string
-	var totalIncomeInt, totalExpenseInt, totalAmountInt int64
+	var totalIncomeStr, totalExpenseStr, totalAmountStr string
 	var createdAt time.Time
 	var updatedAt sql.NullTime
 
 	err := executor.QueryRowContext(ctx, query, monthlyID.String(), userID.String()).Scan(
-		&monthly.ID,
-		&monthly.UserID,
+		&monthly.ID.Value,
+		&monthly.UserID.Value,
 		&refMonthStr,
-		&totalIncomeInt,
-		&totalExpenseInt,
-		&totalAmountInt,
+		&totalIncomeStr,
+		&totalExpenseStr,
+		&totalAmountStr,
 		&createdAt,
 		&updatedAt,
 	)
@@ -130,20 +130,20 @@ func (r *transactionRepository) FindMonthlyByID(
 		return nil, err
 	}
 
-	// Parse money values
-	monthly.TotalIncome, err = sharedVos.NewMoney(totalIncomeInt, sharedVos.CurrencyBRL)
+	// Parse money values from NUMERIC strings
+	monthly.TotalIncome, err = sharedVos.NewMoneyFromString(totalIncomeStr, sharedVos.CurrencyBRL)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("failed to parse total_income: %w", err)
 	}
 
-	monthly.TotalExpense, err = sharedVos.NewMoney(totalExpenseInt, sharedVos.CurrencyBRL)
+	monthly.TotalExpense, err = sharedVos.NewMoneyFromString(totalExpenseStr, sharedVos.CurrencyBRL)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("failed to parse total_expense: %w", err)
 	}
 
-	monthly.TotalAmount, err = sharedVos.NewMoney(totalAmountInt, sharedVos.CurrencyBRL)
+	monthly.TotalAmount, err = sharedVos.NewMoneyFromString(totalAmountStr, sharedVos.CurrencyBRL)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("failed to parse total_amount: %w", err)
 	}
 
 	// Parse timestamps
@@ -181,11 +181,13 @@ func (r *transactionRepository) UpdateMonthly(
 		WHERE id = $5
 	`
 
+	now := sharedVos.NewNullableTime(time.Now().UTC())
+
 	_, err := executor.ExecContext(ctx, query,
 		monthly.TotalIncome.Cents(),
 		monthly.TotalExpense.Cents(),
 		monthly.TotalAmount.Cents(),
-		time.Now().UTC(),
+		now.ValueOr(time.Now().UTC()),
 		monthly.ID.String(),
 	)
 
@@ -257,9 +259,11 @@ func (r *transactionRepository) UpdateItem(
 		WHERE id = $9
 	`
 
+	now := sharedVos.NewNullableTime(time.Now().UTC())
+
 	var deletedAt any
 	if item.IsDeleted() {
-		deletedAt = item.DeletedAt.ValueOr(time.Now().UTC())
+		deletedAt = item.DeletedAt.ValueOr(now.ValueOr(time.Now().UTC()))
 	}
 
 	_, err := executor.ExecContext(ctx, query,
@@ -269,7 +273,7 @@ func (r *transactionRepository) UpdateItem(
 		item.Direction.String(),
 		item.Type.String(),
 		item.IsPaid,
-		time.Now().UTC(),
+		now.ValueOr(time.Now().UTC()),
 		deletedAt,
 		item.ID.String(),
 	)
@@ -303,18 +307,18 @@ func (r *transactionRepository) FindItemByID(
 	`
 
 	var item entities.TransactionItem
-	var amountInt int64
+	var amountStr string
 	var direction, itemType string
 	var createdAt time.Time
 	var updatedAt, deletedAt sql.NullTime
 
 	err := executor.QueryRowContext(ctx, query, itemID.String(), userID.String()).Scan(
-		&item.ID,
-		&item.MonthlyID,
-		&item.CategoryID,
+		&item.ID.Value,
+		&item.MonthlyID.Value,
+		&item.CategoryID.Value,
 		&item.Title,
 		&item.Description,
-		&amountInt,
+		&amountStr,
 		&direction,
 		&itemType,
 		&item.IsPaid,
@@ -332,9 +336,9 @@ func (r *transactionRepository) FindItemByID(
 	}
 
 	// Parse values
-	item.Amount, err = sharedVos.NewMoney(amountInt, sharedVos.CurrencyBRL)
+	item.Amount, err = sharedVos.NewMoneyFromString(amountStr, sharedVos.CurrencyBRL)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("failed to parse amount: %w", err)
 	}
 
 	item.Direction, err = transactionVos.NewTransactionDirection(direction)
@@ -378,17 +382,17 @@ func (r *transactionRepository) findMonthlyByUserAndMonth(
 
 	var monthly entities.MonthlyTransaction
 	var refMonthStr string
-	var totalIncomeInt, totalExpenseInt, totalAmountInt int64
+	var totalIncomeStr, totalExpenseStr, totalAmountStr string
 	var createdAt time.Time
 	var updatedAt sql.NullTime
 
 	err := executor.QueryRowContext(ctx, query, userID.String(), referenceMonth.String()).Scan(
-		&monthly.ID,
-		&monthly.UserID,
+		&monthly.ID.Value,
+		&monthly.UserID.Value,
 		&refMonthStr,
-		&totalIncomeInt,
-		&totalExpenseInt,
-		&totalAmountInt,
+		&totalIncomeStr,
+		&totalExpenseStr,
+		&totalAmountStr,
 		&createdAt,
 		&updatedAt,
 	)
@@ -406,19 +410,20 @@ func (r *transactionRepository) findMonthlyByUserAndMonth(
 		return nil, err
 	}
 
-	monthly.TotalIncome, err = sharedVos.NewMoney(totalIncomeInt, sharedVos.CurrencyBRL)
+	// Parse money values from NUMERIC strings
+	monthly.TotalIncome, err = sharedVos.NewMoneyFromString(totalIncomeStr, sharedVos.CurrencyBRL)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("failed to parse total_income: %w", err)
 	}
 
-	monthly.TotalExpense, err = sharedVos.NewMoney(totalExpenseInt, sharedVos.CurrencyBRL)
+	monthly.TotalExpense, err = sharedVos.NewMoneyFromString(totalExpenseStr, sharedVos.CurrencyBRL)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("failed to parse total_expense: %w", err)
 	}
 
-	monthly.TotalAmount, err = sharedVos.NewMoney(totalAmountInt, sharedVos.CurrencyBRL)
+	monthly.TotalAmount, err = sharedVos.NewMoneyFromString(totalAmountStr, sharedVos.CurrencyBRL)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("failed to parse total_amount: %w", err)
 	}
 
 	monthly.CreatedAt = sharedVos.NewNullableTime(createdAt)
@@ -493,18 +498,18 @@ func (r *transactionRepository) findItemsByMonthlyID(
 
 	for rows.Next() {
 		var item entities.TransactionItem
-		var amountInt int64
+		var amountStr string
 		var direction, itemType string
 		var createdAt time.Time
 		var updatedAt, deletedAt sql.NullTime
 
 		err := rows.Scan(
-			&item.ID,
-			&item.MonthlyID,
-			&item.CategoryID,
+			&item.ID.Value,
+			&item.MonthlyID.Value,
+			&item.CategoryID.Value,
 			&item.Title,
 			&item.Description,
-			&amountInt,
+			&amountStr,
 			&direction,
 			&itemType,
 			&item.IsPaid,
@@ -516,10 +521,10 @@ func (r *transactionRepository) findItemsByMonthlyID(
 			return nil, err
 		}
 
-		// Parse values
-		item.Amount, err = sharedVos.NewMoney(amountInt, sharedVos.CurrencyBRL)
+		// Parse values using Money VO
+		item.Amount, err = sharedVos.NewMoneyFromString(amountStr, sharedVos.CurrencyBRL)
 		if err != nil {
-			return nil, err
+			return nil, fmt.Errorf("failed to parse amount: %w", err)
 		}
 
 		item.Direction, err = transactionVos.NewTransactionDirection(direction)
@@ -556,7 +561,7 @@ func (r *transactionRepository) ListMonthlyPaginated(
 
 	// Build WHERE clause with cursor for keyset pagination
 	whereClause := "user_id = $1"
-	args := []interface{}{params.UserID.String()}
+	args := []any{params.UserID.String()}
 
 	cursorDate, hasDate := params.Cursor.GetString("date")
 	cursorID, hasID := params.Cursor.GetString("id")
@@ -593,17 +598,17 @@ func (r *transactionRepository) ListMonthlyPaginated(
 	for rows.Next() {
 		var monthly entities.MonthlyTransaction
 		var refMonthStr string
-		var totalIncomeInt, totalExpenseInt, totalAmountInt int64
+		var totalIncomeStr, totalExpenseStr, totalAmountStr string
 		var createdAt time.Time
 		var updatedAt sql.NullTime
 
 		err := rows.Scan(
-			&monthly.ID,
-			&monthly.UserID,
+			&monthly.ID.Value,
+			&monthly.UserID.Value,
 			&refMonthStr,
-			&totalIncomeInt,
-			&totalExpenseInt,
-			&totalAmountInt,
+			&totalIncomeStr,
+			&totalExpenseStr,
+			&totalAmountStr,
 			&createdAt,
 			&updatedAt,
 		)
@@ -618,20 +623,20 @@ func (r *transactionRepository) ListMonthlyPaginated(
 			return nil, err
 		}
 
-		// Parse money values
-		monthly.TotalIncome, err = sharedVos.NewMoney(totalIncomeInt, sharedVos.CurrencyBRL)
+		// Parse money values from NUMERIC strings
+		monthly.TotalIncome, err = sharedVos.NewMoneyFromString(totalIncomeStr, sharedVos.CurrencyBRL)
 		if err != nil {
-			return nil, err
+			return nil, fmt.Errorf("failed to parse total_income: %w", err)
 		}
 
-		monthly.TotalExpense, err = sharedVos.NewMoney(totalExpenseInt, sharedVos.CurrencyBRL)
+		monthly.TotalExpense, err = sharedVos.NewMoneyFromString(totalExpenseStr, sharedVos.CurrencyBRL)
 		if err != nil {
-			return nil, err
+			return nil, fmt.Errorf("failed to parse total_expense: %w", err)
 		}
 
-		monthly.TotalAmount, err = sharedVos.NewMoney(totalAmountInt, sharedVos.CurrencyBRL)
+		monthly.TotalAmount, err = sharedVos.NewMoneyFromString(totalAmountStr, sharedVos.CurrencyBRL)
 		if err != nil {
-			return nil, err
+			return nil, fmt.Errorf("failed to parse total_amount: %w", err)
 		}
 
 		// Parse timestamps

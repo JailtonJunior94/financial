@@ -1,6 +1,6 @@
-# pkg/messaging - Sistema de Mensageria Agnóstico
+# pkg/messaging - Sistema de Mensageria com RabbitMQ
 
-Sistema de mensageria agnóstico que permite trocar entre diferentes message brokers (RabbitMQ, Kafka, SQS) sem modificar o código de domínio.
+Sistema de mensageria utilizando RabbitMQ como message broker, com abstrações que facilitam o desenvolvimento de produtores e consumidores.
 
 ## Arquitetura
 
@@ -10,13 +10,11 @@ pkg/messaging/          # Abstrações agnósticas
   ├── handler.go        # Interface de handler
   └── consumer.go       # Interface de consumer
 
-pkg/brokers/            # Implementações específicas
-  ├── rabbitmq/         # Implementação RabbitMQ
-  │   ├── consumer.go   # Thin adapter sobre devkit-go
-  │   ├── adapter.go    # Adapter para lifecycle.Service
-  │   └── builder.go    # Builder pattern com topologia
-  ├── kafka/            # (Futuro) Implementação Kafka
-  └── sqs/              # (Futuro) Implementação SQS
+pkg/brokers/            # Implementação RabbitMQ
+  └── rabbitmq/         # Implementação RabbitMQ
+      ├── consumer.go   # Thin adapter sobre devkit-go
+      ├── adapter.go    # Adapter para lifecycle.Service
+      └── builder.go    # Builder pattern com topologia
 
 pkg/lifecycle/          # Gerenciamento de lifecycle
   ├── service.go        # Interface Service
@@ -220,12 +218,8 @@ func createConsumerFactory(cfg *configs.Config, o11y observability.Observability
     switch cfg.ConsumerConfig.BrokerType {
     case "rabbitmq":
         return newRabbitMQFactory(cfg, o11y)
-    case "kafka":
-        return newKafkaFactory(cfg, o11y)
-    case "sqs":
-        return newSQSFactory(cfg, o11y)
     default:
-        return nil, fmt.Errorf("unknown broker type: %s", cfg.ConsumerConfig.BrokerType)
+        return nil, fmt.Errorf("unsupported broker type: %s (only rabbitmq is supported)", cfg.ConsumerConfig.BrokerType)
     }
 }
 ```
@@ -234,183 +228,13 @@ func createConsumerFactory(cfg *configs.Config, o11y observability.Observability
 
 ```env
 # Consumer Configuration
-CONSUMER_BROKER_TYPE=rabbitmq        # rabbitmq, kafka, sqs
+CONSUMER_BROKER_TYPE=rabbitmq
 CONSUMER_EXCHANGE=financial.events
 CONSUMER_WORKER_COUNT=5
 CONSUMER_PREFETCH_COUNT=10
 ```
 
-## Adicionando Novo Broker (Kafka/SQS)
-
-### 1. Criar Implementação do Consumer
-
-```go
-// pkg/brokers/kafka/consumer.go
-package kafka
-
-import (
-    "context"
-    "github.com/jailtonjunior94/financial/pkg/messaging"
-    "github.com/segmentio/kafka-go"
-)
-
-type Consumer struct {
-    reader  *kafka.Reader
-    config  *ConsumerConfig
-    handler messaging.Handler
-}
-
-func NewConsumer(config *ConsumerConfig) (*Consumer, error) {
-    reader := kafka.NewReader(kafka.ReaderConfig{
-        Brokers: config.Brokers,
-        Topic:   config.Topic,
-        GroupID: config.GroupID,
-    })
-
-    return &Consumer{reader: reader, config: config}, nil
-}
-
-func (c *Consumer) RegisterHandler(handler messaging.Handler) error {
-    c.handler = handler
-    return nil
-}
-
-func (c *Consumer) Start(ctx context.Context) error {
-    go func() {
-        for {
-            kafkaMsg, err := c.reader.ReadMessage(ctx)
-            if err != nil {
-                return
-            }
-
-            // Converte kafka.Message → messaging.Message
-            msg := &messaging.Message{
-                Topic:   kafkaMsg.Topic,
-                Payload: kafkaMsg.Value,
-                Headers: convertKafkaHeaders(kafkaMsg.Headers),
-            }
-
-            // Processa com handler
-            if err := c.handler.Handle(ctx, msg); err != nil {
-                // Log error, send to DLQ, etc
-            }
-        }
-    }()
-    return nil
-}
-
-func (c *Consumer) Shutdown(ctx context.Context) error {
-    return c.reader.Close()
-}
-
-func (c *Consumer) Name() string {
-    return "kafka-consumer-" + c.config.Topic
-}
-```
-
-### 2. Criar Builder
-
-```go
-// pkg/brokers/kafka/builder.go
-package kafka
-
-import (
-    "context"
-    "github.com/jailtonjunior94/financial/pkg/messaging"
-)
-
-type Builder struct {
-    config *ConsumerConfig
-}
-
-func NewBuilder(config *ConsumerConfig) *Builder {
-    return &Builder{config: config}
-}
-
-func (b *Builder) BuildConsumer(ctx context.Context) (messaging.Consumer, error) {
-    return NewConsumer(b.config)
-}
-```
-
-### 3. Criar Adapter para Lifecycle
-
-```go
-// pkg/brokers/kafka/adapter.go
-package kafka
-
-import (
-    "github.com/jailtonjunior94/financial/pkg/lifecycle"
-    "github.com/jailtonjunior94/financial/pkg/messaging"
-)
-
-type ConsumerService struct {
-    consumer messaging.Consumer
-}
-
-func NewConsumerService(consumer messaging.Consumer) lifecycle.Service {
-    return &ConsumerService{consumer: consumer}
-}
-
-func (s *ConsumerService) Start(ctx context.Context) error {
-    return s.consumer.Start(ctx)
-}
-
-func (s *ConsumerService) Shutdown(ctx context.Context) error {
-    return s.consumer.Shutdown(ctx)
-}
-
-func (s *ConsumerService) Name() string {
-    return s.consumer.Name()
-}
-```
-
-### 4. Adicionar Factory em cmd/consumer
-
-```go
-type kafkaFactory struct {
-    config *configs.Config
-    o11y   observability.Observability
-}
-
-func (f *kafkaFactory) BuildBudgetConsumer(ctx context.Context, handler messaging.Handler) (lifecycle.Service, error) {
-    config := &kafka.ConsumerConfig{
-        Brokers: strings.Split(f.config.ConsumerConfig.KafkaBrokers, ","),
-        Topic:   "budget.updates",
-        GroupID: f.config.ConsumerConfig.KafkaGroupID,
-    }
-
-    builder := kafka.NewBuilder(config)
-    consumer, err := builder.BuildConsumer(ctx)
-    if err != nil {
-        return nil, err
-    }
-
-    consumer.RegisterHandler(handler)
-
-    return kafka.NewConsumerService(consumer), nil
-}
-
-func (f *kafkaFactory) Shutdown(ctx context.Context) error {
-    return nil
-}
-```
-
-### 5. Atualizar Factory Switch
-
-```go
-case "kafka":
-    return &kafkaFactory{config: cfg, o11y: o11y}, nil
-```
-
-### 6. Adicionar Configuração
-
-```env
-# Kafka Configuration
-CONSUMER_KAFKA_BROKERS=localhost:9092,localhost:9093
-CONSUMER_KAFKA_GROUP_ID=financial-consumer-group
-```
-
-## Features Incluídas (RabbitMQ via devkit-go)
+## Features do RabbitMQ (via devkit-go)
 
 O thin adapter sobre devkit-go fornece automaticamente:
 

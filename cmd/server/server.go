@@ -8,6 +8,10 @@ import (
 	"syscall"
 	"time"
 
+	httpserver "github.com/JailtonJunior94/devkit-go/pkg/http_server/chi_server"
+	"github.com/JailtonJunior94/devkit-go/pkg/observability"
+	"github.com/JailtonJunior94/devkit-go/pkg/observability/otel"
+
 	"github.com/jailtonjunior94/financial/configs"
 	"github.com/jailtonjunior94/financial/internal/budget"
 	"github.com/jailtonjunior94/financial/internal/card"
@@ -19,10 +23,7 @@ import (
 	"github.com/jailtonjunior94/financial/pkg/api/middlewares"
 	"github.com/jailtonjunior94/financial/pkg/auth"
 	"github.com/jailtonjunior94/financial/pkg/database"
-
-	httpserver "github.com/JailtonJunior94/devkit-go/pkg/http_server/chi_server"
-	"github.com/JailtonJunior94/devkit-go/pkg/observability"
-	"github.com/JailtonJunior94/devkit-go/pkg/observability/otel"
+	"github.com/jailtonjunior94/financial/pkg/outbox"
 )
 
 func Run() error {
@@ -80,12 +81,26 @@ func Run() error {
 	categoryModule := category.NewCategoryModule(dbManager.DB(), o11y, jwtAdapter)
 	paymentMethodModule := payment_method.NewPaymentMethodModule(dbManager.DB(), o11y)
 
-	invoiceModule, err := invoice.NewInvoiceModule(dbManager.DB(), o11y, jwtAdapter, cardModule.CardProvider)
+	// Create outbox service for transactional event persistence
+	outboxRepository := outbox.NewRepository(dbManager.DB(), o11y)
+	outboxService := outbox.NewService(outboxRepository, o11y)
+
+	// Create transaction module first (without InvoiceTotalProvider for now)
+	// This breaks the circular dependency between Invoice and Transaction
+	transactionModule, err := transaction.NewTransactionModule(dbManager.DB(), o11y, jwtAdapter, nil)
+	if err != nil {
+		return fmt.Errorf("run: failed to create transaction module: %v", err)
+	}
+
+	// Now create invoice module with outbox service
+	// Events are persisted in outbox and processed asynchronously by worker
+	invoiceModule, err := invoice.NewInvoiceModule(dbManager.DB(), o11y, jwtAdapter, cardModule.CardProvider, outboxService)
 	if err != nil {
 		return fmt.Errorf("run: failed to create invoice module: %v", err)
 	}
 
-	transactionModule, err := transaction.NewTransactionModule(dbManager.DB(), o11y, jwtAdapter, invoiceModule.InvoiceTotalProvider)
+	// Re-create transaction module with InvoiceTotalProvider
+	transactionModule, err = transaction.NewTransactionModule(dbManager.DB(), o11y, jwtAdapter, invoiceModule.InvoiceTotalProvider)
 	if err != nil {
 		return fmt.Errorf("run: failed to create transaction module: %v", err)
 	}

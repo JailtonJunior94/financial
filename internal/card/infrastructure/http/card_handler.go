@@ -65,6 +65,11 @@ func (h *CardHandler) Create(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	if validationErrs := input.Validate(); validationErrs.HasErrors() {
+		h.errorHandler.HandleError(w, r, validationErrs)
+		return
+	}
+
 	output, err := h.createCardUseCase.Execute(ctx, user.ID, input)
 	if err != nil {
 		h.errorHandler.HandleError(w, r, err)
@@ -138,6 +143,11 @@ func (h *CardHandler) Update(w http.ResponseWriter, r *http.Request) {
 	var input *dtos.CardInput
 	if err = json.NewDecoder(r.Body).Decode(&input); err != nil {
 		h.errorHandler.HandleError(w, r, err)
+		return
+	}
+
+	if validationErrs := input.Validate(); validationErrs.HasErrors() {
+		h.errorHandler.HandleError(w, r, validationErrs)
 		return
 	}
 

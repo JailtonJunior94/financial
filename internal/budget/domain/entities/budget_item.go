@@ -11,7 +11,6 @@ import (
 // Nota: Mutações devem passar pelo Budget (aggregate root).
 type BudgetItem struct {
 	entity.Base
-	Budget         *Budget
 	BudgetID       vos.UUID
 	CategoryID     vos.UUID
 	PercentageGoal vos.Percentage
@@ -20,34 +19,27 @@ type BudgetItem struct {
 }
 
 func NewBudgetItem(
-	budget *Budget,
+	budgetID vos.UUID,
+	budgetTotalAmount vos.Money,
 	categoryID vos.UUID,
 	percentageGoal vos.Percentage,
 ) *BudgetItem {
 	// Initialize zero values with correct types
-	zeroCurrency := budget.TotalAmount.Currency()
+	zeroCurrency := budgetTotalAmount.Currency()
 	zeroMoney, _ := vos.NewMoney(0, zeroCurrency)
 
-	budgetItem := &BudgetItem{
-		Budget:         budget,
-		BudgetID:       budget.ID,
+	// Calculate planned amount
+	plannedAmount, _ := percentageGoal.Apply(budgetTotalAmount)
+
+	return &BudgetItem{
+		BudgetID:       budgetID,
 		CategoryID:     categoryID,
 		PercentageGoal: percentageGoal,
+		PlannedAmount:  plannedAmount,
 		SpentAmount:    zeroMoney,
 		Base: entity.Base{
 			CreatedAt: time.Now().UTC(),
 		},
-	}
-
-	budgetItem.calculatePlannedAmount()
-	return budgetItem
-}
-
-// calculatePlannedAmount calcula o valor planejado com base na porcentagem.
-func (b *BudgetItem) calculatePlannedAmount() {
-	// Apply percentage to budget total amount
-	if amount, err := b.PercentageGoal.Apply(b.Budget.TotalAmount); err == nil {
-		b.PlannedAmount = amount
 	}
 }
 

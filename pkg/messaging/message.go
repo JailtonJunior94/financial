@@ -6,8 +6,8 @@ import (
 	"github.com/google/uuid"
 )
 
-// Message representa uma mensagem agnóstica de broker.
-// Compatível com diferentes message brokers (RabbitMQ, Kafka, SQS).
+// Message representa uma mensagem do RabbitMQ.
+// Abstração que facilita o processamento de mensagens sem acoplar ao broker.
 //
 // Exemplo de uso:
 //

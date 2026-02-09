@@ -1,6 +1,10 @@
 package dtos
 
-import "time"
+import (
+	"time"
+
+	"github.com/jailtonjunior94/financial/pkg/validation"
+)
 
 // BudgetCreateInput representa o input para criar um orçamento.
 type BudgetCreateInput struct {
@@ -10,16 +14,106 @@ type BudgetCreateInput struct {
 	Items          []BudgetItemInput `json:"items"`
 }
 
+// Validate valida os campos do input.
+func (b *BudgetCreateInput) Validate() validation.ValidationErrors {
+	var errs validation.ValidationErrors
+
+	// ReferenceMonth
+	if !validation.IsRequired(b.ReferenceMonth) {
+		errs.Add("reference_month", "is required")
+	}
+	if !validation.IsMonth(b.ReferenceMonth) {
+		errs.Add("reference_month", "must be in YYYY-MM format")
+	}
+
+	// TotalAmount
+	if !validation.IsRequired(b.TotalAmount) {
+		errs.Add("total_amount", "is required")
+	}
+	if !validation.IsMoney(b.TotalAmount) {
+		errs.Add("total_amount", "must be a valid monetary value")
+	}
+
+	// Currency (optional)
+	if b.Currency != "" && !validation.IsOneOf(b.Currency, []string{"BRL", "USD", "EUR"}) {
+		errs.Add("currency", "must be BRL, USD, or EUR")
+	}
+
+	// Items
+	if len(b.Items) == 0 {
+		errs.Add("items", "at least one item is required")
+	} else {
+		for i, item := range b.Items {
+			itemErrs := item.Validate()
+			for _, err := range itemErrs {
+				errs.Add(err.Field+"["+string(rune(i))+"]", err.Message)
+			}
+		}
+	}
+
+	return errs
+}
+
 // BudgetUpdateInput representa o input para atualizar um orçamento.
 type BudgetUpdateInput struct {
 	TotalAmount string            `json:"total_amount"` // String decimal
 	Items       []BudgetItemInput `json:"items"`
 }
 
+// Validate valida os campos do input.
+func (b *BudgetUpdateInput) Validate() validation.ValidationErrors {
+	var errs validation.ValidationErrors
+
+	// TotalAmount
+	if !validation.IsRequired(b.TotalAmount) {
+		errs.Add("total_amount", "is required")
+	}
+	if !validation.IsMoney(b.TotalAmount) {
+		errs.Add("total_amount", "must be a valid monetary value")
+	}
+
+	// Items
+	if len(b.Items) == 0 {
+		errs.Add("items", "at least one item is required")
+	} else {
+		for i, item := range b.Items {
+			itemErrs := item.Validate()
+			for _, err := range itemErrs {
+				errs.Add(err.Field+"["+string(rune(i))+"]", err.Message)
+			}
+		}
+	}
+
+	return errs
+}
+
 // BudgetItemInput representa um item de orçamento no input.
 type BudgetItemInput struct {
 	CategoryID     string `json:"category_id"`
 	PercentageGoal string `json:"percentage_goal"` // String decimal (e.g., "25.50")
+}
+
+// Validate valida os campos do BudgetItemInput.
+func (b *BudgetItemInput) Validate() validation.ValidationErrors {
+	var errs validation.ValidationErrors
+
+	// CategoryID
+	if !validation.IsRequired(b.CategoryID) {
+		errs.Add("category_id", "is required")
+	}
+	if !validation.IsUUID(b.CategoryID) {
+		errs.Add("category_id", "must be a valid UUID")
+	}
+
+	// PercentageGoal
+	if !validation.IsRequired(b.PercentageGoal) {
+		errs.Add("percentage_goal", "is required")
+	}
+	if !validation.IsMoney(b.PercentageGoal) {
+		errs.Add("percentage_goal", "must be a valid percentage value")
+	}
+
+	return errs
 }
 
 // UpdateSpentAmountInput representa o input para atualizar o valor gasto de um item.

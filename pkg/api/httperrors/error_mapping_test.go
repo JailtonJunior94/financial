@@ -88,12 +88,6 @@ func TestErrorMapper_MapError_ValidationErrors(t *testing.T) {
 
 		// Invoice validation errors should return 400
 		{
-			name:           "ErrInvalidPurchaseDate returns 400",
-			err:            invoicedomain.ErrInvalidPurchaseDate,
-			expectedStatus: http.StatusBadRequest,
-			description:    "Invalid purchase date should return 400 Bad Request",
-		},
-		{
 			name:           "ErrInvoiceHasNoItems returns 400",
 			err:            invoicedomain.ErrInvoiceHasNoItems,
 			expectedStatus: http.StatusBadRequest,

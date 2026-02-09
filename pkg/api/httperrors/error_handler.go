@@ -7,6 +7,7 @@ import (
 	"net/http"
 
 	customerrors "github.com/jailtonjunior94/financial/pkg/custom_errors"
+	"github.com/jailtonjunior94/financial/pkg/validation"
 
 	"github.com/JailtonJunior94/devkit-go/pkg/observability"
 	"go.opentelemetry.io/otel/attribute"
@@ -67,8 +68,12 @@ func (h *errorHandler) HandleError(w http.ResponseWriter, r *http.Request, err e
 	// 5. Construct and write ProblemDetail response
 	problem := NewProblemDetail(r, mapping.Status, getStatusText(mapping.Status), mapping.Message)
 
-	// Add extra details from CustomError if present
-	if customErr, ok := err.(*customerrors.CustomError); ok && customErr.Details != nil {
+	// Add extra details from ValidationErrors
+	var validationErrs validation.ValidationErrors
+	if errors.As(originalErr, &validationErrs) {
+		problem.Errors = h.convertValidationErrors(validationErrs)
+	} else if customErr, ok := err.(*customerrors.CustomError); ok && customErr.Details != nil {
+		// Add extra details from CustomError if present
 		problem.Errors = customErr.Details
 	}
 
@@ -119,5 +124,19 @@ func (h *errorHandler) logError(ctx context.Context, r *http.Request, err error,
 	default:
 		// Other → INFO
 		h.o11y.Logger().Info(ctx, "request error", fields...)
+	}
+}
+
+// convertValidationErrors converts validation errors to error details format.
+func (h *errorHandler) convertValidationErrors(errs validation.ValidationErrors) map[string]any {
+	fields := make([]map[string]string, 0, len(errs))
+	for _, err := range errs {
+		fields = append(fields, map[string]string{
+			"field":   err.Field,
+			"message": err.Message,
+		})
+	}
+	return map[string]any{
+		"validation": fields,
 	}
 }

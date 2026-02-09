@@ -10,6 +10,7 @@ import (
 	invoicedomain "github.com/jailtonjunior94/financial/internal/invoice/domain"
 	transactiondomain "github.com/jailtonjunior94/financial/internal/transaction/domain"
 	customerrors "github.com/jailtonjunior94/financial/pkg/custom_errors"
+	"github.com/jailtonjunior94/financial/pkg/validation"
 )
 
 // ErrorMapping represents the HTTP status code and message for an error.
@@ -40,6 +41,15 @@ func (m *errorMapper) MapError(err error) ErrorMapping {
 		return ErrorMapping{
 			Status:  http.StatusInternalServerError,
 			Message: "Unknown error",
+		}
+	}
+
+	// Check for ValidationErrors first
+	var validationErrs validation.ValidationErrors
+	if errors.As(err, &validationErrs) {
+		return ErrorMapping{
+			Status:  http.StatusBadRequest,
+			Message: "Validation failed",
 		}
 	}
 
@@ -131,10 +141,6 @@ func buildDomainErrorMappings() map[error]ErrorMapping {
 		},
 
 		// Invoice validation errors → 400 Bad Request
-		invoicedomain.ErrInvalidPurchaseDate: {
-			Status:  http.StatusBadRequest,
-			Message: "Purchase date cannot be in the future",
-		},
 		invoicedomain.ErrNegativeAmount: {
 			Status:  http.StatusBadRequest,
 			Message: "Amount cannot be negative",

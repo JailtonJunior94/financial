@@ -77,7 +77,7 @@ func (u *createBudgetItemUseCase) Execute(ctx context.Context, budgetID string, 
 		}
 
 		// 2. Create a new BudgetItem entity
-		newItem := entities.NewBudgetItem(budget, categoryID, percentageGoal)
+		newItem := entities.NewBudgetItem(budget.ID, budget.TotalAmount, categoryID, percentageGoal)
 
 		// 3. Call budget.AddItem() to validate and add
 		if err := budget.AddItem(newItem); err != nil {

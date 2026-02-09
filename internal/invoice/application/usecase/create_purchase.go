@@ -5,17 +5,20 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/jailtonjunior94/financial/internal/invoice/application/dtos"
-	"github.com/jailtonjunior94/financial/internal/invoice/domain/entities"
-	"github.com/jailtonjunior94/financial/internal/invoice/domain/factories"
-	"github.com/jailtonjunior94/financial/internal/invoice/domain/interfaces"
-	invoiceVos "github.com/jailtonjunior94/financial/internal/invoice/domain/vos"
-	"github.com/jailtonjunior94/financial/internal/invoice/infrastructure/repositories"
-
 	"github.com/JailtonJunior94/devkit-go/pkg/database"
 	"github.com/JailtonJunior94/devkit-go/pkg/database/uow"
 	"github.com/JailtonJunior94/devkit-go/pkg/observability"
 	"github.com/JailtonJunior94/devkit-go/pkg/vos"
+	"github.com/google/uuid"
+
+	"github.com/jailtonjunior94/financial/internal/invoice/application/dtos"
+	"github.com/jailtonjunior94/financial/internal/invoice/domain/entities"
+	"github.com/jailtonjunior94/financial/internal/invoice/domain/events"
+	"github.com/jailtonjunior94/financial/internal/invoice/domain/factories"
+	"github.com/jailtonjunior94/financial/internal/invoice/domain/interfaces"
+	invoiceVos "github.com/jailtonjunior94/financial/internal/invoice/domain/vos"
+	"github.com/jailtonjunior94/financial/internal/invoice/infrastructure/repositories"
+	"github.com/jailtonjunior94/financial/pkg/outbox"
 )
 
 type (
@@ -26,6 +29,7 @@ type (
 	createPurchaseUseCase struct {
 		uow               uow.UnitOfWork
 		cardProvider      interfaces.CardProvider
+		outboxService     outbox.Service
 		o11y              observability.Observability
 		invoiceCalculator *factories.InvoiceCalculator
 	}
@@ -34,11 +38,13 @@ type (
 func NewCreatePurchaseUseCase(
 	uow uow.UnitOfWork,
 	cardProvider interfaces.CardProvider,
+	outboxService outbox.Service,
 	o11y observability.Observability,
 ) CreatePurchaseUseCase {
 	return &createPurchaseUseCase{
 		uow:               uow,
 		cardProvider:      cardProvider,
+		outboxService:     outboxService,
 		o11y:              o11y,
 		invoiceCalculator: factories.NewInvoiceCalculator(),
 	}
@@ -128,7 +134,7 @@ func (u *createPurchaseUseCase) Execute(ctx context.Context, userID string, inpu
 
 			// Criar o item de fatura (parcela)
 			item, err := entities.NewInvoiceItem(
-				invoice,
+				invoice.ID,
 				categoryID,
 				purchaseDate,
 				input.Description,
@@ -164,6 +170,41 @@ func (u *createPurchaseUseCase) Execute(ctx context.Context, userID string, inpu
 			createdItems = append(createdItems, item)
 		}
 
+		// ✅ Salvar evento no outbox dentro da mesma transação (ACID guarantee)
+		monthsList := make([]string, 0, len(installmentMonths))
+		for _, refMonth := range installmentMonths {
+			monthsList = append(monthsList, refMonth.String())
+		}
+
+		// Converter userID para uuid.UUID
+		aggregateID, err := uuid.Parse(userID)
+		if err != nil {
+			return fmt.Errorf("invalid user_id: %w", err)
+		}
+
+		// Criar evento e salvar no outbox
+		event := events.NewPurchaseCreated(userID, input.CategoryID, monthsList)
+		eventPayload := event.GetPayload().(events.PurchaseEventPayload)
+
+		payload := outbox.JSONBPayload{
+			"user_id":         eventPayload.UserID,
+			"category_id":     eventPayload.CategoryID,
+			"affected_months": eventPayload.AffectedMonths,
+			"occurred_at":     eventPayload.OccurredAt,
+		}
+
+		// Salvar no outbox - será processado assincronamente pelo worker
+		if err := u.outboxService.SaveDomainEvent(
+			ctx,
+			tx,
+			aggregateID,
+			"invoice",
+			event.GetEventType(),
+			payload,
+		); err != nil {
+			return fmt.Errorf("failed to save outbox event: %w", err)
+		}
+
 		return nil
 	})
 
@@ -171,6 +212,12 @@ func (u *createPurchaseUseCase) Execute(ctx context.Context, userID string, inpu
 		u.o11y.Logger().Error(ctx, "failed to create purchase", observability.Error(err))
 		return nil, err
 	}
+
+	// Event saved in outbox - will be processed by worker
+	u.o11y.Logger().Info(ctx, "purchase created successfully",
+		observability.String("user_id", userID),
+		observability.Int("installments", len(createdItems)),
+	)
 
 	// Convert entities to DTOs
 	itemOutputs := make([]dtos.InvoiceItemOutput, 0, len(createdItems))

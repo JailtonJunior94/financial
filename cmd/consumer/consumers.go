@@ -9,13 +9,16 @@ import (
 	"syscall"
 	"time"
 
-	"github.com/jailtonjunior94/financial/configs"
-	"github.com/jailtonjunior94/financial/pkg/database"
-
 	"github.com/JailtonJunior94/devkit-go/pkg/database/postgres_otelsql"
 	"github.com/JailtonJunior94/devkit-go/pkg/messaging/rabbitmq"
 	"github.com/JailtonJunior94/devkit-go/pkg/observability"
 	"github.com/JailtonJunior94/devkit-go/pkg/observability/otel"
+
+	"github.com/jailtonjunior94/financial/configs"
+	"github.com/jailtonjunior94/financial/internal/transaction"
+	"github.com/jailtonjunior94/financial/pkg/auth"
+	"github.com/jailtonjunior94/financial/pkg/database"
+	"github.com/jailtonjunior94/financial/pkg/messaging"
 )
 
 type application struct {
@@ -108,6 +111,52 @@ func NewApplication() (*application, error) {
 		return nil, fmt.Errorf("failed to create rabbitmq client: %w", err)
 	}
 
+	// ✅ Declarar exchange
+	if err := client.DeclareExchange(
+		context.Background(),
+		cfg.RabbitMQConfig.Exchange,
+		"topic",
+		true,  // durable
+		false, // auto-delete
+		nil,
+	); err != nil {
+		return nil, fmt.Errorf("failed to declare exchange: %w", err)
+	}
+
+	// ✅ Declarar queue
+	_, err = client.DeclareQueue(
+		context.Background(),
+		cfg.RabbitMQConfig.Queue,
+		true,  // durable
+		false, // auto-delete
+		false, // exclusive
+		nil,
+	)
+	if err != nil {
+		return nil, fmt.Errorf("failed to declare queue: %w", err)
+	}
+
+	// ✅ Bind queue ao exchange com routing key pattern
+	// Pattern "invoice.#" captura todos os eventos de invoice (invoice.invoice.purchase.*)
+	err = client.BindQueue(
+		context.Background(),
+		cfg.RabbitMQConfig.Queue,
+		"invoice.#",
+		cfg.RabbitMQConfig.Exchange,
+		nil,
+	)
+	if err != nil {
+		return nil, fmt.Errorf("failed to bind queue: %w", err)
+	}
+
+	o11y.Logger().Info(
+		context.Background(),
+		"rabbitmq topology configured",
+		observability.String("exchange", cfg.RabbitMQConfig.Exchange),
+		observability.String("queue", cfg.RabbitMQConfig.Queue),
+		observability.String("routing_pattern", "invoice.#"),
+	)
+
 	consumer := rabbitmq.NewConsumer(
 		client,
 		rabbitmq.WithWorkerPool(10),
@@ -131,11 +180,47 @@ func NewApplication() (*application, error) {
 func (app *application) Start() error {
 	app.o11y.Logger().Info(app.ctx, "starting consumer...")
 
-	app.wg.Go(func() {
+	// ✅ Inicializar TransactionModule (para processar eventos de invoice)
+	// Dummy tokenValidator (consumer não precisa validar tokens)
+	jwtAdapter := auth.NewJwtAdapter(app.config, app.o11y)
+
+	transactionModule, err := transaction.NewTransactionModule(
+		app.dbManager.DB(),
+		app.o11y,
+		jwtAdapter,
+		nil, // invoiceTotalProvider não é necessário no consumer
+	)
+	if err != nil {
+		return fmt.Errorf("failed to create transaction module: %w", err)
+	}
+
+	// ✅ Registrar handler para processar eventos de purchase
+	topics := transactionModule.PurchaseEventConsumer.Topics()
+	for _, topic := range topics {
+		handler := func(ctx context.Context, msg rabbitmq.Message) error {
+			// Converter rabbitmq.Message para messaging.Message
+			return transactionModule.PurchaseEventConsumer.Handle(ctx, &messaging.Message{
+				ID:      msg.MessageID,
+				Topic:   msg.RoutingKey,
+				Payload: msg.Body,
+				Headers: msg.Headers,
+			})
+		}
+		app.consumer.RegisterHandler(topic, handler)
+	}
+
+	app.o11y.Logger().Info(app.ctx, "handlers registered",
+		observability.Int("handlers_count", len(topics)),
+		observability.Any("topics", topics),
+	)
+
+	app.wg.Add(1)
+	go func() {
+		defer app.wg.Done()
 		if err := app.consumer.Start(app.ctx); err != nil {
 			app.o11y.Logger().Error(app.ctx, "consumer stopped with error", observability.Error(err))
 		}
-	})
+	}()
 
 	app.o11y.Logger().Info(app.ctx, "consumer started successfully")
 	return nil

@@ -25,6 +25,26 @@ type TransactionItem struct {
 	DeletedAt   sharedVos.NullableTime
 }
 
+// validateTransactionItemFields valida os campos básicos de um TransactionItem
+func validateTransactionItemFields(title string, amount sharedVos.Money, direction transactionVos.TransactionDirection, transactionType transactionVos.TransactionType) error {
+	if title == "" {
+		return ErrTitleRequired
+	}
+	if len(title) > 255 {
+		return ErrTitleTooLong
+	}
+	if !amount.IsPositive() {
+		return ErrAmountMustBePositive
+	}
+	if !direction.IsValid() {
+		return ErrInvalidDirection
+	}
+	if !transactionType.IsValid() {
+		return ErrInvalidType
+	}
+	return nil
+}
+
 // NewTransactionItem cria um novo TransactionItem.
 // Não deve ser chamado diretamente - use o método do aggregate.
 func NewTransactionItem(
@@ -37,24 +57,8 @@ func NewTransactionItem(
 	transactionType transactionVos.TransactionType,
 	isPaid bool,
 ) (*TransactionItem, error) {
-	if title == "" {
-		return nil, ErrTitleRequired
-	}
-
-	if len(title) > 255 {
-		return nil, ErrTitleTooLong
-	}
-
-	if !amount.IsPositive() {
-		return nil, ErrAmountMustBePositive
-	}
-
-	if !direction.IsValid() {
-		return nil, ErrInvalidDirection
-	}
-
-	if !transactionType.IsValid() {
-		return nil, ErrInvalidType
+	if err := validateTransactionItemFields(title, amount, direction, transactionType); err != nil {
+		return nil, err
 	}
 
 	return &TransactionItem{
@@ -80,24 +84,8 @@ func (t *TransactionItem) Update(
 	transactionType transactionVos.TransactionType,
 	isPaid bool,
 ) error {
-	if title == "" {
-		return ErrTitleRequired
-	}
-
-	if len(title) > 255 {
-		return ErrTitleTooLong
-	}
-
-	if !amount.IsPositive() {
-		return ErrAmountMustBePositive
-	}
-
-	if !direction.IsValid() {
-		return ErrInvalidDirection
-	}
-
-	if !transactionType.IsValid() {
-		return ErrInvalidType
+	if err := validateTransactionItemFields(title, amount, direction, transactionType); err != nil {
+		return err
 	}
 
 	t.Title = title

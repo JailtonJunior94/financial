@@ -72,6 +72,11 @@ func (h *InvoiceHandler) CreatePurchase(w http.ResponseWriter, r *http.Request) 
 		return
 	}
 
+	if validationErrs := input.Validate(); validationErrs.HasErrors() {
+		h.errorHandler.HandleError(w, r, validationErrs)
+		return
+	}
+
 	output, err := h.createPurchaseUseCase.Execute(ctx, user.ID, input)
 	if err != nil {
 		h.errorHandler.HandleError(w, r, err)
@@ -87,7 +92,7 @@ func (h *InvoiceHandler) UpdatePurchase(w http.ResponseWriter, r *http.Request) 
 	ctx, span := h.o11y.Tracer().Start(r.Context(), "invoice_handler.update_purchase")
 	defer span.End()
 
-	_, err := middlewares.GetUserFromContext(ctx)
+	userID, err := middlewares.GetUserFromContext(ctx)
 	if err != nil {
 		h.errorHandler.HandleError(w, r, err)
 		return
@@ -99,8 +104,13 @@ func (h *InvoiceHandler) UpdatePurchase(w http.ResponseWriter, r *http.Request) 
 		return
 	}
 
+	if validationErrs := input.Validate(); validationErrs.HasErrors() {
+		h.errorHandler.HandleError(w, r, validationErrs)
+		return
+	}
+
 	itemID := chi.URLParam(r, "id")
-	output, err := h.updatePurchaseUseCase.Execute(ctx, itemID, input)
+	output, err := h.updatePurchaseUseCase.Execute(ctx, userID.ID, itemID, input)
 	if err != nil {
 		h.errorHandler.HandleError(w, r, err)
 		return
@@ -115,14 +125,17 @@ func (h *InvoiceHandler) DeletePurchase(w http.ResponseWriter, r *http.Request) 
 	ctx, span := h.o11y.Tracer().Start(r.Context(), "invoice_handler.delete_purchase")
 	defer span.End()
 
-	_, err := middlewares.GetUserFromContext(ctx)
+	userID, err := middlewares.GetUserFromContext(ctx)
 	if err != nil {
 		h.errorHandler.HandleError(w, r, err)
 		return
 	}
 
+	// Get categoryID from query param (optional, default to empty for now)
+	categoryID := r.URL.Query().Get("category_id")
+
 	itemID := chi.URLParam(r, "id")
-	if err := h.deletePurchaseUseCase.Execute(ctx, itemID); err != nil {
+	if err := h.deletePurchaseUseCase.Execute(ctx, userID.ID, itemID, categoryID); err != nil {
 		h.errorHandler.HandleError(w, r, err)
 		return
 	}

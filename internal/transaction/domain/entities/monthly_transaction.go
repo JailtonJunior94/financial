@@ -117,6 +117,7 @@ func (m *MonthlyTransaction) RemoveItem(itemID sharedVos.UUID) error {
 
 // UpdateOrCreateCreditCardItem atualiza ou cria o item de cartão de crédito.
 // Garante idempotência: apenas um item CREDIT_CARD por mês.
+// Se o amount for zero ou negativo, remove o item existente (se houver) e retorna sem erro.
 func (m *MonthlyTransaction) UpdateOrCreateCreditCardItem(
 	categoryID sharedVos.UUID,
 	amount sharedVos.Money,
@@ -124,6 +125,14 @@ func (m *MonthlyTransaction) UpdateOrCreateCreditCardItem(
 ) error {
 	// Procura item CREDIT_CARD existente
 	existingItem := m.findCreditCardItem()
+
+	// Se o amount não for positivo, remove o item existente (se houver) e retorna
+	if !amount.IsPositive() {
+		if existingItem != nil {
+			return m.RemoveItem(existingItem.ID)
+		}
+		return nil // Não há nada para criar/atualizar
+	}
 
 	if existingItem != nil {
 		// Atualiza o item existente

@@ -1,4 +1,4 @@
-FROM golang:1.25.0 AS builder
+FROM golang:1.25.6 AS builder
 
 WORKDIR /go/src/financial
 
@@ -27,8 +27,11 @@ COPY --from=builder /etc/ssl/certs/ca-certificates.crt /etc/ssl/certs/
 COPY --from=builder /etc/passwd /etc/passwd
 COPY --from=builder /etc/group /etc/group
 COPY --from=builder /go/src/financial/bin .
-COPY --from=builder /go/src/financial/cmd/.env .
+COPY --from=builder /go/src/financial/.env .
 COPY --from=builder /go/src/financial/database/migrations ./migrations/financial
+
+# Fix permissions for appuser
+RUN chown -R 1000:1000 /app
 
 EXPOSE 80
 EXPOSE 443

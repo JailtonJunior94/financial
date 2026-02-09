@@ -16,6 +16,8 @@ import (
 	"github.com/JailtonJunior94/devkit-go/pkg/database"
 	"github.com/JailtonJunior94/devkit-go/pkg/observability"
 	"github.com/JailtonJunior94/devkit-go/pkg/vos"
+	"github.com/jailtonjunior94/financial/pkg/constants"
+	"github.com/jailtonjunior94/financial/pkg/helpers"
 )
 
 type budgetRepository struct {
@@ -167,12 +169,12 @@ func (r *budgetRepository) FindByID(ctx context.Context, id vos.UUID) (*entities
 	}
 
 	// Parse NUMERIC values from strings - using string conversion directly for precision
-	budget.TotalAmount, err = vos.NewMoneyFromString(amountGoal, "BRL")
+	budget.TotalAmount, err = vos.NewMoneyFromString(amountGoal, constants.DefaultCurrency)
 	if err != nil {
 		return nil, fmt.Errorf("failed to create Money from amount_goal: %w", err)
 	}
 
-	budget.SpentAmount, err = vos.NewMoneyFromString(amountUsed, "BRL")
+	budget.SpentAmount, err = vos.NewMoneyFromString(amountUsed, constants.DefaultCurrency)
 	if err != nil {
 		return nil, fmt.Errorf("failed to create Money from amount_used: %w", err)
 	}
@@ -183,13 +185,8 @@ func (r *budgetRepository) FindByID(ctx context.Context, id vos.UUID) (*entities
 	}
 
 	budget.ReferenceMonth = budgetVos.NewReferenceMonthFromDate(referenceDate)
-
-	if updatedAt != nil {
-		budget.UpdatedAt = vos.NewNullableTime(*updatedAt)
-	}
-	if deletedAt != nil {
-		budget.DeletedAt = vos.NewNullableTime(*deletedAt)
-	}
+	budget.UpdatedAt = helpers.ParseNullableTime(updatedAt)
+	budget.DeletedAt = helpers.ParseNullableTime(deletedAt)
 
 	// Load budget items
 	items, err := r.findItemsByBudgetID(ctx, id)
@@ -246,12 +243,12 @@ func (r *budgetRepository) FindByUserIDAndReferenceMonth(ctx context.Context, us
 	}
 
 	// Parse NUMERIC values from strings - using string conversion directly for precision
-	budget.TotalAmount, err = vos.NewMoneyFromString(amountGoal, "BRL")
+	budget.TotalAmount, err = vos.NewMoneyFromString(amountGoal, constants.DefaultCurrency)
 	if err != nil {
 		return nil, fmt.Errorf("failed to create Money from amount_goal: %w", err)
 	}
 
-	budget.SpentAmount, err = vos.NewMoneyFromString(amountUsed, "BRL")
+	budget.SpentAmount, err = vos.NewMoneyFromString(amountUsed, constants.DefaultCurrency)
 	if err != nil {
 		return nil, fmt.Errorf("failed to create Money from amount_used: %w", err)
 	}
@@ -262,13 +259,8 @@ func (r *budgetRepository) FindByUserIDAndReferenceMonth(ctx context.Context, us
 	}
 
 	budget.ReferenceMonth = budgetVos.NewReferenceMonthFromDate(referenceDate)
-
-	if updatedAt != nil {
-		budget.UpdatedAt = vos.NewNullableTime(*updatedAt)
-	}
-	if deletedAt != nil {
-		budget.DeletedAt = vos.NewNullableTime(*deletedAt)
-	}
+	budget.UpdatedAt = helpers.ParseNullableTime(updatedAt)
+	budget.DeletedAt = helpers.ParseNullableTime(deletedAt)
 
 	// Load budget items
 	items, err := r.findItemsByBudgetID(ctx, budget.ID)
@@ -364,12 +356,12 @@ func (r *budgetRepository) ListPaginated(ctx context.Context, params interfaces.
 			return nil, fmt.Errorf("failed to parse percentage_used: %w", err)
 		}
 
-		budget.TotalAmount, err = vos.NewMoneyFromFloat(amountGoalFloat, "BRL")
+		budget.TotalAmount, err = vos.NewMoneyFromFloat(amountGoalFloat, constants.DefaultCurrency)
 		if err != nil {
 			return nil, fmt.Errorf("failed to create Money from amount_goal: %w", err)
 		}
 
-		budget.SpentAmount, err = vos.NewMoneyFromFloat(amountUsedFloat, "BRL")
+		budget.SpentAmount, err = vos.NewMoneyFromFloat(amountUsedFloat, constants.DefaultCurrency)
 		if err != nil {
 			return nil, fmt.Errorf("failed to create Money from amount_used: %w", err)
 		}
@@ -380,13 +372,8 @@ func (r *budgetRepository) ListPaginated(ctx context.Context, params interfaces.
 		}
 
 		budget.ReferenceMonth = budgetVos.NewReferenceMonthFromDate(referenceDate)
-
-		if updatedAt != nil {
-			budget.UpdatedAt = vos.NewNullableTime(*updatedAt)
-		}
-		if deletedAt != nil {
-			budget.DeletedAt = vos.NewNullableTime(*deletedAt)
-		}
+		budget.UpdatedAt = helpers.ParseNullableTime(updatedAt)
+		budget.DeletedAt = helpers.ParseNullableTime(deletedAt)
 
 		// Load budget items for each budget
 		items, err := r.findItemsByBudgetID(ctx, budget.ID)
@@ -492,12 +479,12 @@ func (r *budgetRepository) findItemsByBudgetID(ctx context.Context, budgetID vos
 		}
 
 		// Parse NUMERIC values from strings - using string conversion directly for precision
-		item.PlannedAmount, err = vos.NewMoneyFromString(amountGoal, "BRL")
+		item.PlannedAmount, err = vos.NewMoneyFromString(amountGoal, constants.DefaultCurrency)
 		if err != nil {
 			return nil, fmt.Errorf("failed to create Money from amount_goal: %w", err)
 		}
 
-		item.SpentAmount, err = vos.NewMoneyFromString(amountUsed, "BRL")
+		item.SpentAmount, err = vos.NewMoneyFromString(amountUsed, constants.DefaultCurrency)
 		if err != nil {
 			return nil, fmt.Errorf("failed to create Money from amount_used: %w", err)
 		}
@@ -506,13 +493,8 @@ func (r *budgetRepository) findItemsByBudgetID(ctx context.Context, budgetID vos
 		if err != nil {
 			return nil, fmt.Errorf("failed to create Percentage from percentage_goal: %w", err)
 		}
-
-		if updatedAt != nil {
-			item.UpdatedAt = vos.NewNullableTime(*updatedAt)
-		}
-		if deletedAt != nil {
-			item.DeletedAt = vos.NewNullableTime(*deletedAt)
-		}
+		item.UpdatedAt = helpers.ParseNullableTime(updatedAt)
+		item.DeletedAt = helpers.ParseNullableTime(deletedAt)
 
 		items = append(items, &item)
 	}

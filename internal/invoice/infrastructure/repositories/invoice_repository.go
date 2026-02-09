@@ -15,6 +15,8 @@ import (
 	"github.com/JailtonJunior94/devkit-go/pkg/database"
 	"github.com/JailtonJunior94/devkit-go/pkg/observability"
 	"github.com/JailtonJunior94/devkit-go/pkg/vos"
+	"github.com/jailtonjunior94/financial/pkg/constants"
+	"github.com/jailtonjunior94/financial/pkg/helpers"
 )
 
 const (
@@ -625,19 +627,14 @@ func (r *invoiceRepository) scanInvoice(s scanner) (*entities.Invoice, error) {
 		return nil, err
 	}
 
-	invoice.TotalAmount, err = vos.NewMoneyFromString(totalAmount, "BRL")
+	invoice.TotalAmount, err = vos.NewMoneyFromString(totalAmount, constants.DefaultCurrency)
 	if err != nil {
 		return nil, fmt.Errorf("failed to create Money from total_amount: %w", err)
 	}
 
 	invoice.ReferenceMonth = invoiceVos.NewReferenceMonthFromDate(referenceDate)
-
-	if updatedAt != nil {
-		invoice.UpdatedAt = vos.NewNullableTime(*updatedAt)
-	}
-	if deletedAt != nil {
-		invoice.DeletedAt = vos.NewNullableTime(*deletedAt)
-	}
+	invoice.UpdatedAt = helpers.ParseNullableTime(updatedAt)
+	invoice.DeletedAt = helpers.ParseNullableTime(deletedAt)
 
 	return &invoice, nil
 }
@@ -665,22 +662,18 @@ func (r *invoiceRepository) scanInvoiceItemFromRows(rows *sql.Rows) (*entities.I
 		return nil, err
 	}
 
-	item.TotalAmount, err = vos.NewMoneyFromString(totalAmount, "BRL")
+	item.TotalAmount, err = vos.NewMoneyFromString(totalAmount, constants.DefaultCurrency)
 	if err != nil {
 		return nil, fmt.Errorf("failed to create Money from total_amount: %w", err)
 	}
 
-	item.InstallmentAmount, err = vos.NewMoneyFromString(installmentAmount, "BRL")
+	item.InstallmentAmount, err = vos.NewMoneyFromString(installmentAmount, constants.DefaultCurrency)
 	if err != nil {
 		return nil, fmt.Errorf("failed to create Money from installment_amount: %w", err)
 	}
 
-	if updatedAt != nil {
-		item.UpdatedAt = vos.NewNullableTime(*updatedAt)
-	}
-	if deletedAt != nil {
-		item.DeletedAt = vos.NewNullableTime(*deletedAt)
-	}
+	item.UpdatedAt = helpers.ParseNullableTime(updatedAt)
+	item.DeletedAt = helpers.ParseNullableTime(deletedAt)
 
 	return &item, nil
 }

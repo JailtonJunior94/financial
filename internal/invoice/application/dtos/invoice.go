@@ -1,6 +1,10 @@
 package dtos
 
-import "time"
+import (
+	"time"
+
+	"github.com/jailtonjunior94/financial/pkg/validation"
+)
 
 // PurchaseCreateInput representa o input para criar uma compra.
 type PurchaseCreateInput struct {
@@ -13,11 +17,100 @@ type PurchaseCreateInput struct {
 	InstallmentTotal int    `json:"installment_total"` // 1 para à vista
 }
 
+// Validate valida os campos do input.
+func (i *PurchaseCreateInput) Validate() validation.ValidationErrors {
+	var errs validation.ValidationErrors
+
+	// CardID
+	if !validation.IsRequired(i.CardID) {
+		errs.Add("card_id", "is required")
+	}
+
+	if !validation.IsUUID(i.CardID) {
+		errs.Add("card_id", "must be a valid UUID")
+	}
+
+	// CategoryID
+	if !validation.IsRequired(i.CategoryID) {
+		errs.Add("category_id", "is required")
+	}
+	if !validation.IsUUID(i.CategoryID) {
+		errs.Add("category_id", "must be a valid UUID")
+	}
+
+	// PurchaseDate
+	if !validation.IsRequired(i.PurchaseDate) {
+		errs.Add("purchase_date", "is required")
+	}
+	if !validation.IsDate(i.PurchaseDate) {
+		errs.Add("purchase_date", "must be in YYYY-MM-DD format")
+	}
+
+	// Description
+	if !validation.IsRequired(i.Description) {
+		errs.Add("description", "is required")
+	}
+	if !validation.IsMaxLength(i.Description, 255) {
+		errs.Add("description", "must be at most 255 characters")
+	}
+
+	// TotalAmount
+	if !validation.IsRequired(i.TotalAmount) {
+		errs.Add("total_amount", "is required")
+	}
+	if !validation.IsMoney(i.TotalAmount) {
+		errs.Add("total_amount", "must be a valid monetary value")
+	}
+
+	// Currency (optional, defaults to BRL)
+	if i.Currency != "" && !validation.IsOneOf(i.Currency, []string{"BRL", "USD", "EUR"}) {
+		errs.Add("currency", "must be BRL, USD, or EUR")
+	}
+
+	// InstallmentTotal
+	if !validation.IsPositiveInt(i.InstallmentTotal) {
+		errs.Add("installment_total", "must be at least 1")
+	}
+	if !validation.IsInRange(i.InstallmentTotal, 1, 48) {
+		errs.Add("installment_total", "must be between 1 and 48")
+	}
+
+	return errs
+}
+
 // PurchaseUpdateInput representa o input para atualizar uma compra.
 type PurchaseUpdateInput struct {
 	CategoryID  string `json:"category_id"`
 	Description string `json:"description"`
 	TotalAmount string `json:"total_amount"`
+}
+
+// Validate valida os campos do input.
+func (i *PurchaseUpdateInput) Validate() validation.ValidationErrors {
+	var errs validation.ValidationErrors
+
+	// CategoryID
+	if !validation.IsRequired(i.CategoryID) {
+		errs.Add("category_id", "is required")
+	} else if !validation.IsUUID(i.CategoryID) {
+		errs.Add("category_id", "must be a valid UUID")
+	}
+
+	// Description
+	if !validation.IsRequired(i.Description) {
+		errs.Add("description", "is required")
+	} else if !validation.IsMaxLength(i.Description, 255) {
+		errs.Add("description", "must be at most 255 characters")
+	}
+
+	// TotalAmount
+	if !validation.IsRequired(i.TotalAmount) {
+		errs.Add("total_amount", "is required")
+	} else if !validation.IsMoney(i.TotalAmount) {
+		errs.Add("total_amount", "must be a valid monetary value")
+	}
+
+	return errs
 }
 
 // InvoiceOutput representa a resposta de uma fatura.

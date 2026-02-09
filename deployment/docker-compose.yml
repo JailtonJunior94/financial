@@ -68,6 +68,8 @@ services:
       DB_HOST: cockroachdb
       RABBITMQ_URL: amqp://guest:rabbitmq@dev@rabbitmq:5672/
       OTEL_EXPORTER_OTLP_ENDPOINT: otel-lgtm:4317
+      # Override migration path for Docker
+      MIGRATE_PATH: file://migrations/financial
     depends_on:
       cockroachdb:
         condition: service_healthy

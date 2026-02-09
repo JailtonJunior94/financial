@@ -4,10 +4,10 @@ import (
 	"context"
 )
 
-// Consumer abstração agnóstica de consumer.
+// Consumer abstração de consumer para RabbitMQ.
 //
-// Implementações específicas (RabbitMQ, Kafka, SQS) implementam esta interface
-// permitindo trocar brokers sem alterar código de domínio.
+// Esta interface define o contrato para consumidores de mensagens,
+// permitindo fácil teste e manutenção do código de domínio.
 //
 // Exemplo de uso:
 //

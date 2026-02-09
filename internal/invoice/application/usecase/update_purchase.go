@@ -5,39 +5,46 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/jailtonjunior94/financial/internal/invoice/application/dtos"
-	"github.com/jailtonjunior94/financial/internal/invoice/domain"
-	"github.com/jailtonjunior94/financial/internal/invoice/domain/entities"
-	"github.com/jailtonjunior94/financial/internal/invoice/infrastructure/repositories"
-
 	"github.com/JailtonJunior94/devkit-go/pkg/database"
 	"github.com/JailtonJunior94/devkit-go/pkg/database/uow"
 	"github.com/JailtonJunior94/devkit-go/pkg/observability"
 	"github.com/JailtonJunior94/devkit-go/pkg/vos"
+
+	"github.com/google/uuid"
+
+	"github.com/jailtonjunior94/financial/internal/invoice/application/dtos"
+	"github.com/jailtonjunior94/financial/internal/invoice/domain"
+	"github.com/jailtonjunior94/financial/internal/invoice/domain/entities"
+	"github.com/jailtonjunior94/financial/internal/invoice/domain/events"
+	"github.com/jailtonjunior94/financial/internal/invoice/infrastructure/repositories"
+	"github.com/jailtonjunior94/financial/pkg/outbox"
 )
 
 type (
 	UpdatePurchaseUseCase interface {
-		Execute(ctx context.Context, itemID string, input *dtos.PurchaseUpdateInput) (*dtos.PurchaseUpdateOutput, error)
+		Execute(ctx context.Context, userID string, itemID string, input *dtos.PurchaseUpdateInput) (*dtos.PurchaseUpdateOutput, error)
 	}
 
 	updatePurchaseUseCase struct {
-		uow  uow.UnitOfWork
-		o11y observability.Observability
+		uow           uow.UnitOfWork
+		outboxService outbox.Service
+		o11y          observability.Observability
 	}
 )
 
 func NewUpdatePurchaseUseCase(
 	uow uow.UnitOfWork,
+	outboxService outbox.Service,
 	o11y observability.Observability,
 ) UpdatePurchaseUseCase {
 	return &updatePurchaseUseCase{
-		uow:  uow,
-		o11y: o11y,
+		uow:           uow,
+		outboxService: outboxService,
+		o11y:          o11y,
 	}
 }
 
-func (u *updatePurchaseUseCase) Execute(ctx context.Context, itemID string, input *dtos.PurchaseUpdateInput) (*dtos.PurchaseUpdateOutput, error) {
+func (u *updatePurchaseUseCase) Execute(ctx context.Context, userID string, itemID string, input *dtos.PurchaseUpdateInput) (*dtos.PurchaseUpdateOutput, error) {
 	ctx, span := u.o11y.Tracer().Start(ctx, "update_purchase_usecase.execute")
 	defer span.End()
 
@@ -144,6 +151,44 @@ func (u *updatePurchaseUseCase) Execute(ctx context.Context, itemID string, inpu
 			}
 		}
 
+		// ✅ Salvar evento no outbox dentro da mesma transação
+		// Collect affected months from the affected invoices
+		monthsList := make([]string, 0, len(affectedInvoices))
+		for invoiceIDStr := range affectedInvoices {
+			invoiceID, _ := vos.NewUUIDFromString(invoiceIDStr)
+			invoice, err := invoiceRepo.FindByID(ctx, invoiceID)
+			if err == nil && invoice != nil {
+				monthsList = append(monthsList, invoice.ReferenceMonth.String())
+			}
+		}
+
+		// Converter userID string para UUID
+		aggregateID, err := uuid.Parse(userID)
+		if err != nil {
+			return fmt.Errorf("invalid user_id: %w", err)
+		}
+
+		event := events.NewPurchaseUpdated(userID, input.CategoryID, monthsList)
+		eventPayload := event.GetPayload().(events.PurchaseEventPayload)
+
+		payload := outbox.JSONBPayload{
+			"user_id":         eventPayload.UserID,
+			"category_id":     eventPayload.CategoryID,
+			"affected_months": eventPayload.AffectedMonths,
+			"occurred_at":     eventPayload.OccurredAt,
+		}
+
+		if err := u.outboxService.SaveDomainEvent(
+			ctx,
+			tx,
+			aggregateID,
+			"invoice",
+			event.GetEventType(),
+			payload,
+		); err != nil {
+			return fmt.Errorf("failed to save outbox event: %w", err)
+		}
+
 		return nil
 	})
 
@@ -151,6 +196,11 @@ func (u *updatePurchaseUseCase) Execute(ctx context.Context, itemID string, inpu
 		u.o11y.Logger().Error(ctx, "failed to update purchase", observability.Error(err))
 		return nil, err
 	}
+
+	u.o11y.Logger().Info(ctx, "purchase updated successfully",
+		observability.String("user_id", userID),
+		observability.Int("items", len(updatedItems)),
+	)
 
 	// Convert entities to DTOs
 	itemOutputs := make([]dtos.InvoiceItemOutput, 0, len(updatedItems))

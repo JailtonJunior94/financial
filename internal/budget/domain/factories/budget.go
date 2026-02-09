@@ -72,7 +72,7 @@ func CreateBudget(userID string, input *dtos.BudgetCreateInput) (*entities.Budge
 			return nil, fmt.Errorf("create_budget: invalid percentage: %w", err)
 		}
 
-		newItem := entities.NewBudgetItem(budget, category, percentage)
+		newItem := entities.NewBudgetItem(budget.ID, budget.TotalAmount, category, percentage)
 		newItem.SetID(budgetItemID)
 
 		budgetItems = append(budgetItems, newItem)

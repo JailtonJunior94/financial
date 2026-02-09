@@ -62,6 +62,11 @@ func (h *TransactionHandler) Register(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	if validationErrs := input.Validate(); validationErrs.HasErrors() {
+		h.errorHandler.HandleError(w, r, validationErrs)
+		return
+	}
+
 	output, err := h.registerTransactionUseCase.Execute(ctx, user.ID, input)
 	if err != nil {
 		h.errorHandler.HandleError(w, r, err)
@@ -150,6 +155,11 @@ func (h *TransactionHandler) UpdateItem(w http.ResponseWriter, r *http.Request) 
 	var input *dtos.UpdateTransactionItemInput
 	if err = json.NewDecoder(r.Body).Decode(&input); err != nil {
 		h.errorHandler.HandleError(w, r, err)
+		return
+	}
+
+	if validationErrs := input.Validate(); validationErrs.HasErrors() {
+		h.errorHandler.HandleError(w, r, validationErrs)
 		return
 	}
 
