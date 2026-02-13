@@ -51,6 +51,20 @@ func NewPaymentMethodHandler(
 	}
 }
 
+// Create godoc
+//
+//	@Summary		Criar método de pagamento
+//	@Description	Cria um novo método de pagamento. Este endpoint é público (não requer autenticação).
+//	@Description	O campo `code` deve ser único e imutável após criação (ex: `PIX`, `BOLETO`, `CREDIT_CARD`).
+//	@Tags			payment-methods
+//	@Accept			json
+//	@Produce		json
+//	@Param			request	body		dtos.PaymentMethodInput		true	"Dados do método de pagamento"
+//	@Success		201		{object}	dtos.PaymentMethodOutput	"Método de pagamento criado"
+//	@Failure		400		{object}	httperrors.ProblemDetail	"Dados inválidos"
+//	@Failure		409		{object}	httperrors.ProblemDetail	"Código já existente"
+//	@Failure		500		{object}	httperrors.ProblemDetail	"Erro interno"
+//	@Router			/api/v1/payment-methods [post]
 func (h *PaymentMethodHandler) Create(w http.ResponseWriter, r *http.Request) {
 	ctx, span := h.o11y.Tracer().Start(r.Context(), "payment_method_handler.create")
 	defer span.End()
@@ -70,6 +84,20 @@ func (h *PaymentMethodHandler) Create(w http.ResponseWriter, r *http.Request) {
 	responses.JSON(w, http.StatusCreated, output)
 }
 
+// Find godoc
+//
+//	@Summary		Listar métodos de pagamento
+//	@Description	Retorna lista paginada de métodos de pagamento. Endpoint público.
+//	@Description	Filtragem opcional por `code` via query param (ex: `?code=PIX`).
+//	@Tags			payment-methods
+//	@Produce		json
+//	@Param			limit	query		integer	false	"Itens por página (default: 20, max: 100)"	minimum(1)	maximum(100)	default(20)
+//	@Param			cursor	query		string	false	"Cursor de paginação"
+//	@Param			code	query		string	false	"Filtrar pelo código do método"				example(PIX)
+//	@Success		200		{object}	dtos.PaymentMethodPaginatedOutput	"Lista paginada"
+//	@Failure		400		{object}	httperrors.ProblemDetail							"Parâmetro inválido"
+//	@Failure		500		{object}	httperrors.ProblemDetail							"Erro interno"
+//	@Router			/api/v1/payment-methods [get]
 func (h *PaymentMethodHandler) Find(w http.ResponseWriter, r *http.Request) {
 	ctx, span := h.o11y.Tracer().Start(r.Context(), "payment_method_handler.find")
 	defer span.End()
@@ -99,6 +127,17 @@ func (h *PaymentMethodHandler) Find(w http.ResponseWriter, r *http.Request) {
 	responses.JSON(w, http.StatusOK, response)
 }
 
+// FindBy godoc
+//
+//	@Summary		Buscar método de pagamento por ID
+//	@Description	Retorna os detalhes de um método de pagamento pelo UUID. Endpoint público.
+//	@Tags			payment-methods
+//	@Produce		json
+//	@Param			id	path		string						true	"ID do método de pagamento"	format(uuid)
+//	@Success		200	{object}	dtos.PaymentMethodOutput	"Dados do método de pagamento"
+//	@Failure		404	{object}	httperrors.ProblemDetail	"Não encontrado"
+//	@Failure		500	{object}	httperrors.ProblemDetail	"Erro interno"
+//	@Router			/api/v1/payment-methods/{id} [get]
 func (h *PaymentMethodHandler) FindBy(w http.ResponseWriter, r *http.Request) {
 	ctx, span := h.o11y.Tracer().Start(r.Context(), "payment_method_handler.find_by")
 	defer span.End()
@@ -125,6 +164,20 @@ func (h *PaymentMethodHandler) FindByCode(w http.ResponseWriter, r *http.Request
 	responses.JSON(w, http.StatusOK, output)
 }
 
+// Update godoc
+//
+//	@Summary		Atualizar método de pagamento
+//	@Description	Atualiza nome e descrição de um método de pagamento. O campo `code` não pode ser alterado. Endpoint público.
+//	@Tags			payment-methods
+//	@Accept			json
+//	@Produce		json
+//	@Param			id		path		string							true	"ID do método de pagamento"	format(uuid)
+//	@Param			request	body		dtos.PaymentMethodUpdateInput	true	"Dados atualizados"
+//	@Success		200		{object}	dtos.PaymentMethodOutput		"Método atualizado"
+//	@Failure		400		{object}	httperrors.ProblemDetail		"Dados inválidos"
+//	@Failure		404		{object}	httperrors.ProblemDetail		"Não encontrado"
+//	@Failure		500		{object}	httperrors.ProblemDetail		"Erro interno"
+//	@Router			/api/v1/payment-methods/{id} [put]
 func (h *PaymentMethodHandler) Update(w http.ResponseWriter, r *http.Request) {
 	ctx, span := h.o11y.Tracer().Start(r.Context(), "payment_method_handler.update")
 	defer span.End()
@@ -144,6 +197,17 @@ func (h *PaymentMethodHandler) Update(w http.ResponseWriter, r *http.Request) {
 	responses.JSON(w, http.StatusOK, output)
 }
 
+// Delete godoc
+//
+//	@Summary		Remover método de pagamento
+//	@Description	Remove um método de pagamento. Endpoint público.
+//	@Tags			payment-methods
+//	@Produce		json
+//	@Param			id	path	string	true	"ID do método de pagamento"	format(uuid)
+//	@Success		204	"Removido com sucesso"
+//	@Failure		404	{object}	httperrors.ProblemDetail	"Não encontrado"
+//	@Failure		500	{object}	httperrors.ProblemDetail	"Erro interno"
+//	@Router			/api/v1/payment-methods/{id} [delete]
 func (h *PaymentMethodHandler) Delete(w http.ResponseWriter, r *http.Request) {
 	ctx, span := h.o11y.Tracer().Start(r.Context(), "payment_method_handler.delete")
 	defer span.End()

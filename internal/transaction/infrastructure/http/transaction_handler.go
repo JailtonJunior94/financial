@@ -46,6 +46,29 @@ func NewTransactionHandler(
 	}
 }
 
+// Register godoc
+//
+//	@Summary		Registrar transação
+//	@Description	Cria uma nova transação mensal (ou adiciona um item a transação existente do mês).
+//	@Description
+//	@Description	**Enums:**
+//	@Description	- `direction`: `INCOME` | `EXPENSE`
+//	@Description	- `type`: `PIX` | `BOLETO` | `TRANSFER` | `CREDIT_CARD`
+//	@Description
+//	@Description	**Formato de campos:**
+//	@Description	- `reference_month`: `YYYY-MM` (ex: `2025-01`)
+//	@Description	- `amount`: string decimal (ex: `"1234.56"`)
+//	@Tags			transactions
+//	@Accept			json
+//	@Produce		json
+//	@Security		BearerAuth
+//	@Param			request	body		dtos.RegisterTransactionInput	true	"Dados da transação"
+//	@Success		201		{object}	dtos.MonthlyTransactionOutput	"Transação registrada"
+//	@Failure		400		{object}	httperrors.ProblemDetail		"Dados inválidos"
+//	@Failure		401		{object}	httperrors.ProblemDetail		"Não autenticado"
+//	@Failure		404		{object}	httperrors.ProblemDetail		"Categoria não encontrada"
+//	@Failure		500		{object}	httperrors.ProblemDetail		"Erro interno"
+//	@Router			/api/v1/transactions [post]
 func (h *TransactionHandler) Register(w http.ResponseWriter, r *http.Request) {
 	ctx, span := h.o11y.Tracer().Start(r.Context(), "transaction_handler.register")
 	defer span.End()
@@ -76,6 +99,21 @@ func (h *TransactionHandler) Register(w http.ResponseWriter, r *http.Request) {
 	responses.JSON(w, http.StatusCreated, output)
 }
 
+// List godoc
+//
+//	@Summary		Listar transações mensais
+//	@Description	Retorna a lista paginada de transações mensais consolidadas do usuário autenticado.
+//	@Description	Cada item representa um mês com seus totais e itens individuais.
+//	@Tags			transactions
+//	@Produce		json
+//	@Security		BearerAuth
+//	@Param			limit	query		integer	false	"Itens por página (default: 20, max: 100)"	minimum(1)	maximum(100)	default(20)
+//	@Param			cursor	query		string	false	"Cursor de paginação"
+//	@Success		200		{object}	dtos.MonthlyTransactionPaginatedOutput	"Lista paginada de transações mensais"
+//	@Failure		400		{object}	httperrors.ProblemDetail									"Parâmetro inválido"
+//	@Failure		401		{object}	httperrors.ProblemDetail									"Não autenticado"
+//	@Failure		500		{object}	httperrors.ProblemDetail									"Erro interno"
+//	@Router			/api/v1/transactions [get]
 func (h *TransactionHandler) List(w http.ResponseWriter, r *http.Request) {
 	ctx, span := h.o11y.Tracer().Start(r.Context(), "transaction_handler.list")
 	defer span.End()
@@ -108,6 +146,20 @@ func (h *TransactionHandler) List(w http.ResponseWriter, r *http.Request) {
 	responses.JSON(w, http.StatusOK, response)
 }
 
+// Get godoc
+//
+//	@Summary		Buscar transação mensal por ID
+//	@Description	Retorna os detalhes de uma transação mensal específica, incluindo todos os itens e totais.
+//	@Tags			transactions
+//	@Produce		json
+//	@Security		BearerAuth
+//	@Param			id	path		string							true	"ID da transação mensal"	format(uuid)
+//	@Success		200	{object}	dtos.MonthlyTransactionOutput	"Dados da transação mensal"
+//	@Failure		400	{object}	httperrors.ProblemDetail		"ID inválido"
+//	@Failure		401	{object}	httperrors.ProblemDetail		"Não autenticado"
+//	@Failure		404	{object}	httperrors.ProblemDetail		"Transação não encontrada"
+//	@Failure		500	{object}	httperrors.ProblemDetail		"Erro interno"
+//	@Router			/api/v1/transactions/{id} [get]
 func (h *TransactionHandler) Get(w http.ResponseWriter, r *http.Request) {
 	ctx, span := h.o11y.Tracer().Start(r.Context(), "transaction_handler.get")
 	defer span.End()
@@ -133,6 +185,28 @@ func (h *TransactionHandler) Get(w http.ResponseWriter, r *http.Request) {
 	responses.JSON(w, http.StatusOK, output)
 }
 
+// UpdateItem godoc
+//
+//	@Summary		Atualizar item de transação
+//	@Description	Atualiza os dados de um item individual dentro de uma transação mensal.
+//	@Description	O `transactionId` é o ID do consolidado mensal; o `itemId` é o item específico.
+//	@Description
+//	@Description	**Enums:**
+//	@Description	- `direction`: `INCOME` | `EXPENSE`
+//	@Description	- `type`: `PIX` | `BOLETO` | `TRANSFER` | `CREDIT_CARD`
+//	@Tags			transactions
+//	@Accept			json
+//	@Produce		json
+//	@Security		BearerAuth
+//	@Param			transactionId	path		string							true	"ID da transação mensal"	format(uuid)
+//	@Param			itemId			path		string							true	"ID do item de transação"	format(uuid)
+//	@Param			request			body		dtos.UpdateTransactionItemInput	true	"Dados atualizados do item"
+//	@Success		200				{object}	dtos.TransactionItemOutput		"Item atualizado"
+//	@Failure		400				{object}	httperrors.ProblemDetail		"Dados inválidos"
+//	@Failure		401				{object}	httperrors.ProblemDetail		"Não autenticado"
+//	@Failure		404				{object}	httperrors.ProblemDetail		"Item não encontrado"
+//	@Failure		500				{object}	httperrors.ProblemDetail		"Erro interno"
+//	@Router			/api/v1/transactions/{transactionId}/items/{itemId} [put]
 func (h *TransactionHandler) UpdateItem(w http.ResponseWriter, r *http.Request) {
 	ctx, span := h.o11y.Tracer().Start(r.Context(), "transaction_handler.update_item")
 	defer span.End()
@@ -173,6 +247,21 @@ func (h *TransactionHandler) UpdateItem(w http.ResponseWriter, r *http.Request) 
 	responses.JSON(w, http.StatusOK, output)
 }
 
+// DeleteItem godoc
+//
+//	@Summary		Remover item de transação
+//	@Description	Remove um item individual de uma transação mensal. Se for o último item, a transação mensal também é removida.
+//	@Tags			transactions
+//	@Produce		json
+//	@Security		BearerAuth
+//	@Param			transactionId	path	string	true	"ID da transação mensal"	format(uuid)
+//	@Param			itemId			path	string	true	"ID do item de transação"	format(uuid)
+//	@Success		204	"Item removido com sucesso"
+//	@Failure		400	{object}	httperrors.ProblemDetail	"IDs inválidos"
+//	@Failure		401	{object}	httperrors.ProblemDetail	"Não autenticado"
+//	@Failure		404	{object}	httperrors.ProblemDetail	"Item não encontrado"
+//	@Failure		500	{object}	httperrors.ProblemDetail	"Erro interno"
+//	@Router			/api/v1/transactions/{transactionId}/items/{itemId} [delete]
 func (h *TransactionHandler) DeleteItem(w http.ResponseWriter, r *http.Request) {
 	ctx, span := h.o11y.Tracer().Start(r.Context(), "transaction_handler.delete_item")
 	defer span.End()

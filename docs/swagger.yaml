@@ -1,0 +1,2068 @@
+basePath: /
+definitions:
+  dtos.AuthOutput:
+    properties:
+      expires_at:
+        example: "2025-01-16T10:30:00Z"
+        type: string
+      token:
+        example: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
+        type: string
+    type: object
+  dtos.BudgetCreateInput:
+    properties:
+      currency:
+        description: ISO 4217 (e.g., "BRL")
+        enum:
+        - BRL
+        - USD
+        - EUR
+        example: BRL
+        type: string
+      items:
+        items:
+          $ref: '#/definitions/dtos.BudgetItemInput'
+        type: array
+      reference_month:
+        description: YYYY-MM format
+        example: 2025-01
+        type: string
+      total_amount:
+        description: String decimal (e.g., "5000.00")
+        example: "5000.00"
+        type: string
+    type: object
+  dtos.BudgetItemInput:
+    properties:
+      category_id:
+        example: 550e8400-e29b-41d4-a716-446655440000
+        type: string
+      percentage_goal:
+        description: String decimal (e.g., "25.50")
+        example: "25.50"
+        type: string
+    type: object
+  dtos.BudgetItemOutput:
+    properties:
+      budget_id:
+        example: 550e8400-e29b-41d4-a716-446655440000
+        type: string
+      category_id:
+        example: 880e8400-e29b-41d4-a716-446655440003
+        type: string
+      created_at:
+        example: "2025-01-01T00:00:00Z"
+        type: string
+      id:
+        example: 770e8400-e29b-41d4-a716-446655440002
+        type: string
+      percentage_goal:
+        example: "30.00"
+        type: string
+      percentage_spent:
+        example: "46.67"
+        type: string
+      planned_amount:
+        example: "1500.00"
+        type: string
+      remaining_amount:
+        example: "800.00"
+        type: string
+      spent_amount:
+        example: "700.00"
+        type: string
+      updated_at:
+        example: "2025-01-20T08:00:00Z"
+        type: string
+    type: object
+  dtos.BudgetOutput:
+    properties:
+      created_at:
+        example: "2025-01-01T00:00:00Z"
+        type: string
+      currency:
+        enum:
+        - BRL
+        - USD
+        - EUR
+        example: BRL
+        type: string
+      id:
+        example: 550e8400-e29b-41d4-a716-446655440000
+        type: string
+      items:
+        items:
+          $ref: '#/definitions/dtos.BudgetItemOutput'
+        type: array
+      percentage_used:
+        example: "47.00"
+        type: string
+      reference_month:
+        description: YYYY-MM
+        example: 2025-01
+        type: string
+      spent_amount:
+        example: "2350.00"
+        type: string
+      total_amount:
+        example: "5000.00"
+        type: string
+      updated_at:
+        example: "2025-01-20T08:00:00Z"
+        type: string
+      user_id:
+        example: 660e8400-e29b-41d4-a716-446655440001
+        type: string
+    type: object
+  dtos.BudgetPaginatedOutput:
+    properties:
+      data:
+        items:
+          $ref: '#/definitions/dtos.BudgetOutput'
+        type: array
+      pagination:
+        $ref: '#/definitions/dtos.BudgetPaginationMeta'
+    type: object
+  dtos.BudgetPaginationMeta:
+    properties:
+      has_next:
+        example: false
+        type: boolean
+      limit:
+        example: 20
+        type: integer
+      next_cursor:
+        example: eyJmIjp7InJlZmVyZW5jZV9tb250aCI6IjIwMjUtMDEifX0
+        type: string
+    type: object
+  dtos.BudgetUpdateInput:
+    properties:
+      items:
+        items:
+          $ref: '#/definitions/dtos.BudgetItemInput'
+        type: array
+      total_amount:
+        description: String decimal
+        example: "6000.00"
+        type: string
+    type: object
+  dtos.CardInput:
+    properties:
+      closing_offset_days:
+        description: 'Opcional, padrão: 7'
+        example: 7
+        maximum: 31
+        minimum: 1
+        type: integer
+      due_day:
+        example: 10
+        maximum: 31
+        minimum: 1
+        type: integer
+      name:
+        example: Nubank Platinum
+        type: string
+    type: object
+  dtos.CardOutput:
+    properties:
+      closing_offset_days:
+        description: 'Quantos dias antes do vencimento fecha (padrão brasileiro: 7)'
+        example: 7
+        type: integer
+      created_at:
+        example: "2025-01-15T10:30:00Z"
+        type: string
+      due_day:
+        example: 10
+        type: integer
+      id:
+        example: 550e8400-e29b-41d4-a716-446655440000
+        type: string
+      name:
+        example: Nubank Platinum
+        type: string
+      updated_at:
+        example: "2025-01-20T08:00:00Z"
+        type: string
+    type: object
+  dtos.CardPaginatedOutput:
+    properties:
+      data:
+        items:
+          $ref: '#/definitions/dtos.CardOutput'
+        type: array
+      pagination:
+        $ref: '#/definitions/dtos.CardPaginationMeta'
+    type: object
+  dtos.CardPaginationMeta:
+    properties:
+      has_next:
+        example: true
+        type: boolean
+      limit:
+        example: 20
+        type: integer
+      next_cursor:
+        example: eyJmIjp7Im5hbWUiOiJOdWJhbmsifX0
+        type: string
+    type: object
+  dtos.CategoryInput:
+    properties:
+      name:
+        example: Alimentação
+        type: string
+      parent_id:
+        description: UUID da categoria pai (opcional)
+        example: 550e8400-e29b-41d4-a716-446655440000
+        type: string
+      sequence:
+        example: 1
+        minimum: 1
+        type: integer
+    type: object
+  dtos.CategoryOutput:
+    properties:
+      children:
+        items:
+          $ref: '#/definitions/dtos.CategoryOutput'
+        type: array
+      created_at:
+        example: "2025-01-15T10:30:00Z"
+        type: string
+      id:
+        example: 550e8400-e29b-41d4-a716-446655440000
+        type: string
+      name:
+        example: Alimentação
+        type: string
+      sequence:
+        example: 1
+        type: integer
+    type: object
+  dtos.CategoryPaginatedOutput:
+    properties:
+      data:
+        items:
+          $ref: '#/definitions/dtos.CategoryOutput'
+        type: array
+      pagination:
+        $ref: '#/definitions/dtos.CategoryPaginationMeta'
+    type: object
+  dtos.CategoryPaginationMeta:
+    properties:
+      has_next:
+        example: false
+        type: boolean
+      limit:
+        example: 20
+        type: integer
+      next_cursor:
+        example: eyJmIjp7Im5hbWUiOiJBbGltZW50YcOnw6NvIn19
+        type: string
+    type: object
+  dtos.CreateUserInput:
+    properties:
+      email:
+        example: joao@email.com
+        type: string
+      name:
+        example: João Silva
+        type: string
+      password:
+        example: senhaSegura123
+        type: string
+    type: object
+  dtos.CreateUserOutput:
+    properties:
+      created_at:
+        example: "2025-01-15T10:30:00Z"
+        type: string
+      email:
+        example: joao@email.com
+        type: string
+      id:
+        example: 550e8400-e29b-41d4-a716-446655440000
+        type: string
+      name:
+        example: João Silva
+        type: string
+    type: object
+  dtos.InvoiceItemOutput:
+    properties:
+      category_id:
+        example: 660e8400-e29b-41d4-a716-446655440001
+        type: string
+      created_at:
+        example: "2025-01-01T00:00:00Z"
+        type: string
+      description:
+        example: iPhone 16 Pro
+        type: string
+      id:
+        example: 880e8400-e29b-41d4-a716-446655440003
+        type: string
+      installment_amount:
+        description: Valor desta parcela
+        example: "833.25"
+        type: string
+      installment_label:
+        description: 'Ex: "3/12" ou "À vista"'
+        example: 3/12
+        type: string
+      installment_number:
+        description: 1 a N
+        example: 3
+        type: integer
+      installment_total:
+        description: Total de parcelas
+        example: 12
+        type: integer
+      invoice_id:
+        example: 550e8400-e29b-41d4-a716-446655440000
+        type: string
+      purchase_date:
+        description: YYYY-MM-DD
+        example: "2025-01-15"
+        type: string
+      total_amount:
+        description: Valor total da compra original
+        example: "9999.00"
+        type: string
+      updated_at:
+        example: "2025-01-20T08:00:00Z"
+        type: string
+    type: object
+  dtos.InvoiceListOutput:
+    properties:
+      card_id:
+        example: 770e8400-e29b-41d4-a716-446655440002
+        type: string
+      created_at:
+        example: "2025-01-01T00:00:00Z"
+        type: string
+      currency:
+        enum:
+        - BRL
+        - USD
+        - EUR
+        example: BRL
+        type: string
+      due_date:
+        example: "2025-01-10"
+        type: string
+      id:
+        example: 550e8400-e29b-41d4-a716-446655440000
+        type: string
+      item_count:
+        example: 12
+        type: integer
+      reference_month:
+        example: 2025-01
+        type: string
+      total_amount:
+        example: "9999.00"
+        type: string
+    type: object
+  dtos.InvoiceOutput:
+    properties:
+      card_id:
+        example: 770e8400-e29b-41d4-a716-446655440002
+        type: string
+      created_at:
+        example: "2025-01-01T00:00:00Z"
+        type: string
+      currency:
+        enum:
+        - BRL
+        - USD
+        - EUR
+        example: BRL
+        type: string
+      due_date:
+        description: YYYY-MM-DD
+        example: "2025-01-10"
+        type: string
+      id:
+        example: 550e8400-e29b-41d4-a716-446655440000
+        type: string
+      item_count:
+        example: 12
+        type: integer
+      items:
+        items:
+          $ref: '#/definitions/dtos.InvoiceItemOutput'
+        type: array
+      reference_month:
+        description: YYYY-MM
+        example: 2025-01
+        type: string
+      total_amount:
+        example: "9999.00"
+        type: string
+      updated_at:
+        example: "2025-01-20T08:00:00Z"
+        type: string
+      user_id:
+        example: 660e8400-e29b-41d4-a716-446655440001
+        type: string
+    type: object
+  dtos.InvoicePaginatedOutput:
+    properties:
+      data:
+        items:
+          $ref: '#/definitions/dtos.InvoiceListOutput'
+        type: array
+      pagination:
+        $ref: '#/definitions/dtos.InvoicePaginationMeta'
+    type: object
+  dtos.InvoicePaginationMeta:
+    properties:
+      has_next:
+        example: true
+        type: boolean
+      limit:
+        example: 20
+        type: integer
+      next_cursor:
+        example: eyJmIjp7InJlZmVyZW5jZV9tb250aCI6IjIwMjUtMDEifX0
+        type: string
+    type: object
+  dtos.MonthlyTransactionOutput:
+    properties:
+      created_at:
+        example: "2025-01-01T00:00:00Z"
+        type: string
+      id:
+        example: 770e8400-e29b-41d4-a716-446655440002
+        type: string
+      items:
+        items:
+          $ref: '#/definitions/dtos.TransactionItemOutput'
+        type: array
+      reference_month:
+        example: 2025-01
+        type: string
+      total_amount:
+        description: String decimal (e.g., "1500.00")
+        example: "1500.00"
+        type: string
+      total_expense:
+        description: String decimal (e.g., "3500.00")
+        example: "3500.00"
+        type: string
+      total_income:
+        description: String decimal (e.g., "5000.00")
+        example: "5000.00"
+        type: string
+      updated_at:
+        example: "2025-01-31T23:59:59Z"
+        type: string
+    type: object
+  dtos.MonthlyTransactionPaginatedOutput:
+    properties:
+      data:
+        items:
+          $ref: '#/definitions/dtos.MonthlyTransactionOutput'
+        type: array
+      pagination:
+        $ref: '#/definitions/dtos.TransactionPaginationMeta'
+    type: object
+  dtos.PaymentMethodInput:
+    properties:
+      code:
+        example: PIX
+        type: string
+      description:
+        example: Transferência instantânea via Pix
+        type: string
+      name:
+        example: Pix
+        type: string
+    type: object
+  dtos.PaymentMethodOutput:
+    properties:
+      code:
+        example: PIX
+        type: string
+      created_at:
+        example: "2025-01-15T10:30:00Z"
+        type: string
+      description:
+        example: Transferência instantânea via Pix
+        type: string
+      id:
+        example: 550e8400-e29b-41d4-a716-446655440000
+        type: string
+      name:
+        example: Pix
+        type: string
+      updated_at:
+        example: "2025-01-20T08:00:00Z"
+        type: string
+    type: object
+  dtos.PaymentMethodPaginatedOutput:
+    properties:
+      data:
+        items:
+          $ref: '#/definitions/dtos.PaymentMethodOutput'
+        type: array
+      pagination:
+        $ref: '#/definitions/dtos.PaymentMethodPaginationMeta'
+    type: object
+  dtos.PaymentMethodPaginationMeta:
+    properties:
+      has_next:
+        example: false
+        type: boolean
+      limit:
+        example: 20
+        type: integer
+      next_cursor:
+        example: eyJmIjp7ImNvZGUiOiJQSVgifX0
+        type: string
+    type: object
+  dtos.PaymentMethodUpdateInput:
+    properties:
+      description:
+        example: Pagamento instantâneo 24h
+        type: string
+      name:
+        example: Pix Atualizado
+        type: string
+    type: object
+  dtos.PurchaseCreateInput:
+    properties:
+      card_id:
+        example: 550e8400-e29b-41d4-a716-446655440000
+        type: string
+      category_id:
+        example: 660e8400-e29b-41d4-a716-446655440001
+        type: string
+      currency:
+        description: ISO 4217 (e.g., "BRL")
+        enum:
+        - BRL
+        - USD
+        - EUR
+        example: BRL
+        type: string
+      description:
+        example: iPhone 16 Pro
+        type: string
+      installment_total:
+        description: 1 para à vista
+        example: 12
+        maximum: 48
+        minimum: 1
+        type: integer
+      purchase_date:
+        description: YYYY-MM-DD
+        example: "2025-01-15"
+        type: string
+      total_amount:
+        description: String decimal (e.g., "1200.00")
+        example: "9999.00"
+        type: string
+    type: object
+  dtos.PurchaseCreateOutput:
+    properties:
+      items:
+        items:
+          $ref: '#/definitions/dtos.InvoiceItemOutput'
+        type: array
+    type: object
+  dtos.PurchaseUpdateInput:
+    properties:
+      category_id:
+        example: 660e8400-e29b-41d4-a716-446655440001
+        type: string
+      description:
+        example: iPhone 16 Pro Max
+        type: string
+      total_amount:
+        example: "10999.00"
+        type: string
+    type: object
+  dtos.PurchaseUpdateOutput:
+    properties:
+      items:
+        items:
+          $ref: '#/definitions/dtos.InvoiceItemOutput'
+        type: array
+    type: object
+  dtos.RegisterTransactionInput:
+    properties:
+      amount:
+        description: String decimal (e.g., "1234.56")
+        example: "350.75"
+        type: string
+      category_id:
+        example: 550e8400-e29b-41d4-a716-446655440000
+        type: string
+      description:
+        example: Compras da semana
+        type: string
+      direction:
+        description: INCOME | EXPENSE
+        enum:
+        - INCOME
+        - EXPENSE
+        example: EXPENSE
+        type: string
+      is_paid:
+        example: true
+        type: boolean
+      reference_month:
+        description: 'Formato: YYYY-MM'
+        example: 2025-01
+        type: string
+      title:
+        example: Supermercado Pão de Açúcar
+        type: string
+      type:
+        description: PIX | BOLETO | TRANSFER | CREDIT_CARD
+        enum:
+        - PIX
+        - BOLETO
+        - TRANSFER
+        - CREDIT_CARD
+        example: PIX
+        type: string
+    type: object
+  dtos.TransactionItemOutput:
+    properties:
+      amount:
+        description: String decimal (e.g., "1234.56")
+        example: "350.75"
+        type: string
+      category_id:
+        example: 660e8400-e29b-41d4-a716-446655440001
+        type: string
+      created_at:
+        example: "2025-01-15T10:30:00Z"
+        type: string
+      description:
+        example: Compras da semana
+        type: string
+      direction:
+        enum:
+        - INCOME
+        - EXPENSE
+        example: EXPENSE
+        type: string
+      id:
+        example: 550e8400-e29b-41d4-a716-446655440000
+        type: string
+      is_paid:
+        example: true
+        type: boolean
+      title:
+        example: Supermercado Pão de Açúcar
+        type: string
+      type:
+        enum:
+        - PIX
+        - BOLETO
+        - TRANSFER
+        - CREDIT_CARD
+        example: PIX
+        type: string
+      updated_at:
+        example: "2025-01-20T08:00:00Z"
+        type: string
+    type: object
+  dtos.TransactionPaginationMeta:
+    properties:
+      has_next:
+        example: true
+        type: boolean
+      limit:
+        example: 20
+        type: integer
+      next_cursor:
+        example: eyJmIjp7InJlZmVyZW5jZV9tb250aCI6IjIwMjUtMDEifX0
+        type: string
+    type: object
+  dtos.UpdateTransactionItemInput:
+    properties:
+      amount:
+        description: String decimal (e.g., "1234.56")
+        example: "420.00"
+        type: string
+      description:
+        example: Compras do mês
+        type: string
+      direction:
+        enum:
+        - INCOME
+        - EXPENSE
+        example: EXPENSE
+        type: string
+      is_paid:
+        example: false
+        type: boolean
+      title:
+        example: Supermercado Extra
+        type: string
+      type:
+        enum:
+        - PIX
+        - BOLETO
+        - TRANSFER
+        - CREDIT_CARD
+        example: PIX
+        type: string
+    type: object
+  httperrors.ProblemDetail:
+    properties:
+      detail:
+        type: string
+      errors:
+        additionalProperties: {}
+        type: object
+      instance:
+        type: string
+      request_id:
+        type: string
+      status:
+        type: integer
+      timestamp:
+        type: string
+      title:
+        type: string
+      trace_id:
+        type: string
+      type:
+        type: string
+    type: object
+host: localhost:8080
+info:
+  contact:
+    name: Jailton Junior
+    url: https://github.com/jailtonjunior94
+  description: |-
+    API para gestão financeira pessoal com suporte a cartões de crédito, transações,
+    orçamentos mensais, categorias e faturas com parcelamento.
+
+    ## Valores Monetários
+    Todos os valores monetários são representados como **strings decimais** (ex: `"1234.56"`)
+    para preservar precisão e evitar erros de ponto flutuante.
+
+    ## Paginação
+    Endpoints de listagem usam **cursor-based pagination**. Parâmetros:
+    - `limit` (int, default: 20, max: 100)
+    - `cursor` (string, opcional): valor de `pagination.next_cursor` da resposta anterior
+
+    ## Autenticação
+    Endpoints protegidos requerem o header `Authorization: Bearer {token}`.
+    Obtenha o token em `POST /api/v1/token`.
+  license:
+    name: MIT
+  title: Financial API
+  version: 1.0.0
+paths:
+  /api/v1/budgets:
+    get:
+      description: Retorna a lista paginada de orçamentos do usuário autenticado (cursor-based
+        pagination).
+      parameters:
+      - default: 20
+        description: 'Itens por página (default: 20, max: 100)'
+        in: query
+        maximum: 100
+        minimum: 1
+        name: limit
+        type: integer
+      - description: Cursor de paginação
+        in: query
+        name: cursor
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Lista paginada de orçamentos
+          schema:
+            $ref: '#/definitions/dtos.BudgetPaginatedOutput'
+        "400":
+          description: Parâmetro inválido
+          schema:
+            $ref: '#/definitions/httperrors.ProblemDetail'
+        "401":
+          description: Não autenticado
+          schema:
+            $ref: '#/definitions/httperrors.ProblemDetail'
+        "500":
+          description: Erro interno
+          schema:
+            $ref: '#/definitions/httperrors.ProblemDetail'
+      security:
+      - BearerAuth: []
+      summary: Listar orçamentos mensais
+      tags:
+      - budgets
+    post:
+      consumes:
+      - application/json
+      description: |-
+        Cria um novo orçamento para o mês de referência do usuário autenticado.
+        Apenas um orçamento por mês (`reference_month`) é permitido por usuário.
+
+        **Campos:**
+        - `reference_month`: `YYYY-MM` (ex: `2025-01`)
+        - `total_amount`: valor total planejado (ex: `"5000.00"`)
+        - `currency`: `BRL` | `USD` | `EUR` (opcional, default: `BRL`)
+        - `items`: ao menos um item com `category_id` e `percentage_goal` (ex: `"25.50"`)
+      parameters:
+      - description: Dados do orçamento
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/dtos.BudgetCreateInput'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Orçamento criado
+          schema:
+            $ref: '#/definitions/dtos.BudgetOutput'
+        "400":
+          description: Dados inválidos
+          schema:
+            $ref: '#/definitions/httperrors.ProblemDetail'
+        "401":
+          description: Não autenticado
+          schema:
+            $ref: '#/definitions/httperrors.ProblemDetail'
+        "409":
+          description: Orçamento já existe para este mês
+          schema:
+            $ref: '#/definitions/httperrors.ProblemDetail'
+        "500":
+          description: Erro interno
+          schema:
+            $ref: '#/definitions/httperrors.ProblemDetail'
+      security:
+      - BearerAuth: []
+      summary: Criar orçamento mensal
+      tags:
+      - budgets
+  /api/v1/budgets/{id}:
+    delete:
+      description: Remove um orçamento mensal e todos os seus itens. Esta operação
+        é irreversível.
+      parameters:
+      - description: ID do orçamento
+        format: uuid
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "204":
+          description: Orçamento removido com sucesso
+        "400":
+          description: ID inválido
+          schema:
+            $ref: '#/definitions/httperrors.ProblemDetail'
+        "401":
+          description: Não autenticado
+          schema:
+            $ref: '#/definitions/httperrors.ProblemDetail'
+        "404":
+          description: Orçamento não encontrado
+          schema:
+            $ref: '#/definitions/httperrors.ProblemDetail'
+        "500":
+          description: Erro interno
+          schema:
+            $ref: '#/definitions/httperrors.ProblemDetail'
+      security:
+      - BearerAuth: []
+      summary: Remover orçamento mensal
+      tags:
+      - budgets
+    get:
+      description: Retorna os detalhes de um orçamento mensal específico, incluindo
+        itens com valores planejados, gastos e percentuais.
+      parameters:
+      - description: ID do orçamento
+        format: uuid
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Dados do orçamento
+          schema:
+            $ref: '#/definitions/dtos.BudgetOutput'
+        "400":
+          description: ID inválido
+          schema:
+            $ref: '#/definitions/httperrors.ProblemDetail'
+        "401":
+          description: Não autenticado
+          schema:
+            $ref: '#/definitions/httperrors.ProblemDetail'
+        "404":
+          description: Orçamento não encontrado
+          schema:
+            $ref: '#/definitions/httperrors.ProblemDetail'
+        "500":
+          description: Erro interno
+          schema:
+            $ref: '#/definitions/httperrors.ProblemDetail'
+      security:
+      - BearerAuth: []
+      summary: Buscar orçamento por ID
+      tags:
+      - budgets
+    put:
+      consumes:
+      - application/json
+      description: |-
+        Atualiza o valor total e os itens de um orçamento existente.
+        Os itens existentes são substituídos pelos novos itens enviados.
+      parameters:
+      - description: ID do orçamento
+        format: uuid
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: Dados atualizados
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/dtos.BudgetUpdateInput'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Orçamento atualizado
+          schema:
+            $ref: '#/definitions/dtos.BudgetOutput'
+        "400":
+          description: Dados inválidos
+          schema:
+            $ref: '#/definitions/httperrors.ProblemDetail'
+        "401":
+          description: Não autenticado
+          schema:
+            $ref: '#/definitions/httperrors.ProblemDetail'
+        "404":
+          description: Orçamento não encontrado
+          schema:
+            $ref: '#/definitions/httperrors.ProblemDetail'
+        "500":
+          description: Erro interno
+          schema:
+            $ref: '#/definitions/httperrors.ProblemDetail'
+      security:
+      - BearerAuth: []
+      summary: Atualizar orçamento mensal
+      tags:
+      - budgets
+  /api/v1/cards:
+    get:
+      description: Retorna a lista paginada de cartões do usuário autenticado (cursor-based
+        pagination).
+      parameters:
+      - default: 20
+        description: 'Itens por página (default: 20, max: 100)'
+        in: query
+        maximum: 100
+        minimum: 1
+        name: limit
+        type: integer
+      - description: Cursor de paginação (retornado em pagination.next_cursor)
+        in: query
+        name: cursor
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Lista paginada de cartões
+          schema:
+            $ref: '#/definitions/dtos.CardPaginatedOutput'
+        "400":
+          description: Parâmetro inválido
+          schema:
+            $ref: '#/definitions/httperrors.ProblemDetail'
+        "401":
+          description: Não autenticado
+          schema:
+            $ref: '#/definitions/httperrors.ProblemDetail'
+        "500":
+          description: Erro interno
+          schema:
+            $ref: '#/definitions/httperrors.ProblemDetail'
+      security:
+      - BearerAuth: []
+      summary: Listar cartões
+      tags:
+      - cards
+    post:
+      consumes:
+      - application/json
+      description: |-
+        Cria um novo cartão de crédito para o usuário autenticado.
+        O campo `closing_offset_days` é opcional (default: 7 dias antes do vencimento).
+        - `due_day`: dia do mês em que a fatura vence (1–31)
+        - `closing_offset_days`: quantos dias antes do vencimento a fatura fecha (1–31)
+      parameters:
+      - description: Dados do cartão
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/dtos.CardInput'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Cartão criado com sucesso
+          schema:
+            $ref: '#/definitions/dtos.CardOutput'
+        "400":
+          description: Dados inválidos
+          schema:
+            $ref: '#/definitions/httperrors.ProblemDetail'
+        "401":
+          description: Não autenticado
+          schema:
+            $ref: '#/definitions/httperrors.ProblemDetail'
+        "500":
+          description: Erro interno
+          schema:
+            $ref: '#/definitions/httperrors.ProblemDetail'
+      security:
+      - BearerAuth: []
+      summary: Criar cartão
+      tags:
+      - cards
+  /api/v1/cards/{id}:
+    delete:
+      description: Remove um cartão do usuário autenticado. Esta operação é irreversível.
+      parameters:
+      - description: ID do cartão
+        format: uuid
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "204":
+          description: Cartão removido com sucesso
+        "401":
+          description: Não autenticado
+          schema:
+            $ref: '#/definitions/httperrors.ProblemDetail'
+        "404":
+          description: Cartão não encontrado
+          schema:
+            $ref: '#/definitions/httperrors.ProblemDetail'
+        "500":
+          description: Erro interno
+          schema:
+            $ref: '#/definitions/httperrors.ProblemDetail'
+      security:
+      - BearerAuth: []
+      summary: Remover cartão
+      tags:
+      - cards
+    get:
+      description: Retorna os detalhes de um cartão específico do usuário autenticado.
+      parameters:
+      - description: ID do cartão
+        format: uuid
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Dados do cartão
+          schema:
+            $ref: '#/definitions/dtos.CardOutput'
+        "401":
+          description: Não autenticado
+          schema:
+            $ref: '#/definitions/httperrors.ProblemDetail'
+        "404":
+          description: Cartão não encontrado
+          schema:
+            $ref: '#/definitions/httperrors.ProblemDetail'
+        "500":
+          description: Erro interno
+          schema:
+            $ref: '#/definitions/httperrors.ProblemDetail'
+      security:
+      - BearerAuth: []
+      summary: Buscar cartão por ID
+      tags:
+      - cards
+    put:
+      consumes:
+      - application/json
+      description: Atualiza os dados de um cartão existente do usuário autenticado.
+      parameters:
+      - description: ID do cartão
+        format: uuid
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: Dados atualizados do cartão
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/dtos.CardInput'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Cartão atualizado com sucesso
+          schema:
+            $ref: '#/definitions/dtos.CardOutput'
+        "400":
+          description: Dados inválidos
+          schema:
+            $ref: '#/definitions/httperrors.ProblemDetail'
+        "401":
+          description: Não autenticado
+          schema:
+            $ref: '#/definitions/httperrors.ProblemDetail'
+        "404":
+          description: Cartão não encontrado
+          schema:
+            $ref: '#/definitions/httperrors.ProblemDetail'
+        "500":
+          description: Erro interno
+          schema:
+            $ref: '#/definitions/httperrors.ProblemDetail'
+      security:
+      - BearerAuth: []
+      summary: Atualizar cartão
+      tags:
+      - cards
+  /api/v1/categories:
+    get:
+      description: Retorna a lista paginada de categorias do usuário autenticado (cursor-based
+        pagination).
+      parameters:
+      - default: 20
+        description: 'Itens por página (default: 20, max: 100)'
+        in: query
+        maximum: 100
+        minimum: 1
+        name: limit
+        type: integer
+      - description: Cursor de paginação
+        in: query
+        name: cursor
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Lista paginada de categorias
+          schema:
+            $ref: '#/definitions/dtos.CategoryPaginatedOutput'
+        "400":
+          description: Parâmetro inválido
+          schema:
+            $ref: '#/definitions/httperrors.ProblemDetail'
+        "401":
+          description: Não autenticado
+          schema:
+            $ref: '#/definitions/httperrors.ProblemDetail'
+        "500":
+          description: Erro interno
+          schema:
+            $ref: '#/definitions/httperrors.ProblemDetail'
+      security:
+      - BearerAuth: []
+      summary: Listar categorias
+      tags:
+      - categories
+    post:
+      consumes:
+      - application/json
+      description: |-
+        Cria uma nova categoria para o usuário autenticado.
+        Categorias podem ser hierárquicas: informe `parent_id` para criar uma subcategoria.
+        - `parent_id`: UUID da categoria pai (opcional)
+        - `sequence`: ordem de exibição (mínimo 1)
+      parameters:
+      - description: Dados da categoria
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/dtos.CategoryInput'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Categoria criada com sucesso
+          schema:
+            $ref: '#/definitions/dtos.CategoryOutput'
+        "400":
+          description: Dados inválidos
+          schema:
+            $ref: '#/definitions/httperrors.ProblemDetail'
+        "401":
+          description: Não autenticado
+          schema:
+            $ref: '#/definitions/httperrors.ProblemDetail'
+        "409":
+          description: Ciclo detectado na hierarquia
+          schema:
+            $ref: '#/definitions/httperrors.ProblemDetail'
+        "500":
+          description: Erro interno
+          schema:
+            $ref: '#/definitions/httperrors.ProblemDetail'
+      security:
+      - BearerAuth: []
+      summary: Criar categoria
+      tags:
+      - categories
+  /api/v1/categories/{id}:
+    delete:
+      description: Remove uma categoria do usuário autenticado. Esta operação é irreversível.
+      parameters:
+      - description: ID da categoria
+        format: uuid
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "204":
+          description: Categoria removida com sucesso
+        "401":
+          description: Não autenticado
+          schema:
+            $ref: '#/definitions/httperrors.ProblemDetail'
+        "404":
+          description: Categoria não encontrada
+          schema:
+            $ref: '#/definitions/httperrors.ProblemDetail'
+        "500":
+          description: Erro interno
+          schema:
+            $ref: '#/definitions/httperrors.ProblemDetail'
+      security:
+      - BearerAuth: []
+      summary: Remover categoria
+      tags:
+      - categories
+    get:
+      description: Retorna os detalhes de uma categoria específica, incluindo subcategorias
+        (`children`).
+      parameters:
+      - description: ID da categoria
+        format: uuid
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Dados da categoria com filhos
+          schema:
+            $ref: '#/definitions/dtos.CategoryOutput'
+        "401":
+          description: Não autenticado
+          schema:
+            $ref: '#/definitions/httperrors.ProblemDetail'
+        "404":
+          description: Categoria não encontrada
+          schema:
+            $ref: '#/definitions/httperrors.ProblemDetail'
+        "500":
+          description: Erro interno
+          schema:
+            $ref: '#/definitions/httperrors.ProblemDetail'
+      security:
+      - BearerAuth: []
+      summary: Buscar categoria por ID
+      tags:
+      - categories
+    put:
+      consumes:
+      - application/json
+      description: Atualiza os dados de uma categoria existente do usuário autenticado.
+      parameters:
+      - description: ID da categoria
+        format: uuid
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: Dados atualizados da categoria
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/dtos.CategoryInput'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Categoria atualizada
+          schema:
+            $ref: '#/definitions/dtos.CategoryOutput'
+        "400":
+          description: Dados inválidos
+          schema:
+            $ref: '#/definitions/httperrors.ProblemDetail'
+        "401":
+          description: Não autenticado
+          schema:
+            $ref: '#/definitions/httperrors.ProblemDetail'
+        "404":
+          description: Categoria não encontrada
+          schema:
+            $ref: '#/definitions/httperrors.ProblemDetail'
+        "409":
+          description: Ciclo detectado na hierarquia
+          schema:
+            $ref: '#/definitions/httperrors.ProblemDetail'
+        "500":
+          description: Erro interno
+          schema:
+            $ref: '#/definitions/httperrors.ProblemDetail'
+      security:
+      - BearerAuth: []
+      summary: Atualizar categoria
+      tags:
+      - categories
+  /api/v1/invoice-items:
+    post:
+      consumes:
+      - application/json
+      description: |-
+        Registra uma nova compra no cartão de crédito com suporte a parcelamento.
+        Para cada parcela é criado um `InvoiceItem` na fatura correspondente ao mês de vencimento.
+
+        **Campos:**
+        - `card_id`: UUID do cartão
+        - `purchase_date`: data da compra em `YYYY-MM-DD`
+        - `total_amount`: valor total da compra (ex: `"1200.00"`)
+        - `currency`: `BRL` | `USD` | `EUR` (opcional, default `BRL`)
+        - `installment_total`: `1` para à vista, até `48` para parcelado
+      parameters:
+      - description: Dados da compra
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/dtos.PurchaseCreateInput'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Itens de fatura criados (um por parcela)
+          schema:
+            $ref: '#/definitions/dtos.PurchaseCreateOutput'
+        "400":
+          description: Dados inválidos
+          schema:
+            $ref: '#/definitions/httperrors.ProblemDetail'
+        "401":
+          description: Não autenticado
+          schema:
+            $ref: '#/definitions/httperrors.ProblemDetail'
+        "404":
+          description: Cartão ou categoria não encontrados
+          schema:
+            $ref: '#/definitions/httperrors.ProblemDetail'
+        "500":
+          description: Erro interno
+          schema:
+            $ref: '#/definitions/httperrors.ProblemDetail'
+        "503":
+          description: Serviço de cartão indisponível
+          schema:
+            $ref: '#/definitions/httperrors.ProblemDetail'
+      security:
+      - BearerAuth: []
+      summary: Criar compra (invoice item)
+      tags:
+      - invoices
+  /api/v1/invoice-items/{id}:
+    delete:
+      description: |-
+        Remove uma compra e todas as suas parcelas das faturas. Esta operação é irreversível.
+        O parâmetro `category_id` é opcional e usado para atualizar o orçamento após a remoção.
+      parameters:
+      - description: ID do item de fatura
+        format: uuid
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: ID da categoria (para atualizar orçamento)
+        format: uuid
+        in: query
+        name: category_id
+        type: string
+      produces:
+      - application/json
+      responses:
+        "204":
+          description: Compra removida com sucesso
+        "401":
+          description: Não autenticado
+          schema:
+            $ref: '#/definitions/httperrors.ProblemDetail'
+        "404":
+          description: Item não encontrado
+          schema:
+            $ref: '#/definitions/httperrors.ProblemDetail'
+        "500":
+          description: Erro interno
+          schema:
+            $ref: '#/definitions/httperrors.ProblemDetail'
+      security:
+      - BearerAuth: []
+      summary: Remover compra (invoice item)
+      tags:
+      - invoices
+    put:
+      consumes:
+      - application/json
+      description: |-
+        Atualiza os dados de uma compra. A atualização é propagada para todas as parcelas vinculadas.
+        O `id` é o ID de qualquer parcela da compra original.
+      parameters:
+      - description: ID do item de fatura
+        format: uuid
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: Dados atualizados da compra
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/dtos.PurchaseUpdateInput'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Itens atualizados (todas as parcelas)
+          schema:
+            $ref: '#/definitions/dtos.PurchaseUpdateOutput'
+        "400":
+          description: Dados inválidos
+          schema:
+            $ref: '#/definitions/httperrors.ProblemDetail'
+        "401":
+          description: Não autenticado
+          schema:
+            $ref: '#/definitions/httperrors.ProblemDetail'
+        "404":
+          description: Item não encontrado
+          schema:
+            $ref: '#/definitions/httperrors.ProblemDetail'
+        "500":
+          description: Erro interno
+          schema:
+            $ref: '#/definitions/httperrors.ProblemDetail'
+      security:
+      - BearerAuth: []
+      summary: Atualizar compra (invoice item)
+      tags:
+      - invoices
+  /api/v1/invoices:
+    get:
+      description: |-
+        Retorna a lista paginada de faturas filtradas por mês ou por cartão.
+        **Exatamente um** dos parâmetros `month` ou `cardId` deve ser informado.
+
+        - **`?month=YYYY-MM`**: lista todas as faturas do usuário no mês especificado (ex: `?month=2025-01`)
+        - **`?cardId=uuid`**: lista todas as faturas de um cartão específico (ex: `?cardId=abc-123`)
+      parameters:
+      - description: Mês de referência (YYYY-MM). Mutuamente exclusivo com cardId.
+        example: 2025-01
+        in: query
+        name: month
+        type: string
+      - description: ID do cartão (UUID). Mutuamente exclusivo com month.
+        format: uuid
+        in: query
+        name: cardId
+        type: string
+      - default: 20
+        description: 'Itens por página (default: 20, max: 100)'
+        in: query
+        maximum: 100
+        minimum: 1
+        name: limit
+        type: integer
+      - description: Cursor de paginação
+        in: query
+        name: cursor
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Lista paginada de faturas
+          schema:
+            $ref: '#/definitions/dtos.InvoicePaginatedOutput'
+        "400":
+          description: Parâmetros ausentes ou inválidos
+          schema:
+            $ref: '#/definitions/httperrors.ProblemDetail'
+        "401":
+          description: Não autenticado
+          schema:
+            $ref: '#/definitions/httperrors.ProblemDetail'
+        "500":
+          description: Erro interno
+          schema:
+            $ref: '#/definitions/httperrors.ProblemDetail'
+      security:
+      - BearerAuth: []
+      summary: Listar faturas
+      tags:
+      - invoices
+  /api/v1/invoices/{id}:
+    get:
+      description: |-
+        Retorna os detalhes completos de uma fatura, incluindo todos os itens com valores por parcela,
+        rótulo de parcelamento (`installment_label`: ex: `"3/12"` ou `"À vista"`), data de vencimento e total.
+      parameters:
+      - description: ID da fatura
+        format: uuid
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Dados completos da fatura
+          schema:
+            $ref: '#/definitions/dtos.InvoiceOutput'
+        "401":
+          description: Não autenticado
+          schema:
+            $ref: '#/definitions/httperrors.ProblemDetail'
+        "404":
+          description: Fatura não encontrada
+          schema:
+            $ref: '#/definitions/httperrors.ProblemDetail'
+        "500":
+          description: Erro interno
+          schema:
+            $ref: '#/definitions/httperrors.ProblemDetail'
+      security:
+      - BearerAuth: []
+      summary: Buscar fatura por ID
+      tags:
+      - invoices
+  /api/v1/payment-methods:
+    get:
+      description: |-
+        Retorna lista paginada de métodos de pagamento. Endpoint público.
+        Filtragem opcional por `code` via query param (ex: `?code=PIX`).
+      parameters:
+      - default: 20
+        description: 'Itens por página (default: 20, max: 100)'
+        in: query
+        maximum: 100
+        minimum: 1
+        name: limit
+        type: integer
+      - description: Cursor de paginação
+        in: query
+        name: cursor
+        type: string
+      - description: Filtrar pelo código do método
+        example: PIX
+        in: query
+        name: code
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Lista paginada
+          schema:
+            $ref: '#/definitions/dtos.PaymentMethodPaginatedOutput'
+        "400":
+          description: Parâmetro inválido
+          schema:
+            $ref: '#/definitions/httperrors.ProblemDetail'
+        "500":
+          description: Erro interno
+          schema:
+            $ref: '#/definitions/httperrors.ProblemDetail'
+      summary: Listar métodos de pagamento
+      tags:
+      - payment-methods
+    post:
+      consumes:
+      - application/json
+      description: |-
+        Cria um novo método de pagamento. Este endpoint é público (não requer autenticação).
+        O campo `code` deve ser único e imutável após criação (ex: `PIX`, `BOLETO`, `CREDIT_CARD`).
+      parameters:
+      - description: Dados do método de pagamento
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/dtos.PaymentMethodInput'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Método de pagamento criado
+          schema:
+            $ref: '#/definitions/dtos.PaymentMethodOutput'
+        "400":
+          description: Dados inválidos
+          schema:
+            $ref: '#/definitions/httperrors.ProblemDetail'
+        "409":
+          description: Código já existente
+          schema:
+            $ref: '#/definitions/httperrors.ProblemDetail'
+        "500":
+          description: Erro interno
+          schema:
+            $ref: '#/definitions/httperrors.ProblemDetail'
+      summary: Criar método de pagamento
+      tags:
+      - payment-methods
+  /api/v1/payment-methods/{id}:
+    delete:
+      description: Remove um método de pagamento. Endpoint público.
+      parameters:
+      - description: ID do método de pagamento
+        format: uuid
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "204":
+          description: Removido com sucesso
+        "404":
+          description: Não encontrado
+          schema:
+            $ref: '#/definitions/httperrors.ProblemDetail'
+        "500":
+          description: Erro interno
+          schema:
+            $ref: '#/definitions/httperrors.ProblemDetail'
+      summary: Remover método de pagamento
+      tags:
+      - payment-methods
+    get:
+      description: Retorna os detalhes de um método de pagamento pelo UUID. Endpoint
+        público.
+      parameters:
+      - description: ID do método de pagamento
+        format: uuid
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Dados do método de pagamento
+          schema:
+            $ref: '#/definitions/dtos.PaymentMethodOutput'
+        "404":
+          description: Não encontrado
+          schema:
+            $ref: '#/definitions/httperrors.ProblemDetail'
+        "500":
+          description: Erro interno
+          schema:
+            $ref: '#/definitions/httperrors.ProblemDetail'
+      summary: Buscar método de pagamento por ID
+      tags:
+      - payment-methods
+    put:
+      consumes:
+      - application/json
+      description: Atualiza nome e descrição de um método de pagamento. O campo `code`
+        não pode ser alterado. Endpoint público.
+      parameters:
+      - description: ID do método de pagamento
+        format: uuid
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: Dados atualizados
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/dtos.PaymentMethodUpdateInput'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Método atualizado
+          schema:
+            $ref: '#/definitions/dtos.PaymentMethodOutput'
+        "400":
+          description: Dados inválidos
+          schema:
+            $ref: '#/definitions/httperrors.ProblemDetail'
+        "404":
+          description: Não encontrado
+          schema:
+            $ref: '#/definitions/httperrors.ProblemDetail'
+        "500":
+          description: Erro interno
+          schema:
+            $ref: '#/definitions/httperrors.ProblemDetail'
+      summary: Atualizar método de pagamento
+      tags:
+      - payment-methods
+  /api/v1/token:
+    post:
+      consumes:
+      - application/x-www-form-urlencoded
+      description: |-
+        Autentica o usuário com email e senha e retorna um JWT Bearer Token.
+        O token gerado deve ser enviado no header `Authorization: Bearer {token}` nas requisições protegidas.
+      parameters:
+      - description: Email do usuário
+        example: usuario@email.com
+        in: formData
+        name: email
+        required: true
+        type: string
+      - description: Senha do usuário
+        example: senha123
+        in: formData
+        name: password
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Token gerado com sucesso
+          schema:
+            $ref: '#/definitions/dtos.AuthOutput'
+        "400":
+          description: Requisição inválida
+          schema:
+            $ref: '#/definitions/httperrors.ProblemDetail'
+        "401":
+          description: Credenciais inválidas
+          schema:
+            $ref: '#/definitions/httperrors.ProblemDetail'
+        "500":
+          description: Erro interno
+          schema:
+            $ref: '#/definitions/httperrors.ProblemDetail'
+      summary: Gerar token de autenticação
+      tags:
+      - auth
+  /api/v1/transactions:
+    get:
+      description: |-
+        Retorna a lista paginada de transações mensais consolidadas do usuário autenticado.
+        Cada item representa um mês com seus totais e itens individuais.
+      parameters:
+      - default: 20
+        description: 'Itens por página (default: 20, max: 100)'
+        in: query
+        maximum: 100
+        minimum: 1
+        name: limit
+        type: integer
+      - description: Cursor de paginação
+        in: query
+        name: cursor
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Lista paginada de transações mensais
+          schema:
+            $ref: '#/definitions/dtos.MonthlyTransactionPaginatedOutput'
+        "400":
+          description: Parâmetro inválido
+          schema:
+            $ref: '#/definitions/httperrors.ProblemDetail'
+        "401":
+          description: Não autenticado
+          schema:
+            $ref: '#/definitions/httperrors.ProblemDetail'
+        "500":
+          description: Erro interno
+          schema:
+            $ref: '#/definitions/httperrors.ProblemDetail'
+      security:
+      - BearerAuth: []
+      summary: Listar transações mensais
+      tags:
+      - transactions
+    post:
+      consumes:
+      - application/json
+      description: |-
+        Cria uma nova transação mensal (ou adiciona um item a transação existente do mês).
+
+        **Enums:**
+        - `direction`: `INCOME` | `EXPENSE`
+        - `type`: `PIX` | `BOLETO` | `TRANSFER` | `CREDIT_CARD`
+
+        **Formato de campos:**
+        - `reference_month`: `YYYY-MM` (ex: `2025-01`)
+        - `amount`: string decimal (ex: `"1234.56"`)
+      parameters:
+      - description: Dados da transação
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/dtos.RegisterTransactionInput'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Transação registrada
+          schema:
+            $ref: '#/definitions/dtos.MonthlyTransactionOutput'
+        "400":
+          description: Dados inválidos
+          schema:
+            $ref: '#/definitions/httperrors.ProblemDetail'
+        "401":
+          description: Não autenticado
+          schema:
+            $ref: '#/definitions/httperrors.ProblemDetail'
+        "404":
+          description: Categoria não encontrada
+          schema:
+            $ref: '#/definitions/httperrors.ProblemDetail'
+        "500":
+          description: Erro interno
+          schema:
+            $ref: '#/definitions/httperrors.ProblemDetail'
+      security:
+      - BearerAuth: []
+      summary: Registrar transação
+      tags:
+      - transactions
+  /api/v1/transactions/{id}:
+    get:
+      description: Retorna os detalhes de uma transação mensal específica, incluindo
+        todos os itens e totais.
+      parameters:
+      - description: ID da transação mensal
+        format: uuid
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Dados da transação mensal
+          schema:
+            $ref: '#/definitions/dtos.MonthlyTransactionOutput'
+        "400":
+          description: ID inválido
+          schema:
+            $ref: '#/definitions/httperrors.ProblemDetail'
+        "401":
+          description: Não autenticado
+          schema:
+            $ref: '#/definitions/httperrors.ProblemDetail'
+        "404":
+          description: Transação não encontrada
+          schema:
+            $ref: '#/definitions/httperrors.ProblemDetail'
+        "500":
+          description: Erro interno
+          schema:
+            $ref: '#/definitions/httperrors.ProblemDetail'
+      security:
+      - BearerAuth: []
+      summary: Buscar transação mensal por ID
+      tags:
+      - transactions
+  /api/v1/transactions/{transactionId}/items/{itemId}:
+    delete:
+      description: Remove um item individual de uma transação mensal. Se for o último
+        item, a transação mensal também é removida.
+      parameters:
+      - description: ID da transação mensal
+        format: uuid
+        in: path
+        name: transactionId
+        required: true
+        type: string
+      - description: ID do item de transação
+        format: uuid
+        in: path
+        name: itemId
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "204":
+          description: Item removido com sucesso
+        "400":
+          description: IDs inválidos
+          schema:
+            $ref: '#/definitions/httperrors.ProblemDetail'
+        "401":
+          description: Não autenticado
+          schema:
+            $ref: '#/definitions/httperrors.ProblemDetail'
+        "404":
+          description: Item não encontrado
+          schema:
+            $ref: '#/definitions/httperrors.ProblemDetail'
+        "500":
+          description: Erro interno
+          schema:
+            $ref: '#/definitions/httperrors.ProblemDetail'
+      security:
+      - BearerAuth: []
+      summary: Remover item de transação
+      tags:
+      - transactions
+    put:
+      consumes:
+      - application/json
+      description: |-
+        Atualiza os dados de um item individual dentro de uma transação mensal.
+        O `transactionId` é o ID do consolidado mensal; o `itemId` é o item específico.
+
+        **Enums:**
+        - `direction`: `INCOME` | `EXPENSE`
+        - `type`: `PIX` | `BOLETO` | `TRANSFER` | `CREDIT_CARD`
+      parameters:
+      - description: ID da transação mensal
+        format: uuid
+        in: path
+        name: transactionId
+        required: true
+        type: string
+      - description: ID do item de transação
+        format: uuid
+        in: path
+        name: itemId
+        required: true
+        type: string
+      - description: Dados atualizados do item
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/dtos.UpdateTransactionItemInput'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Item atualizado
+          schema:
+            $ref: '#/definitions/dtos.TransactionItemOutput'
+        "400":
+          description: Dados inválidos
+          schema:
+            $ref: '#/definitions/httperrors.ProblemDetail'
+        "401":
+          description: Não autenticado
+          schema:
+            $ref: '#/definitions/httperrors.ProblemDetail'
+        "404":
+          description: Item não encontrado
+          schema:
+            $ref: '#/definitions/httperrors.ProblemDetail'
+        "500":
+          description: Erro interno
+          schema:
+            $ref: '#/definitions/httperrors.ProblemDetail'
+      security:
+      - BearerAuth: []
+      summary: Atualizar item de transação
+      tags:
+      - transactions
+  /api/v1/users:
+    post:
+      consumes:
+      - application/json
+      description: Cria um novo usuário na plataforma. Email deve ser único.
+      parameters:
+      - description: Dados do usuário
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/dtos.CreateUserInput'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Usuário criado com sucesso
+          schema:
+            $ref: '#/definitions/dtos.CreateUserOutput'
+        "400":
+          description: Dados inválidos ou mal-formados
+          schema:
+            $ref: '#/definitions/httperrors.ProblemDetail'
+        "409":
+          description: Email já cadastrado
+          schema:
+            $ref: '#/definitions/httperrors.ProblemDetail'
+        "500":
+          description: Erro interno
+          schema:
+            $ref: '#/definitions/httperrors.ProblemDetail'
+      summary: Criar usuário
+      tags:
+      - users
+securityDefinitions:
+  BearerAuth:
+    description: 'Token JWT no formato: `Bearer {token}`'
+    in: header
+    name: Authorization
+    type: apiKey
+swagger: "2.0"

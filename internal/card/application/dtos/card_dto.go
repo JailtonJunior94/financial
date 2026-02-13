@@ -8,20 +8,33 @@ import (
 
 type (
 	CardInput struct {
-		Name              string `json:"name"`
-		DueDay            int    `json:"due_day"`
-		ClosingOffsetDays int    `json:"closing_offset_days"` // Opcional, padrão: 7
+		Name              string `json:"name"                example:"Nubank Platinum"`
+		DueDay            int    `json:"due_day"             example:"10" minimum:"1" maximum:"31"`
+		ClosingOffsetDays int    `json:"closing_offset_days" example:"7"  minimum:"1" maximum:"31"` // Opcional, padrão: 7
 	}
 
 	CardOutput struct {
-		ID                string    `json:"id"`
-		Name              string    `json:"name"`
-		DueDay            int       `json:"due_day"`
-		ClosingOffsetDays int       `json:"closing_offset_days"` // Quantos dias antes do vencimento fecha (padrão brasileiro: 7)
-		CreatedAt         time.Time `json:"created_at"`
-		UpdatedAt         time.Time `json:"updated_at,omitempty"`
+		ID                string    `json:"id"                  example:"550e8400-e29b-41d4-a716-446655440000"`
+		Name              string    `json:"name"                example:"Nubank Platinum"`
+		DueDay            int       `json:"due_day"             example:"10"`
+		ClosingOffsetDays int       `json:"closing_offset_days" example:"7"` // Quantos dias antes do vencimento fecha (padrão brasileiro: 7)
+		CreatedAt         time.Time `json:"created_at"          example:"2025-01-15T10:30:00Z"`
+		UpdatedAt         time.Time `json:"updated_at,omitempty" example:"2025-01-20T08:00:00Z"`
 	}
 )
+
+// CardPaginationMeta contém os metadados de paginação para cards.
+type CardPaginationMeta struct {
+	Limit      int     `json:"limit"                  example:"20"`
+	HasNext    bool    `json:"has_next"               example:"true"`
+	NextCursor *string `json:"next_cursor,omitempty"  example:"eyJmIjp7Im5hbWUiOiJOdWJhbmsifX0"`
+}
+
+// CardPaginatedOutput é a resposta paginada de cartões (usada na documentação Swagger).
+type CardPaginatedOutput struct {
+	Data       []CardOutput       `json:"data"`
+	Pagination CardPaginationMeta `json:"pagination"`
+}
 
 // Validate valida os campos do CardInput.
 func (c *CardInput) Validate() validation.ValidationErrors {

@@ -3,13 +3,13 @@ package dtos
 import "time"
 
 type AuthInput struct {
-	Email    string `json:"email" form:"email"`
-	Password string `json:"password" form:"password"`
+	Email    string `json:"email"    form:"email"    example:"joao@email.com"`
+	Password string `json:"password" form:"password" example:"senhaSegura123"`
 }
 
 type AuthOutput struct {
-	Token     string    `json:"token"`
-	ExpiresAt time.Time `json:"expires_at"`
+	Token     string    `json:"token"      example:"eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."`
+	ExpiresAt time.Time `json:"expires_at" example:"2025-01-16T10:30:00Z"`
 }
 
 func NewAuthOutput(token string, authExpirationAt int) *AuthOutput {

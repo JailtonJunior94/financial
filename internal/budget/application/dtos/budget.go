@@ -6,11 +6,24 @@ import (
 	"github.com/jailtonjunior94/financial/pkg/validation"
 )
 
+// BudgetPaginationMeta contém os metadados de paginação para orçamentos.
+type BudgetPaginationMeta struct {
+	Limit      int     `json:"limit"                  example:"20"`
+	HasNext    bool    `json:"has_next"               example:"false"`
+	NextCursor *string `json:"next_cursor,omitempty"  example:"eyJmIjp7InJlZmVyZW5jZV9tb250aCI6IjIwMjUtMDEifX0"`
+}
+
+// BudgetPaginatedOutput é a resposta paginada de orçamentos (usada na documentação Swagger).
+type BudgetPaginatedOutput struct {
+	Data       []BudgetOutput       `json:"data"`
+	Pagination BudgetPaginationMeta `json:"pagination"`
+}
+
 // BudgetCreateInput representa o input para criar um orçamento.
 type BudgetCreateInput struct {
-	ReferenceMonth string            `json:"reference_month"` // YYYY-MM format
-	TotalAmount    string            `json:"total_amount"`    // String decimal (e.g., "5000.00")
-	Currency       string            `json:"currency"`        // ISO 4217 (e.g., "BRL")
+	ReferenceMonth string            `json:"reference_month" example:"2025-01"`                        // YYYY-MM format
+	TotalAmount    string            `json:"total_amount"    example:"5000.00"`                         // String decimal (e.g., "5000.00")
+	Currency       string            `json:"currency"        example:"BRL" enums:"BRL,USD,EUR"`         // ISO 4217 (e.g., "BRL")
 	Items          []BudgetItemInput `json:"items"`
 }
 
@@ -56,7 +69,7 @@ func (b *BudgetCreateInput) Validate() validation.ValidationErrors {
 
 // BudgetUpdateInput representa o input para atualizar um orçamento.
 type BudgetUpdateInput struct {
-	TotalAmount string            `json:"total_amount"` // String decimal
+	TotalAmount string            `json:"total_amount" example:"6000.00"` // String decimal
 	Items       []BudgetItemInput `json:"items"`
 }
 
@@ -89,8 +102,8 @@ func (b *BudgetUpdateInput) Validate() validation.ValidationErrors {
 
 // BudgetItemInput representa um item de orçamento no input.
 type BudgetItemInput struct {
-	CategoryID     string `json:"category_id"`
-	PercentageGoal string `json:"percentage_goal"` // String decimal (e.g., "25.50")
+	CategoryID     string `json:"category_id"     example:"550e8400-e29b-41d4-a716-446655440000"`
+	PercentageGoal string `json:"percentage_goal" example:"25.50"` // String decimal (e.g., "25.50")
 }
 
 // Validate valida os campos do BudgetItemInput.
@@ -123,28 +136,28 @@ type UpdateSpentAmountInput struct {
 
 // BudgetOutput representa a resposta de um orçamento.
 type BudgetOutput struct {
-	ID             string             `json:"id"`
-	UserID         string             `json:"user_id"`
-	ReferenceMonth string             `json:"reference_month"` // YYYY-MM
-	TotalAmount    string             `json:"total_amount"`
-	SpentAmount    string             `json:"spent_amount"`
-	PercentageUsed string             `json:"percentage_used"`
-	Currency       string             `json:"currency"`
+	ID             string             `json:"id"              example:"550e8400-e29b-41d4-a716-446655440000"`
+	UserID         string             `json:"user_id"         example:"660e8400-e29b-41d4-a716-446655440001"`
+	ReferenceMonth string             `json:"reference_month" example:"2025-01"` // YYYY-MM
+	TotalAmount    string             `json:"total_amount"    example:"5000.00"`
+	SpentAmount    string             `json:"spent_amount"    example:"2350.00"`
+	PercentageUsed string             `json:"percentage_used" example:"47.00"`
+	Currency       string             `json:"currency"        example:"BRL"      enums:"BRL,USD,EUR"`
 	Items          []BudgetItemOutput `json:"items,omitempty"`
-	CreatedAt      time.Time          `json:"created_at"`
-	UpdatedAt      time.Time          `json:"updated_at,omitempty"`
+	CreatedAt      time.Time          `json:"created_at"      example:"2025-01-01T00:00:00Z"`
+	UpdatedAt      time.Time          `json:"updated_at,omitempty" example:"2025-01-20T08:00:00Z"`
 }
 
 // BudgetItemOutput representa a resposta de um item de orçamento.
 type BudgetItemOutput struct {
-	ID              string    `json:"id"`
-	BudgetID        string    `json:"budget_id"`
-	CategoryID      string    `json:"category_id"`
-	PercentageGoal  string    `json:"percentage_goal"`
-	PlannedAmount   string    `json:"planned_amount"`
-	SpentAmount     string    `json:"spent_amount"`
-	RemainingAmount string    `json:"remaining_amount"`
-	PercentageSpent string    `json:"percentage_spent"`
-	CreatedAt       time.Time `json:"created_at"`
-	UpdatedAt       time.Time `json:"updated_at,omitempty"`
+	ID              string    `json:"id"               example:"770e8400-e29b-41d4-a716-446655440002"`
+	BudgetID        string    `json:"budget_id"        example:"550e8400-e29b-41d4-a716-446655440000"`
+	CategoryID      string    `json:"category_id"      example:"880e8400-e29b-41d4-a716-446655440003"`
+	PercentageGoal  string    `json:"percentage_goal"  example:"30.00"`
+	PlannedAmount   string    `json:"planned_amount"   example:"1500.00"`
+	SpentAmount     string    `json:"spent_amount"     example:"700.00"`
+	RemainingAmount string    `json:"remaining_amount" example:"800.00"`
+	PercentageSpent string    `json:"percentage_spent" example:"46.67"`
+	CreatedAt       time.Time `json:"created_at"       example:"2025-01-01T00:00:00Z"`
+	UpdatedAt       time.Time `json:"updated_at,omitempty" example:"2025-01-20T08:00:00Z"`
 }

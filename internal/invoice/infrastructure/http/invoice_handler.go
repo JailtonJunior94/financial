@@ -55,6 +55,30 @@ func NewInvoiceHandler(
 	}
 }
 
+// CreatePurchase godoc
+//
+//	@Summary		Criar compra (invoice item)
+//	@Description	Registra uma nova compra no cartão de crédito com suporte a parcelamento.
+//	@Description	Para cada parcela é criado um `InvoiceItem` na fatura correspondente ao mês de vencimento.
+//	@Description
+//	@Description	**Campos:**
+//	@Description	- `card_id`: UUID do cartão
+//	@Description	- `purchase_date`: data da compra em `YYYY-MM-DD`
+//	@Description	- `total_amount`: valor total da compra (ex: `"1200.00"`)
+//	@Description	- `currency`: `BRL` | `USD` | `EUR` (opcional, default `BRL`)
+//	@Description	- `installment_total`: `1` para à vista, até `48` para parcelado
+//	@Tags			invoices
+//	@Accept			json
+//	@Produce		json
+//	@Security		BearerAuth
+//	@Param			request	body		dtos.PurchaseCreateInput	true	"Dados da compra"
+//	@Success		201		{object}	dtos.PurchaseCreateOutput	"Itens de fatura criados (um por parcela)"
+//	@Failure		400		{object}	httperrors.ProblemDetail	"Dados inválidos"
+//	@Failure		401		{object}	httperrors.ProblemDetail	"Não autenticado"
+//	@Failure		404		{object}	httperrors.ProblemDetail	"Cartão ou categoria não encontrados"
+//	@Failure		503		{object}	httperrors.ProblemDetail	"Serviço de cartão indisponível"
+//	@Failure		500		{object}	httperrors.ProblemDetail	"Erro interno"
+//	@Router			/api/v1/invoice-items [post]
 // CreatePurchase creates a new purchase with installments.
 func (h *InvoiceHandler) CreatePurchase(w http.ResponseWriter, r *http.Request) {
 	ctx, span := h.o11y.Tracer().Start(r.Context(), "invoice_handler.create_purchase")
@@ -87,6 +111,23 @@ func (h *InvoiceHandler) CreatePurchase(w http.ResponseWriter, r *http.Request) 
 	responses.JSON(w, http.StatusCreated, output)
 }
 
+// UpdatePurchase godoc
+//
+//	@Summary		Atualizar compra (invoice item)
+//	@Description	Atualiza os dados de uma compra. A atualização é propagada para todas as parcelas vinculadas.
+//	@Description	O `id` é o ID de qualquer parcela da compra original.
+//	@Tags			invoices
+//	@Accept			json
+//	@Produce		json
+//	@Security		BearerAuth
+//	@Param			id		path		string						true	"ID do item de fatura"	format(uuid)
+//	@Param			request	body		dtos.PurchaseUpdateInput	true	"Dados atualizados da compra"
+//	@Success		200		{object}	dtos.PurchaseUpdateOutput	"Itens atualizados (todas as parcelas)"
+//	@Failure		400		{object}	httperrors.ProblemDetail	"Dados inválidos"
+//	@Failure		401		{object}	httperrors.ProblemDetail	"Não autenticado"
+//	@Failure		404		{object}	httperrors.ProblemDetail	"Item não encontrado"
+//	@Failure		500		{object}	httperrors.ProblemDetail	"Erro interno"
+//	@Router			/api/v1/invoice-items/{id} [put]
 // UpdatePurchase updates all installments of a purchase.
 func (h *InvoiceHandler) UpdatePurchase(w http.ResponseWriter, r *http.Request) {
 	ctx, span := h.o11y.Tracer().Start(r.Context(), "invoice_handler.update_purchase")
@@ -120,6 +161,21 @@ func (h *InvoiceHandler) UpdatePurchase(w http.ResponseWriter, r *http.Request) 
 	responses.JSON(w, http.StatusOK, output)
 }
 
+// DeletePurchase godoc
+//
+//	@Summary		Remover compra (invoice item)
+//	@Description	Remove uma compra e todas as suas parcelas das faturas. Esta operação é irreversível.
+//	@Description	O parâmetro `category_id` é opcional e usado para atualizar o orçamento após a remoção.
+//	@Tags			invoices
+//	@Produce		json
+//	@Security		BearerAuth
+//	@Param			id			path	string	true	"ID do item de fatura"		format(uuid)
+//	@Param			category_id	query	string	false	"ID da categoria (para atualizar orçamento)"	format(uuid)
+//	@Success		204	"Compra removida com sucesso"
+//	@Failure		401	{object}	httperrors.ProblemDetail	"Não autenticado"
+//	@Failure		404	{object}	httperrors.ProblemDetail	"Item não encontrado"
+//	@Failure		500	{object}	httperrors.ProblemDetail	"Erro interno"
+//	@Router			/api/v1/invoice-items/{id} [delete]
 // DeletePurchase deletes all installments of a purchase.
 func (h *InvoiceHandler) DeletePurchase(w http.ResponseWriter, r *http.Request) {
 	ctx, span := h.o11y.Tracer().Start(r.Context(), "invoice_handler.delete_purchase")
@@ -143,6 +199,20 @@ func (h *InvoiceHandler) DeletePurchase(w http.ResponseWriter, r *http.Request) 
 	responses.JSON(w, http.StatusNoContent, nil)
 }
 
+// GetInvoice godoc
+//
+//	@Summary		Buscar fatura por ID
+//	@Description	Retorna os detalhes completos de uma fatura, incluindo todos os itens com valores por parcela,
+//	@Description	rótulo de parcelamento (`installment_label`: ex: `"3/12"` ou `"À vista"`), data de vencimento e total.
+//	@Tags			invoices
+//	@Produce		json
+//	@Security		BearerAuth
+//	@Param			id	path		string					true	"ID da fatura"	format(uuid)
+//	@Success		200	{object}	dtos.InvoiceOutput		"Dados completos da fatura"
+//	@Failure		401	{object}	httperrors.ProblemDetail	"Não autenticado"
+//	@Failure		404	{object}	httperrors.ProblemDetail	"Fatura não encontrada"
+//	@Failure		500	{object}	httperrors.ProblemDetail	"Erro interno"
+//	@Router			/api/v1/invoices/{id} [get]
 // GetInvoice retrieves a single invoice with its items.
 func (h *InvoiceHandler) GetInvoice(w http.ResponseWriter, r *http.Request) {
 	ctx, span := h.o11y.Tracer().Start(r.Context(), "invoice_handler.get_invoice")
@@ -239,6 +309,26 @@ func (h *InvoiceHandler) ListInvoicesByCard(w http.ResponseWriter, r *http.Reque
 	responses.JSON(w, http.StatusOK, response)
 }
 
+// ListInvoices godoc
+//
+//	@Summary		Listar faturas
+//	@Description	Retorna a lista paginada de faturas filtradas por mês ou por cartão.
+//	@Description	**Exatamente um** dos parâmetros `month` ou `cardId` deve ser informado.
+//	@Description
+//	@Description	- **`?month=YYYY-MM`**: lista todas as faturas do usuário no mês especificado (ex: `?month=2025-01`)
+//	@Description	- **`?cardId=uuid`**: lista todas as faturas de um cartão específico (ex: `?cardId=abc-123`)
+//	@Tags			invoices
+//	@Produce		json
+//	@Security		BearerAuth
+//	@Param			month	query		string	false	"Mês de referência (YYYY-MM). Mutuamente exclusivo com cardId."	example(2025-01)
+//	@Param			cardId	query		string	false	"ID do cartão (UUID). Mutuamente exclusivo com month."			format(uuid)
+//	@Param			limit	query		integer	false	"Itens por página (default: 20, max: 100)"						minimum(1)	maximum(100)	default(20)
+//	@Param			cursor	query		string	false	"Cursor de paginação"
+//	@Success		200		{object}	dtos.InvoicePaginatedOutput	"Lista paginada de faturas"
+//	@Failure		400		{object}	httperrors.ProblemDetail							"Parâmetros ausentes ou inválidos"
+//	@Failure		401		{object}	httperrors.ProblemDetail							"Não autenticado"
+//	@Failure		500		{object}	httperrors.ProblemDetail							"Erro interno"
+//	@Router			/api/v1/invoices [get]
 // ListInvoices unifica listagem por month e por cardId via query params (Change 6).
 func (h *InvoiceHandler) ListInvoices(w http.ResponseWriter, r *http.Request) {
 	ctx, span := h.o11y.Tracer().Start(r.Context(), "invoice_handler.list_invoices")

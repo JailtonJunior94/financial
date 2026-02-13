@@ -1,0 +1,2928 @@
+{
+    "swagger": "2.0",
+    "info": {
+        "description": "API para gestão financeira pessoal com suporte a cartões de crédito, transações,\norçamentos mensais, categorias e faturas com parcelamento.\n\n## Valores Monetários\nTodos os valores monetários são representados como **strings decimais** (ex: `\"1234.56\"`)\npara preservar precisão e evitar erros de ponto flutuante.\n\n## Paginação\nEndpoints de listagem usam **cursor-based pagination**. Parâmetros:\n- `limit` (int, default: 20, max: 100)\n- `cursor` (string, opcional): valor de `pagination.next_cursor` da resposta anterior\n\n## Autenticação\nEndpoints protegidos requerem o header `Authorization: Bearer {token}`.\nObtenha o token em `POST /api/v1/token`.",
+        "title": "Financial API",
+        "contact": {
+            "name": "Jailton Junior",
+            "url": "https://github.com/jailtonjunior94"
+        },
+        "license": {
+            "name": "MIT"
+        },
+        "version": "1.0.0"
+    },
+    "host": "localhost:8080",
+    "basePath": "/",
+    "paths": {
+        "/api/v1/budgets": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Retorna a lista paginada de orçamentos do usuário autenticado (cursor-based pagination).",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "budgets"
+                ],
+                "summary": "Listar orçamentos mensais",
+                "parameters": [
+                    {
+                        "maximum": 100,
+                        "minimum": 1,
+                        "type": "integer",
+                        "default": 20,
+                        "description": "Itens por página (default: 20, max: 100)",
+                        "name": "limit",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Cursor de paginação",
+                        "name": "cursor",
+                        "in": "query"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Lista paginada de orçamentos",
+                        "schema": {
+                            "$ref": "#/definitions/dtos.BudgetPaginatedOutput"
+                        }
+                    },
+                    "400": {
+                        "description": "Parâmetro inválido",
+                        "schema": {
+                            "$ref": "#/definitions/httperrors.ProblemDetail"
+                        }
+                    },
+                    "401": {
+                        "description": "Não autenticado",
+                        "schema": {
+                            "$ref": "#/definitions/httperrors.ProblemDetail"
+                        }
+                    },
+                    "500": {
+                        "description": "Erro interno",
+                        "schema": {
+                            "$ref": "#/definitions/httperrors.ProblemDetail"
+                        }
+                    }
+                }
+            },
+            "post": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Cria um novo orçamento para o mês de referência do usuário autenticado.\nApenas um orçamento por mês (`reference_month`) é permitido por usuário.\n\n**Campos:**\n- `reference_month`: `YYYY-MM` (ex: `2025-01`)\n- `total_amount`: valor total planejado (ex: `\"5000.00\"`)\n- `currency`: `BRL` | `USD` | `EUR` (opcional, default: `BRL`)\n- `items`: ao menos um item com `category_id` e `percentage_goal` (ex: `\"25.50\"`)",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "budgets"
+                ],
+                "summary": "Criar orçamento mensal",
+                "parameters": [
+                    {
+                        "description": "Dados do orçamento",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/dtos.BudgetCreateInput"
+                        }
+                    }
+                ],
+                "responses": {
+                    "201": {
+                        "description": "Orçamento criado",
+                        "schema": {
+                            "$ref": "#/definitions/dtos.BudgetOutput"
+                        }
+                    },
+                    "400": {
+                        "description": "Dados inválidos",
+                        "schema": {
+                            "$ref": "#/definitions/httperrors.ProblemDetail"
+                        }
+                    },
+                    "401": {
+                        "description": "Não autenticado",
+                        "schema": {
+                            "$ref": "#/definitions/httperrors.ProblemDetail"
+                        }
+                    },
+                    "409": {
+                        "description": "Orçamento já existe para este mês",
+                        "schema": {
+                            "$ref": "#/definitions/httperrors.ProblemDetail"
+                        }
+                    },
+                    "500": {
+                        "description": "Erro interno",
+                        "schema": {
+                            "$ref": "#/definitions/httperrors.ProblemDetail"
+                        }
+                    }
+                }
+            }
+        },
+        "/api/v1/budgets/{id}": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Retorna os detalhes de um orçamento mensal específico, incluindo itens com valores planejados, gastos e percentuais.",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "budgets"
+                ],
+                "summary": "Buscar orçamento por ID",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "format": "uuid",
+                        "description": "ID do orçamento",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Dados do orçamento",
+                        "schema": {
+                            "$ref": "#/definitions/dtos.BudgetOutput"
+                        }
+                    },
+                    "400": {
+                        "description": "ID inválido",
+                        "schema": {
+                            "$ref": "#/definitions/httperrors.ProblemDetail"
+                        }
+                    },
+                    "401": {
+                        "description": "Não autenticado",
+                        "schema": {
+                            "$ref": "#/definitions/httperrors.ProblemDetail"
+                        }
+                    },
+                    "404": {
+                        "description": "Orçamento não encontrado",
+                        "schema": {
+                            "$ref": "#/definitions/httperrors.ProblemDetail"
+                        }
+                    },
+                    "500": {
+                        "description": "Erro interno",
+                        "schema": {
+                            "$ref": "#/definitions/httperrors.ProblemDetail"
+                        }
+                    }
+                }
+            },
+            "put": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Atualiza o valor total e os itens de um orçamento existente.\nOs itens existentes são substituídos pelos novos itens enviados.",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "budgets"
+                ],
+                "summary": "Atualizar orçamento mensal",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "format": "uuid",
+                        "description": "ID do orçamento",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "Dados atualizados",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/dtos.BudgetUpdateInput"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Orçamento atualizado",
+                        "schema": {
+                            "$ref": "#/definitions/dtos.BudgetOutput"
+                        }
+                    },
+                    "400": {
+                        "description": "Dados inválidos",
+                        "schema": {
+                            "$ref": "#/definitions/httperrors.ProblemDetail"
+                        }
+                    },
+                    "401": {
+                        "description": "Não autenticado",
+                        "schema": {
+                            "$ref": "#/definitions/httperrors.ProblemDetail"
+                        }
+                    },
+                    "404": {
+                        "description": "Orçamento não encontrado",
+                        "schema": {
+                            "$ref": "#/definitions/httperrors.ProblemDetail"
+                        }
+                    },
+                    "500": {
+                        "description": "Erro interno",
+                        "schema": {
+                            "$ref": "#/definitions/httperrors.ProblemDetail"
+                        }
+                    }
+                }
+            },
+            "delete": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Remove um orçamento mensal e todos os seus itens. Esta operação é irreversível.",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "budgets"
+                ],
+                "summary": "Remover orçamento mensal",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "format": "uuid",
+                        "description": "ID do orçamento",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "204": {
+                        "description": "Orçamento removido com sucesso"
+                    },
+                    "400": {
+                        "description": "ID inválido",
+                        "schema": {
+                            "$ref": "#/definitions/httperrors.ProblemDetail"
+                        }
+                    },
+                    "401": {
+                        "description": "Não autenticado",
+                        "schema": {
+                            "$ref": "#/definitions/httperrors.ProblemDetail"
+                        }
+                    },
+                    "404": {
+                        "description": "Orçamento não encontrado",
+                        "schema": {
+                            "$ref": "#/definitions/httperrors.ProblemDetail"
+                        }
+                    },
+                    "500": {
+                        "description": "Erro interno",
+                        "schema": {
+                            "$ref": "#/definitions/httperrors.ProblemDetail"
+                        }
+                    }
+                }
+            }
+        },
+        "/api/v1/cards": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Retorna a lista paginada de cartões do usuário autenticado (cursor-based pagination).",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "cards"
+                ],
+                "summary": "Listar cartões",
+                "parameters": [
+                    {
+                        "maximum": 100,
+                        "minimum": 1,
+                        "type": "integer",
+                        "default": 20,
+                        "description": "Itens por página (default: 20, max: 100)",
+                        "name": "limit",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Cursor de paginação (retornado em pagination.next_cursor)",
+                        "name": "cursor",
+                        "in": "query"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Lista paginada de cartões",
+                        "schema": {
+                            "$ref": "#/definitions/dtos.CardPaginatedOutput"
+                        }
+                    },
+                    "400": {
+                        "description": "Parâmetro inválido",
+                        "schema": {
+                            "$ref": "#/definitions/httperrors.ProblemDetail"
+                        }
+                    },
+                    "401": {
+                        "description": "Não autenticado",
+                        "schema": {
+                            "$ref": "#/definitions/httperrors.ProblemDetail"
+                        }
+                    },
+                    "500": {
+                        "description": "Erro interno",
+                        "schema": {
+                            "$ref": "#/definitions/httperrors.ProblemDetail"
+                        }
+                    }
+                }
+            },
+            "post": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Cria um novo cartão de crédito para o usuário autenticado.\nO campo `closing_offset_days` é opcional (default: 7 dias antes do vencimento).\n- `due_day`: dia do mês em que a fatura vence (1–31)\n- `closing_offset_days`: quantos dias antes do vencimento a fatura fecha (1–31)",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "cards"
+                ],
+                "summary": "Criar cartão",
+                "parameters": [
+                    {
+                        "description": "Dados do cartão",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/dtos.CardInput"
+                        }
+                    }
+                ],
+                "responses": {
+                    "201": {
+                        "description": "Cartão criado com sucesso",
+                        "schema": {
+                            "$ref": "#/definitions/dtos.CardOutput"
+                        }
+                    },
+                    "400": {
+                        "description": "Dados inválidos",
+                        "schema": {
+                            "$ref": "#/definitions/httperrors.ProblemDetail"
+                        }
+                    },
+                    "401": {
+                        "description": "Não autenticado",
+                        "schema": {
+                            "$ref": "#/definitions/httperrors.ProblemDetail"
+                        }
+                    },
+                    "500": {
+                        "description": "Erro interno",
+                        "schema": {
+                            "$ref": "#/definitions/httperrors.ProblemDetail"
+                        }
+                    }
+                }
+            }
+        },
+        "/api/v1/cards/{id}": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Retorna os detalhes de um cartão específico do usuário autenticado.",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "cards"
+                ],
+                "summary": "Buscar cartão por ID",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "format": "uuid",
+                        "description": "ID do cartão",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Dados do cartão",
+                        "schema": {
+                            "$ref": "#/definitions/dtos.CardOutput"
+                        }
+                    },
+                    "401": {
+                        "description": "Não autenticado",
+                        "schema": {
+                            "$ref": "#/definitions/httperrors.ProblemDetail"
+                        }
+                    },
+                    "404": {
+                        "description": "Cartão não encontrado",
+                        "schema": {
+                            "$ref": "#/definitions/httperrors.ProblemDetail"
+                        }
+                    },
+                    "500": {
+                        "description": "Erro interno",
+                        "schema": {
+                            "$ref": "#/definitions/httperrors.ProblemDetail"
+                        }
+                    }
+                }
+            },
+            "put": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Atualiza os dados de um cartão existente do usuário autenticado.",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "cards"
+                ],
+                "summary": "Atualizar cartão",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "format": "uuid",
+                        "description": "ID do cartão",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "Dados atualizados do cartão",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/dtos.CardInput"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Cartão atualizado com sucesso",
+                        "schema": {
+                            "$ref": "#/definitions/dtos.CardOutput"
+                        }
+                    },
+                    "400": {
+                        "description": "Dados inválidos",
+                        "schema": {
+                            "$ref": "#/definitions/httperrors.ProblemDetail"
+                        }
+                    },
+                    "401": {
+                        "description": "Não autenticado",
+                        "schema": {
+                            "$ref": "#/definitions/httperrors.ProblemDetail"
+                        }
+                    },
+                    "404": {
+                        "description": "Cartão não encontrado",
+                        "schema": {
+                            "$ref": "#/definitions/httperrors.ProblemDetail"
+                        }
+                    },
+                    "500": {
+                        "description": "Erro interno",
+                        "schema": {
+                            "$ref": "#/definitions/httperrors.ProblemDetail"
+                        }
+                    }
+                }
+            },
+            "delete": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Remove um cartão do usuário autenticado. Esta operação é irreversível.",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "cards"
+                ],
+                "summary": "Remover cartão",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "format": "uuid",
+                        "description": "ID do cartão",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "204": {
+                        "description": "Cartão removido com sucesso"
+                    },
+                    "401": {
+                        "description": "Não autenticado",
+                        "schema": {
+                            "$ref": "#/definitions/httperrors.ProblemDetail"
+                        }
+                    },
+                    "404": {
+                        "description": "Cartão não encontrado",
+                        "schema": {
+                            "$ref": "#/definitions/httperrors.ProblemDetail"
+                        }
+                    },
+                    "500": {
+                        "description": "Erro interno",
+                        "schema": {
+                            "$ref": "#/definitions/httperrors.ProblemDetail"
+                        }
+                    }
+                }
+            }
+        },
+        "/api/v1/categories": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Retorna a lista paginada de categorias do usuário autenticado (cursor-based pagination).",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "categories"
+                ],
+                "summary": "Listar categorias",
+                "parameters": [
+                    {
+                        "maximum": 100,
+                        "minimum": 1,
+                        "type": "integer",
+                        "default": 20,
+                        "description": "Itens por página (default: 20, max: 100)",
+                        "name": "limit",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Cursor de paginação",
+                        "name": "cursor",
+                        "in": "query"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Lista paginada de categorias",
+                        "schema": {
+                            "$ref": "#/definitions/dtos.CategoryPaginatedOutput"
+                        }
+                    },
+                    "400": {
+                        "description": "Parâmetro inválido",
+                        "schema": {
+                            "$ref": "#/definitions/httperrors.ProblemDetail"
+                        }
+                    },
+                    "401": {
+                        "description": "Não autenticado",
+                        "schema": {
+                            "$ref": "#/definitions/httperrors.ProblemDetail"
+                        }
+                    },
+                    "500": {
+                        "description": "Erro interno",
+                        "schema": {
+                            "$ref": "#/definitions/httperrors.ProblemDetail"
+                        }
+                    }
+                }
+            },
+            "post": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Cria uma nova categoria para o usuário autenticado.\nCategorias podem ser hierárquicas: informe `parent_id` para criar uma subcategoria.\n- `parent_id`: UUID da categoria pai (opcional)\n- `sequence`: ordem de exibição (mínimo 1)",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "categories"
+                ],
+                "summary": "Criar categoria",
+                "parameters": [
+                    {
+                        "description": "Dados da categoria",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/dtos.CategoryInput"
+                        }
+                    }
+                ],
+                "responses": {
+                    "201": {
+                        "description": "Categoria criada com sucesso",
+                        "schema": {
+                            "$ref": "#/definitions/dtos.CategoryOutput"
+                        }
+                    },
+                    "400": {
+                        "description": "Dados inválidos",
+                        "schema": {
+                            "$ref": "#/definitions/httperrors.ProblemDetail"
+                        }
+                    },
+                    "401": {
+                        "description": "Não autenticado",
+                        "schema": {
+                            "$ref": "#/definitions/httperrors.ProblemDetail"
+                        }
+                    },
+                    "409": {
+                        "description": "Ciclo detectado na hierarquia",
+                        "schema": {
+                            "$ref": "#/definitions/httperrors.ProblemDetail"
+                        }
+                    },
+                    "500": {
+                        "description": "Erro interno",
+                        "schema": {
+                            "$ref": "#/definitions/httperrors.ProblemDetail"
+                        }
+                    }
+                }
+            }
+        },
+        "/api/v1/categories/{id}": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Retorna os detalhes de uma categoria específica, incluindo subcategorias (`children`).",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "categories"
+                ],
+                "summary": "Buscar categoria por ID",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "format": "uuid",
+                        "description": "ID da categoria",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Dados da categoria com filhos",
+                        "schema": {
+                            "$ref": "#/definitions/dtos.CategoryOutput"
+                        }
+                    },
+                    "401": {
+                        "description": "Não autenticado",
+                        "schema": {
+                            "$ref": "#/definitions/httperrors.ProblemDetail"
+                        }
+                    },
+                    "404": {
+                        "description": "Categoria não encontrada",
+                        "schema": {
+                            "$ref": "#/definitions/httperrors.ProblemDetail"
+                        }
+                    },
+                    "500": {
+                        "description": "Erro interno",
+                        "schema": {
+                            "$ref": "#/definitions/httperrors.ProblemDetail"
+                        }
+                    }
+                }
+            },
+            "put": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Atualiza os dados de uma categoria existente do usuário autenticado.",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "categories"
+                ],
+                "summary": "Atualizar categoria",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "format": "uuid",
+                        "description": "ID da categoria",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "Dados atualizados da categoria",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/dtos.CategoryInput"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Categoria atualizada",
+                        "schema": {
+                            "$ref": "#/definitions/dtos.CategoryOutput"
+                        }
+                    },
+                    "400": {
+                        "description": "Dados inválidos",
+                        "schema": {
+                            "$ref": "#/definitions/httperrors.ProblemDetail"
+                        }
+                    },
+                    "401": {
+                        "description": "Não autenticado",
+                        "schema": {
+                            "$ref": "#/definitions/httperrors.ProblemDetail"
+                        }
+                    },
+                    "404": {
+                        "description": "Categoria não encontrada",
+                        "schema": {
+                            "$ref": "#/definitions/httperrors.ProblemDetail"
+                        }
+                    },
+                    "409": {
+                        "description": "Ciclo detectado na hierarquia",
+                        "schema": {
+                            "$ref": "#/definitions/httperrors.ProblemDetail"
+                        }
+                    },
+                    "500": {
+                        "description": "Erro interno",
+                        "schema": {
+                            "$ref": "#/definitions/httperrors.ProblemDetail"
+                        }
+                    }
+                }
+            },
+            "delete": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Remove uma categoria do usuário autenticado. Esta operação é irreversível.",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "categories"
+                ],
+                "summary": "Remover categoria",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "format": "uuid",
+                        "description": "ID da categoria",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "204": {
+                        "description": "Categoria removida com sucesso"
+                    },
+                    "401": {
+                        "description": "Não autenticado",
+                        "schema": {
+                            "$ref": "#/definitions/httperrors.ProblemDetail"
+                        }
+                    },
+                    "404": {
+                        "description": "Categoria não encontrada",
+                        "schema": {
+                            "$ref": "#/definitions/httperrors.ProblemDetail"
+                        }
+                    },
+                    "500": {
+                        "description": "Erro interno",
+                        "schema": {
+                            "$ref": "#/definitions/httperrors.ProblemDetail"
+                        }
+                    }
+                }
+            }
+        },
+        "/api/v1/invoice-items": {
+            "post": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Registra uma nova compra no cartão de crédito com suporte a parcelamento.\nPara cada parcela é criado um `InvoiceItem` na fatura correspondente ao mês de vencimento.\n\n**Campos:**\n- `card_id`: UUID do cartão\n- `purchase_date`: data da compra em `YYYY-MM-DD`\n- `total_amount`: valor total da compra (ex: `\"1200.00\"`)\n- `currency`: `BRL` | `USD` | `EUR` (opcional, default `BRL`)\n- `installment_total`: `1` para à vista, até `48` para parcelado",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "invoices"
+                ],
+                "summary": "Criar compra (invoice item)",
+                "parameters": [
+                    {
+                        "description": "Dados da compra",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/dtos.PurchaseCreateInput"
+                        }
+                    }
+                ],
+                "responses": {
+                    "201": {
+                        "description": "Itens de fatura criados (um por parcela)",
+                        "schema": {
+                            "$ref": "#/definitions/dtos.PurchaseCreateOutput"
+                        }
+                    },
+                    "400": {
+                        "description": "Dados inválidos",
+                        "schema": {
+                            "$ref": "#/definitions/httperrors.ProblemDetail"
+                        }
+                    },
+                    "401": {
+                        "description": "Não autenticado",
+                        "schema": {
+                            "$ref": "#/definitions/httperrors.ProblemDetail"
+                        }
+                    },
+                    "404": {
+                        "description": "Cartão ou categoria não encontrados",
+                        "schema": {
+                            "$ref": "#/definitions/httperrors.ProblemDetail"
+                        }
+                    },
+                    "500": {
+                        "description": "Erro interno",
+                        "schema": {
+                            "$ref": "#/definitions/httperrors.ProblemDetail"
+                        }
+                    },
+                    "503": {
+                        "description": "Serviço de cartão indisponível",
+                        "schema": {
+                            "$ref": "#/definitions/httperrors.ProblemDetail"
+                        }
+                    }
+                }
+            }
+        },
+        "/api/v1/invoice-items/{id}": {
+            "put": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Atualiza os dados de uma compra. A atualização é propagada para todas as parcelas vinculadas.\nO `id` é o ID de qualquer parcela da compra original.",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "invoices"
+                ],
+                "summary": "Atualizar compra (invoice item)",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "format": "uuid",
+                        "description": "ID do item de fatura",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "Dados atualizados da compra",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/dtos.PurchaseUpdateInput"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Itens atualizados (todas as parcelas)",
+                        "schema": {
+                            "$ref": "#/definitions/dtos.PurchaseUpdateOutput"
+                        }
+                    },
+                    "400": {
+                        "description": "Dados inválidos",
+                        "schema": {
+                            "$ref": "#/definitions/httperrors.ProblemDetail"
+                        }
+                    },
+                    "401": {
+                        "description": "Não autenticado",
+                        "schema": {
+                            "$ref": "#/definitions/httperrors.ProblemDetail"
+                        }
+                    },
+                    "404": {
+                        "description": "Item não encontrado",
+                        "schema": {
+                            "$ref": "#/definitions/httperrors.ProblemDetail"
+                        }
+                    },
+                    "500": {
+                        "description": "Erro interno",
+                        "schema": {
+                            "$ref": "#/definitions/httperrors.ProblemDetail"
+                        }
+                    }
+                }
+            },
+            "delete": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Remove uma compra e todas as suas parcelas das faturas. Esta operação é irreversível.\nO parâmetro `category_id` é opcional e usado para atualizar o orçamento após a remoção.",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "invoices"
+                ],
+                "summary": "Remover compra (invoice item)",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "format": "uuid",
+                        "description": "ID do item de fatura",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "format": "uuid",
+                        "description": "ID da categoria (para atualizar orçamento)",
+                        "name": "category_id",
+                        "in": "query"
+                    }
+                ],
+                "responses": {
+                    "204": {
+                        "description": "Compra removida com sucesso"
+                    },
+                    "401": {
+                        "description": "Não autenticado",
+                        "schema": {
+                            "$ref": "#/definitions/httperrors.ProblemDetail"
+                        }
+                    },
+                    "404": {
+                        "description": "Item não encontrado",
+                        "schema": {
+                            "$ref": "#/definitions/httperrors.ProblemDetail"
+                        }
+                    },
+                    "500": {
+                        "description": "Erro interno",
+                        "schema": {
+                            "$ref": "#/definitions/httperrors.ProblemDetail"
+                        }
+                    }
+                }
+            }
+        },
+        "/api/v1/invoices": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Retorna a lista paginada de faturas filtradas por mês ou por cartão.\n**Exatamente um** dos parâmetros `month` ou `cardId` deve ser informado.\n\n- **`?month=YYYY-MM`**: lista todas as faturas do usuário no mês especificado (ex: `?month=2025-01`)\n- **`?cardId=uuid`**: lista todas as faturas de um cartão específico (ex: `?cardId=abc-123`)",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "invoices"
+                ],
+                "summary": "Listar faturas",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "example": "2025-01",
+                        "description": "Mês de referência (YYYY-MM). Mutuamente exclusivo com cardId.",
+                        "name": "month",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "format": "uuid",
+                        "description": "ID do cartão (UUID). Mutuamente exclusivo com month.",
+                        "name": "cardId",
+                        "in": "query"
+                    },
+                    {
+                        "maximum": 100,
+                        "minimum": 1,
+                        "type": "integer",
+                        "default": 20,
+                        "description": "Itens por página (default: 20, max: 100)",
+                        "name": "limit",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Cursor de paginação",
+                        "name": "cursor",
+                        "in": "query"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Lista paginada de faturas",
+                        "schema": {
+                            "$ref": "#/definitions/dtos.InvoicePaginatedOutput"
+                        }
+                    },
+                    "400": {
+                        "description": "Parâmetros ausentes ou inválidos",
+                        "schema": {
+                            "$ref": "#/definitions/httperrors.ProblemDetail"
+                        }
+                    },
+                    "401": {
+                        "description": "Não autenticado",
+                        "schema": {
+                            "$ref": "#/definitions/httperrors.ProblemDetail"
+                        }
+                    },
+                    "500": {
+                        "description": "Erro interno",
+                        "schema": {
+                            "$ref": "#/definitions/httperrors.ProblemDetail"
+                        }
+                    }
+                }
+            }
+        },
+        "/api/v1/invoices/{id}": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Retorna os detalhes completos de uma fatura, incluindo todos os itens com valores por parcela,\nrótulo de parcelamento (`installment_label`: ex: `\"3/12\"` ou `\"À vista\"`), data de vencimento e total.",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "invoices"
+                ],
+                "summary": "Buscar fatura por ID",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "format": "uuid",
+                        "description": "ID da fatura",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Dados completos da fatura",
+                        "schema": {
+                            "$ref": "#/definitions/dtos.InvoiceOutput"
+                        }
+                    },
+                    "401": {
+                        "description": "Não autenticado",
+                        "schema": {
+                            "$ref": "#/definitions/httperrors.ProblemDetail"
+                        }
+                    },
+                    "404": {
+                        "description": "Fatura não encontrada",
+                        "schema": {
+                            "$ref": "#/definitions/httperrors.ProblemDetail"
+                        }
+                    },
+                    "500": {
+                        "description": "Erro interno",
+                        "schema": {
+                            "$ref": "#/definitions/httperrors.ProblemDetail"
+                        }
+                    }
+                }
+            }
+        },
+        "/api/v1/payment-methods": {
+            "get": {
+                "description": "Retorna lista paginada de métodos de pagamento. Endpoint público.\nFiltragem opcional por `code` via query param (ex: `?code=PIX`).",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "payment-methods"
+                ],
+                "summary": "Listar métodos de pagamento",
+                "parameters": [
+                    {
+                        "maximum": 100,
+                        "minimum": 1,
+                        "type": "integer",
+                        "default": 20,
+                        "description": "Itens por página (default: 20, max: 100)",
+                        "name": "limit",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Cursor de paginação",
+                        "name": "cursor",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "example": "PIX",
+                        "description": "Filtrar pelo código do método",
+                        "name": "code",
+                        "in": "query"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Lista paginada",
+                        "schema": {
+                            "$ref": "#/definitions/dtos.PaymentMethodPaginatedOutput"
+                        }
+                    },
+                    "400": {
+                        "description": "Parâmetro inválido",
+                        "schema": {
+                            "$ref": "#/definitions/httperrors.ProblemDetail"
+                        }
+                    },
+                    "500": {
+                        "description": "Erro interno",
+                        "schema": {
+                            "$ref": "#/definitions/httperrors.ProblemDetail"
+                        }
+                    }
+                }
+            },
+            "post": {
+                "description": "Cria um novo método de pagamento. Este endpoint é público (não requer autenticação).\nO campo `code` deve ser único e imutável após criação (ex: `PIX`, `BOLETO`, `CREDIT_CARD`).",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "payment-methods"
+                ],
+                "summary": "Criar método de pagamento",
+                "parameters": [
+                    {
+                        "description": "Dados do método de pagamento",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/dtos.PaymentMethodInput"
+                        }
+                    }
+                ],
+                "responses": {
+                    "201": {
+                        "description": "Método de pagamento criado",
+                        "schema": {
+                            "$ref": "#/definitions/dtos.PaymentMethodOutput"
+                        }
+                    },
+                    "400": {
+                        "description": "Dados inválidos",
+                        "schema": {
+                            "$ref": "#/definitions/httperrors.ProblemDetail"
+                        }
+                    },
+                    "409": {
+                        "description": "Código já existente",
+                        "schema": {
+                            "$ref": "#/definitions/httperrors.ProblemDetail"
+                        }
+                    },
+                    "500": {
+                        "description": "Erro interno",
+                        "schema": {
+                            "$ref": "#/definitions/httperrors.ProblemDetail"
+                        }
+                    }
+                }
+            }
+        },
+        "/api/v1/payment-methods/{id}": {
+            "get": {
+                "description": "Retorna os detalhes de um método de pagamento pelo UUID. Endpoint público.",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "payment-methods"
+                ],
+                "summary": "Buscar método de pagamento por ID",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "format": "uuid",
+                        "description": "ID do método de pagamento",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Dados do método de pagamento",
+                        "schema": {
+                            "$ref": "#/definitions/dtos.PaymentMethodOutput"
+                        }
+                    },
+                    "404": {
+                        "description": "Não encontrado",
+                        "schema": {
+                            "$ref": "#/definitions/httperrors.ProblemDetail"
+                        }
+                    },
+                    "500": {
+                        "description": "Erro interno",
+                        "schema": {
+                            "$ref": "#/definitions/httperrors.ProblemDetail"
+                        }
+                    }
+                }
+            },
+            "put": {
+                "description": "Atualiza nome e descrição de um método de pagamento. O campo `code` não pode ser alterado. Endpoint público.",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "payment-methods"
+                ],
+                "summary": "Atualizar método de pagamento",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "format": "uuid",
+                        "description": "ID do método de pagamento",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "Dados atualizados",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/dtos.PaymentMethodUpdateInput"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Método atualizado",
+                        "schema": {
+                            "$ref": "#/definitions/dtos.PaymentMethodOutput"
+                        }
+                    },
+                    "400": {
+                        "description": "Dados inválidos",
+                        "schema": {
+                            "$ref": "#/definitions/httperrors.ProblemDetail"
+                        }
+                    },
+                    "404": {
+                        "description": "Não encontrado",
+                        "schema": {
+                            "$ref": "#/definitions/httperrors.ProblemDetail"
+                        }
+                    },
+                    "500": {
+                        "description": "Erro interno",
+                        "schema": {
+                            "$ref": "#/definitions/httperrors.ProblemDetail"
+                        }
+                    }
+                }
+            },
+            "delete": {
+                "description": "Remove um método de pagamento. Endpoint público.",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "payment-methods"
+                ],
+                "summary": "Remover método de pagamento",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "format": "uuid",
+                        "description": "ID do método de pagamento",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "204": {
+                        "description": "Removido com sucesso"
+                    },
+                    "404": {
+                        "description": "Não encontrado",
+                        "schema": {
+                            "$ref": "#/definitions/httperrors.ProblemDetail"
+                        }
+                    },
+                    "500": {
+                        "description": "Erro interno",
+                        "schema": {
+                            "$ref": "#/definitions/httperrors.ProblemDetail"
+                        }
+                    }
+                }
+            }
+        },
+        "/api/v1/token": {
+            "post": {
+                "description": "Autentica o usuário com email e senha e retorna um JWT Bearer Token.\nO token gerado deve ser enviado no header `Authorization: Bearer {token}` nas requisições protegidas.",
+                "consumes": [
+                    "application/x-www-form-urlencoded"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "auth"
+                ],
+                "summary": "Gerar token de autenticação",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "example": "usuario@email.com",
+                        "description": "Email do usuário",
+                        "name": "email",
+                        "in": "formData",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "example": "senha123",
+                        "description": "Senha do usuário",
+                        "name": "password",
+                        "in": "formData",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Token gerado com sucesso",
+                        "schema": {
+                            "$ref": "#/definitions/dtos.AuthOutput"
+                        }
+                    },
+                    "400": {
+                        "description": "Requisição inválida",
+                        "schema": {
+                            "$ref": "#/definitions/httperrors.ProblemDetail"
+                        }
+                    },
+                    "401": {
+                        "description": "Credenciais inválidas",
+                        "schema": {
+                            "$ref": "#/definitions/httperrors.ProblemDetail"
+                        }
+                    },
+                    "500": {
+                        "description": "Erro interno",
+                        "schema": {
+                            "$ref": "#/definitions/httperrors.ProblemDetail"
+                        }
+                    }
+                }
+            }
+        },
+        "/api/v1/transactions": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Retorna a lista paginada de transações mensais consolidadas do usuário autenticado.\nCada item representa um mês com seus totais e itens individuais.",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "transactions"
+                ],
+                "summary": "Listar transações mensais",
+                "parameters": [
+                    {
+                        "maximum": 100,
+                        "minimum": 1,
+                        "type": "integer",
+                        "default": 20,
+                        "description": "Itens por página (default: 20, max: 100)",
+                        "name": "limit",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Cursor de paginação",
+                        "name": "cursor",
+                        "in": "query"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Lista paginada de transações mensais",
+                        "schema": {
+                            "$ref": "#/definitions/dtos.MonthlyTransactionPaginatedOutput"
+                        }
+                    },
+                    "400": {
+                        "description": "Parâmetro inválido",
+                        "schema": {
+                            "$ref": "#/definitions/httperrors.ProblemDetail"
+                        }
+                    },
+                    "401": {
+                        "description": "Não autenticado",
+                        "schema": {
+                            "$ref": "#/definitions/httperrors.ProblemDetail"
+                        }
+                    },
+                    "500": {
+                        "description": "Erro interno",
+                        "schema": {
+                            "$ref": "#/definitions/httperrors.ProblemDetail"
+                        }
+                    }
+                }
+            },
+            "post": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Cria uma nova transação mensal (ou adiciona um item a transação existente do mês).\n\n**Enums:**\n- `direction`: `INCOME` | `EXPENSE`\n- `type`: `PIX` | `BOLETO` | `TRANSFER` | `CREDIT_CARD`\n\n**Formato de campos:**\n- `reference_month`: `YYYY-MM` (ex: `2025-01`)\n- `amount`: string decimal (ex: `\"1234.56\"`)",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "transactions"
+                ],
+                "summary": "Registrar transação",
+                "parameters": [
+                    {
+                        "description": "Dados da transação",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/dtos.RegisterTransactionInput"
+                        }
+                    }
+                ],
+                "responses": {
+                    "201": {
+                        "description": "Transação registrada",
+                        "schema": {
+                            "$ref": "#/definitions/dtos.MonthlyTransactionOutput"
+                        }
+                    },
+                    "400": {
+                        "description": "Dados inválidos",
+                        "schema": {
+                            "$ref": "#/definitions/httperrors.ProblemDetail"
+                        }
+                    },
+                    "401": {
+                        "description": "Não autenticado",
+                        "schema": {
+                            "$ref": "#/definitions/httperrors.ProblemDetail"
+                        }
+                    },
+                    "404": {
+                        "description": "Categoria não encontrada",
+                        "schema": {
+                            "$ref": "#/definitions/httperrors.ProblemDetail"
+                        }
+                    },
+                    "500": {
+                        "description": "Erro interno",
+                        "schema": {
+                            "$ref": "#/definitions/httperrors.ProblemDetail"
+                        }
+                    }
+                }
+            }
+        },
+        "/api/v1/transactions/{id}": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Retorna os detalhes de uma transação mensal específica, incluindo todos os itens e totais.",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "transactions"
+                ],
+                "summary": "Buscar transação mensal por ID",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "format": "uuid",
+                        "description": "ID da transação mensal",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Dados da transação mensal",
+                        "schema": {
+                            "$ref": "#/definitions/dtos.MonthlyTransactionOutput"
+                        }
+                    },
+                    "400": {
+                        "description": "ID inválido",
+                        "schema": {
+                            "$ref": "#/definitions/httperrors.ProblemDetail"
+                        }
+                    },
+                    "401": {
+                        "description": "Não autenticado",
+                        "schema": {
+                            "$ref": "#/definitions/httperrors.ProblemDetail"
+                        }
+                    },
+                    "404": {
+                        "description": "Transação não encontrada",
+                        "schema": {
+                            "$ref": "#/definitions/httperrors.ProblemDetail"
+                        }
+                    },
+                    "500": {
+                        "description": "Erro interno",
+                        "schema": {
+                            "$ref": "#/definitions/httperrors.ProblemDetail"
+                        }
+                    }
+                }
+            }
+        },
+        "/api/v1/transactions/{transactionId}/items/{itemId}": {
+            "put": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Atualiza os dados de um item individual dentro de uma transação mensal.\nO `transactionId` é o ID do consolidado mensal; o `itemId` é o item específico.\n\n**Enums:**\n- `direction`: `INCOME` | `EXPENSE`\n- `type`: `PIX` | `BOLETO` | `TRANSFER` | `CREDIT_CARD`",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "transactions"
+                ],
+                "summary": "Atualizar item de transação",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "format": "uuid",
+                        "description": "ID da transação mensal",
+                        "name": "transactionId",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "format": "uuid",
+                        "description": "ID do item de transação",
+                        "name": "itemId",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "Dados atualizados do item",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/dtos.UpdateTransactionItemInput"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Item atualizado",
+                        "schema": {
+                            "$ref": "#/definitions/dtos.TransactionItemOutput"
+                        }
+                    },
+                    "400": {
+                        "description": "Dados inválidos",
+                        "schema": {
+                            "$ref": "#/definitions/httperrors.ProblemDetail"
+                        }
+                    },
+                    "401": {
+                        "description": "Não autenticado",
+                        "schema": {
+                            "$ref": "#/definitions/httperrors.ProblemDetail"
+                        }
+                    },
+                    "404": {
+                        "description": "Item não encontrado",
+                        "schema": {
+                            "$ref": "#/definitions/httperrors.ProblemDetail"
+                        }
+                    },
+                    "500": {
+                        "description": "Erro interno",
+                        "schema": {
+                            "$ref": "#/definitions/httperrors.ProblemDetail"
+                        }
+                    }
+                }
+            },
+            "delete": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Remove um item individual de uma transação mensal. Se for o último item, a transação mensal também é removida.",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "transactions"
+                ],
+                "summary": "Remover item de transação",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "format": "uuid",
+                        "description": "ID da transação mensal",
+                        "name": "transactionId",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "format": "uuid",
+                        "description": "ID do item de transação",
+                        "name": "itemId",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "204": {
+                        "description": "Item removido com sucesso"
+                    },
+                    "400": {
+                        "description": "IDs inválidos",
+                        "schema": {
+                            "$ref": "#/definitions/httperrors.ProblemDetail"
+                        }
+                    },
+                    "401": {
+                        "description": "Não autenticado",
+                        "schema": {
+                            "$ref": "#/definitions/httperrors.ProblemDetail"
+                        }
+                    },
+                    "404": {
+                        "description": "Item não encontrado",
+                        "schema": {
+                            "$ref": "#/definitions/httperrors.ProblemDetail"
+                        }
+                    },
+                    "500": {
+                        "description": "Erro interno",
+                        "schema": {
+                            "$ref": "#/definitions/httperrors.ProblemDetail"
+                        }
+                    }
+                }
+            }
+        },
+        "/api/v1/users": {
+            "post": {
+                "description": "Cria um novo usuário na plataforma. Email deve ser único.",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "users"
+                ],
+                "summary": "Criar usuário",
+                "parameters": [
+                    {
+                        "description": "Dados do usuário",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/dtos.CreateUserInput"
+                        }
+                    }
+                ],
+                "responses": {
+                    "201": {
+                        "description": "Usuário criado com sucesso",
+                        "schema": {
+                            "$ref": "#/definitions/dtos.CreateUserOutput"
+                        }
+                    },
+                    "400": {
+                        "description": "Dados inválidos ou mal-formados",
+                        "schema": {
+                            "$ref": "#/definitions/httperrors.ProblemDetail"
+                        }
+                    },
+                    "409": {
+                        "description": "Email já cadastrado",
+                        "schema": {
+                            "$ref": "#/definitions/httperrors.ProblemDetail"
+                        }
+                    },
+                    "500": {
+                        "description": "Erro interno",
+                        "schema": {
+                            "$ref": "#/definitions/httperrors.ProblemDetail"
+                        }
+                    }
+                }
+            }
+        }
+    },
+    "definitions": {
+        "dtos.AuthOutput": {
+            "type": "object",
+            "properties": {
+                "expires_at": {
+                    "type": "string",
+                    "example": "2025-01-16T10:30:00Z"
+                },
+                "token": {
+                    "type": "string",
+                    "example": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
+                }
+            }
+        },
+        "dtos.BudgetCreateInput": {
+            "type": "object",
+            "properties": {
+                "currency": {
+                    "description": "ISO 4217 (e.g., \"BRL\")",
+                    "type": "string",
+                    "enum": [
+                        "BRL",
+                        "USD",
+                        "EUR"
+                    ],
+                    "example": "BRL"
+                },
+                "items": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/dtos.BudgetItemInput"
+                    }
+                },
+                "reference_month": {
+                    "description": "YYYY-MM format",
+                    "type": "string",
+                    "example": "2025-01"
+                },
+                "total_amount": {
+                    "description": "String decimal (e.g., \"5000.00\")",
+                    "type": "string",
+                    "example": "5000.00"
+                }
+            }
+        },
+        "dtos.BudgetItemInput": {
+            "type": "object",
+            "properties": {
+                "category_id": {
+                    "type": "string",
+                    "example": "550e8400-e29b-41d4-a716-446655440000"
+                },
+                "percentage_goal": {
+                    "description": "String decimal (e.g., \"25.50\")",
+                    "type": "string",
+                    "example": "25.50"
+                }
+            }
+        },
+        "dtos.BudgetItemOutput": {
+            "type": "object",
+            "properties": {
+                "budget_id": {
+                    "type": "string",
+                    "example": "550e8400-e29b-41d4-a716-446655440000"
+                },
+                "category_id": {
+                    "type": "string",
+                    "example": "880e8400-e29b-41d4-a716-446655440003"
+                },
+                "created_at": {
+                    "type": "string",
+                    "example": "2025-01-01T00:00:00Z"
+                },
+                "id": {
+                    "type": "string",
+                    "example": "770e8400-e29b-41d4-a716-446655440002"
+                },
+                "percentage_goal": {
+                    "type": "string",
+                    "example": "30.00"
+                },
+                "percentage_spent": {
+                    "type": "string",
+                    "example": "46.67"
+                },
+                "planned_amount": {
+                    "type": "string",
+                    "example": "1500.00"
+                },
+                "remaining_amount": {
+                    "type": "string",
+                    "example": "800.00"
+                },
+                "spent_amount": {
+                    "type": "string",
+                    "example": "700.00"
+                },
+                "updated_at": {
+                    "type": "string",
+                    "example": "2025-01-20T08:00:00Z"
+                }
+            }
+        },
+        "dtos.BudgetOutput": {
+            "type": "object",
+            "properties": {
+                "created_at": {
+                    "type": "string",
+                    "example": "2025-01-01T00:00:00Z"
+                },
+                "currency": {
+                    "type": "string",
+                    "enum": [
+                        "BRL",
+                        "USD",
+                        "EUR"
+                    ],
+                    "example": "BRL"
+                },
+                "id": {
+                    "type": "string",
+                    "example": "550e8400-e29b-41d4-a716-446655440000"
+                },
+                "items": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/dtos.BudgetItemOutput"
+                    }
+                },
+                "percentage_used": {
+                    "type": "string",
+                    "example": "47.00"
+                },
+                "reference_month": {
+                    "description": "YYYY-MM",
+                    "type": "string",
+                    "example": "2025-01"
+                },
+                "spent_amount": {
+                    "type": "string",
+                    "example": "2350.00"
+                },
+                "total_amount": {
+                    "type": "string",
+                    "example": "5000.00"
+                },
+                "updated_at": {
+                    "type": "string",
+                    "example": "2025-01-20T08:00:00Z"
+                },
+                "user_id": {
+                    "type": "string",
+                    "example": "660e8400-e29b-41d4-a716-446655440001"
+                }
+            }
+        },
+        "dtos.BudgetPaginatedOutput": {
+            "type": "object",
+            "properties": {
+                "data": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/dtos.BudgetOutput"
+                    }
+                },
+                "pagination": {
+                    "$ref": "#/definitions/dtos.BudgetPaginationMeta"
+                }
+            }
+        },
+        "dtos.BudgetPaginationMeta": {
+            "type": "object",
+            "properties": {
+                "has_next": {
+                    "type": "boolean",
+                    "example": false
+                },
+                "limit": {
+                    "type": "integer",
+                    "example": 20
+                },
+                "next_cursor": {
+                    "type": "string",
+                    "example": "eyJmIjp7InJlZmVyZW5jZV9tb250aCI6IjIwMjUtMDEifX0"
+                }
+            }
+        },
+        "dtos.BudgetUpdateInput": {
+            "type": "object",
+            "properties": {
+                "items": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/dtos.BudgetItemInput"
+                    }
+                },
+                "total_amount": {
+                    "description": "String decimal",
+                    "type": "string",
+                    "example": "6000.00"
+                }
+            }
+        },
+        "dtos.CardInput": {
+            "type": "object",
+            "properties": {
+                "closing_offset_days": {
+                    "description": "Opcional, padrão: 7",
+                    "type": "integer",
+                    "maximum": 31,
+                    "minimum": 1,
+                    "example": 7
+                },
+                "due_day": {
+                    "type": "integer",
+                    "maximum": 31,
+                    "minimum": 1,
+                    "example": 10
+                },
+                "name": {
+                    "type": "string",
+                    "example": "Nubank Platinum"
+                }
+            }
+        },
+        "dtos.CardOutput": {
+            "type": "object",
+            "properties": {
+                "closing_offset_days": {
+                    "description": "Quantos dias antes do vencimento fecha (padrão brasileiro: 7)",
+                    "type": "integer",
+                    "example": 7
+                },
+                "created_at": {
+                    "type": "string",
+                    "example": "2025-01-15T10:30:00Z"
+                },
+                "due_day": {
+                    "type": "integer",
+                    "example": 10
+                },
+                "id": {
+                    "type": "string",
+                    "example": "550e8400-e29b-41d4-a716-446655440000"
+                },
+                "name": {
+                    "type": "string",
+                    "example": "Nubank Platinum"
+                },
+                "updated_at": {
+                    "type": "string",
+                    "example": "2025-01-20T08:00:00Z"
+                }
+            }
+        },
+        "dtos.CardPaginatedOutput": {
+            "type": "object",
+            "properties": {
+                "data": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/dtos.CardOutput"
+                    }
+                },
+                "pagination": {
+                    "$ref": "#/definitions/dtos.CardPaginationMeta"
+                }
+            }
+        },
+        "dtos.CardPaginationMeta": {
+            "type": "object",
+            "properties": {
+                "has_next": {
+                    "type": "boolean",
+                    "example": true
+                },
+                "limit": {
+                    "type": "integer",
+                    "example": 20
+                },
+                "next_cursor": {
+                    "type": "string",
+                    "example": "eyJmIjp7Im5hbWUiOiJOdWJhbmsifX0"
+                }
+            }
+        },
+        "dtos.CategoryInput": {
+            "type": "object",
+            "properties": {
+                "name": {
+                    "type": "string",
+                    "example": "Alimentação"
+                },
+                "parent_id": {
+                    "description": "UUID da categoria pai (opcional)",
+                    "type": "string",
+                    "example": "550e8400-e29b-41d4-a716-446655440000"
+                },
+                "sequence": {
+                    "type": "integer",
+                    "minimum": 1,
+                    "example": 1
+                }
+            }
+        },
+        "dtos.CategoryOutput": {
+            "type": "object",
+            "properties": {
+                "children": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/dtos.CategoryOutput"
+                    }
+                },
+                "created_at": {
+                    "type": "string",
+                    "example": "2025-01-15T10:30:00Z"
+                },
+                "id": {
+                    "type": "string",
+                    "example": "550e8400-e29b-41d4-a716-446655440000"
+                },
+                "name": {
+                    "type": "string",
+                    "example": "Alimentação"
+                },
+                "sequence": {
+                    "type": "integer",
+                    "example": 1
+                }
+            }
+        },
+        "dtos.CategoryPaginatedOutput": {
+            "type": "object",
+            "properties": {
+                "data": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/dtos.CategoryOutput"
+                    }
+                },
+                "pagination": {
+                    "$ref": "#/definitions/dtos.CategoryPaginationMeta"
+                }
+            }
+        },
+        "dtos.CategoryPaginationMeta": {
+            "type": "object",
+            "properties": {
+                "has_next": {
+                    "type": "boolean",
+                    "example": false
+                },
+                "limit": {
+                    "type": "integer",
+                    "example": 20
+                },
+                "next_cursor": {
+                    "type": "string",
+                    "example": "eyJmIjp7Im5hbWUiOiJBbGltZW50YcOnw6NvIn19"
+                }
+            }
+        },
+        "dtos.CreateUserInput": {
+            "type": "object",
+            "properties": {
+                "email": {
+                    "type": "string",
+                    "example": "joao@email.com"
+                },
+                "name": {
+                    "type": "string",
+                    "example": "João Silva"
+                },
+                "password": {
+                    "type": "string",
+                    "example": "senhaSegura123"
+                }
+            }
+        },
+        "dtos.CreateUserOutput": {
+            "type": "object",
+            "properties": {
+                "created_at": {
+                    "type": "string",
+                    "example": "2025-01-15T10:30:00Z"
+                },
+                "email": {
+                    "type": "string",
+                    "example": "joao@email.com"
+                },
+                "id": {
+                    "type": "string",
+                    "example": "550e8400-e29b-41d4-a716-446655440000"
+                },
+                "name": {
+                    "type": "string",
+                    "example": "João Silva"
+                }
+            }
+        },
+        "dtos.InvoiceItemOutput": {
+            "type": "object",
+            "properties": {
+                "category_id": {
+                    "type": "string",
+                    "example": "660e8400-e29b-41d4-a716-446655440001"
+                },
+                "created_at": {
+                    "type": "string",
+                    "example": "2025-01-01T00:00:00Z"
+                },
+                "description": {
+                    "type": "string",
+                    "example": "iPhone 16 Pro"
+                },
+                "id": {
+                    "type": "string",
+                    "example": "880e8400-e29b-41d4-a716-446655440003"
+                },
+                "installment_amount": {
+                    "description": "Valor desta parcela",
+                    "type": "string",
+                    "example": "833.25"
+                },
+                "installment_label": {
+                    "description": "Ex: \"3/12\" ou \"À vista\"",
+                    "type": "string",
+                    "example": "3/12"
+                },
+                "installment_number": {
+                    "description": "1 a N",
+                    "type": "integer",
+                    "example": 3
+                },
+                "installment_total": {
+                    "description": "Total de parcelas",
+                    "type": "integer",
+                    "example": 12
+                },
+                "invoice_id": {
+                    "type": "string",
+                    "example": "550e8400-e29b-41d4-a716-446655440000"
+                },
+                "purchase_date": {
+                    "description": "YYYY-MM-DD",
+                    "type": "string",
+                    "example": "2025-01-15"
+                },
+                "total_amount": {
+                    "description": "Valor total da compra original",
+                    "type": "string",
+                    "example": "9999.00"
+                },
+                "updated_at": {
+                    "type": "string",
+                    "example": "2025-01-20T08:00:00Z"
+                }
+            }
+        },
+        "dtos.InvoiceListOutput": {
+            "type": "object",
+            "properties": {
+                "card_id": {
+                    "type": "string",
+                    "example": "770e8400-e29b-41d4-a716-446655440002"
+                },
+                "created_at": {
+                    "type": "string",
+                    "example": "2025-01-01T00:00:00Z"
+                },
+                "currency": {
+                    "type": "string",
+                    "enum": [
+                        "BRL",
+                        "USD",
+                        "EUR"
+                    ],
+                    "example": "BRL"
+                },
+                "due_date": {
+                    "type": "string",
+                    "example": "2025-01-10"
+                },
+                "id": {
+                    "type": "string",
+                    "example": "550e8400-e29b-41d4-a716-446655440000"
+                },
+                "item_count": {
+                    "type": "integer",
+                    "example": 12
+                },
+                "reference_month": {
+                    "type": "string",
+                    "example": "2025-01"
+                },
+                "total_amount": {
+                    "type": "string",
+                    "example": "9999.00"
+                }
+            }
+        },
+        "dtos.InvoiceOutput": {
+            "type": "object",
+            "properties": {
+                "card_id": {
+                    "type": "string",
+                    "example": "770e8400-e29b-41d4-a716-446655440002"
+                },
+                "created_at": {
+                    "type": "string",
+                    "example": "2025-01-01T00:00:00Z"
+                },
+                "currency": {
+                    "type": "string",
+                    "enum": [
+                        "BRL",
+                        "USD",
+                        "EUR"
+                    ],
+                    "example": "BRL"
+                },
+                "due_date": {
+                    "description": "YYYY-MM-DD",
+                    "type": "string",
+                    "example": "2025-01-10"
+                },
+                "id": {
+                    "type": "string",
+                    "example": "550e8400-e29b-41d4-a716-446655440000"
+                },
+                "item_count": {
+                    "type": "integer",
+                    "example": 12
+                },
+                "items": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/dtos.InvoiceItemOutput"
+                    }
+                },
+                "reference_month": {
+                    "description": "YYYY-MM",
+                    "type": "string",
+                    "example": "2025-01"
+                },
+                "total_amount": {
+                    "type": "string",
+                    "example": "9999.00"
+                },
+                "updated_at": {
+                    "type": "string",
+                    "example": "2025-01-20T08:00:00Z"
+                },
+                "user_id": {
+                    "type": "string",
+                    "example": "660e8400-e29b-41d4-a716-446655440001"
+                }
+            }
+        },
+        "dtos.InvoicePaginatedOutput": {
+            "type": "object",
+            "properties": {
+                "data": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/dtos.InvoiceListOutput"
+                    }
+                },
+                "pagination": {
+                    "$ref": "#/definitions/dtos.InvoicePaginationMeta"
+                }
+            }
+        },
+        "dtos.InvoicePaginationMeta": {
+            "type": "object",
+            "properties": {
+                "has_next": {
+                    "type": "boolean",
+                    "example": true
+                },
+                "limit": {
+                    "type": "integer",
+                    "example": 20
+                },
+                "next_cursor": {
+                    "type": "string",
+                    "example": "eyJmIjp7InJlZmVyZW5jZV9tb250aCI6IjIwMjUtMDEifX0"
+                }
+            }
+        },
+        "dtos.MonthlyTransactionOutput": {
+            "type": "object",
+            "properties": {
+                "created_at": {
+                    "type": "string",
+                    "example": "2025-01-01T00:00:00Z"
+                },
+                "id": {
+                    "type": "string",
+                    "example": "770e8400-e29b-41d4-a716-446655440002"
+                },
+                "items": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/dtos.TransactionItemOutput"
+                    }
+                },
+                "reference_month": {
+                    "type": "string",
+                    "example": "2025-01"
+                },
+                "total_amount": {
+                    "description": "String decimal (e.g., \"1500.00\")",
+                    "type": "string",
+                    "example": "1500.00"
+                },
+                "total_expense": {
+                    "description": "String decimal (e.g., \"3500.00\")",
+                    "type": "string",
+                    "example": "3500.00"
+                },
+                "total_income": {
+                    "description": "String decimal (e.g., \"5000.00\")",
+                    "type": "string",
+                    "example": "5000.00"
+                },
+                "updated_at": {
+                    "type": "string",
+                    "example": "2025-01-31T23:59:59Z"
+                }
+            }
+        },
+        "dtos.MonthlyTransactionPaginatedOutput": {
+            "type": "object",
+            "properties": {
+                "data": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/dtos.MonthlyTransactionOutput"
+                    }
+                },
+                "pagination": {
+                    "$ref": "#/definitions/dtos.TransactionPaginationMeta"
+                }
+            }
+        },
+        "dtos.PaymentMethodInput": {
+            "type": "object",
+            "properties": {
+                "code": {
+                    "type": "string",
+                    "example": "PIX"
+                },
+                "description": {
+                    "type": "string",
+                    "example": "Transferência instantânea via Pix"
+                },
+                "name": {
+                    "type": "string",
+                    "example": "Pix"
+                }
+            }
+        },
+        "dtos.PaymentMethodOutput": {
+            "type": "object",
+            "properties": {
+                "code": {
+                    "type": "string",
+                    "example": "PIX"
+                },
+                "created_at": {
+                    "type": "string",
+                    "example": "2025-01-15T10:30:00Z"
+                },
+                "description": {
+                    "type": "string",
+                    "example": "Transferência instantânea via Pix"
+                },
+                "id": {
+                    "type": "string",
+                    "example": "550e8400-e29b-41d4-a716-446655440000"
+                },
+                "name": {
+                    "type": "string",
+                    "example": "Pix"
+                },
+                "updated_at": {
+                    "type": "string",
+                    "example": "2025-01-20T08:00:00Z"
+                }
+            }
+        },
+        "dtos.PaymentMethodPaginatedOutput": {
+            "type": "object",
+            "properties": {
+                "data": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/dtos.PaymentMethodOutput"
+                    }
+                },
+                "pagination": {
+                    "$ref": "#/definitions/dtos.PaymentMethodPaginationMeta"
+                }
+            }
+        },
+        "dtos.PaymentMethodPaginationMeta": {
+            "type": "object",
+            "properties": {
+                "has_next": {
+                    "type": "boolean",
+                    "example": false
+                },
+                "limit": {
+                    "type": "integer",
+                    "example": 20
+                },
+                "next_cursor": {
+                    "type": "string",
+                    "example": "eyJmIjp7ImNvZGUiOiJQSVgifX0"
+                }
+            }
+        },
+        "dtos.PaymentMethodUpdateInput": {
+            "type": "object",
+            "properties": {
+                "description": {
+                    "type": "string",
+                    "example": "Pagamento instantâneo 24h"
+                },
+                "name": {
+                    "type": "string",
+                    "example": "Pix Atualizado"
+                }
+            }
+        },
+        "dtos.PurchaseCreateInput": {
+            "type": "object",
+            "properties": {
+                "card_id": {
+                    "type": "string",
+                    "example": "550e8400-e29b-41d4-a716-446655440000"
+                },
+                "category_id": {
+                    "type": "string",
+                    "example": "660e8400-e29b-41d4-a716-446655440001"
+                },
+                "currency": {
+                    "description": "ISO 4217 (e.g., \"BRL\")",
+                    "type": "string",
+                    "enum": [
+                        "BRL",
+                        "USD",
+                        "EUR"
+                    ],
+                    "example": "BRL"
+                },
+                "description": {
+                    "type": "string",
+                    "example": "iPhone 16 Pro"
+                },
+                "installment_total": {
+                    "description": "1 para à vista",
+                    "type": "integer",
+                    "maximum": 48,
+                    "minimum": 1,
+                    "example": 12
+                },
+                "purchase_date": {
+                    "description": "YYYY-MM-DD",
+                    "type": "string",
+                    "example": "2025-01-15"
+                },
+                "total_amount": {
+                    "description": "String decimal (e.g., \"1200.00\")",
+                    "type": "string",
+                    "example": "9999.00"
+                }
+            }
+        },
+        "dtos.PurchaseCreateOutput": {
+            "type": "object",
+            "properties": {
+                "items": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/dtos.InvoiceItemOutput"
+                    }
+                }
+            }
+        },
+        "dtos.PurchaseUpdateInput": {
+            "type": "object",
+            "properties": {
+                "category_id": {
+                    "type": "string",
+                    "example": "660e8400-e29b-41d4-a716-446655440001"
+                },
+                "description": {
+                    "type": "string",
+                    "example": "iPhone 16 Pro Max"
+                },
+                "total_amount": {
+                    "type": "string",
+                    "example": "10999.00"
+                }
+            }
+        },
+        "dtos.PurchaseUpdateOutput": {
+            "type": "object",
+            "properties": {
+                "items": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/dtos.InvoiceItemOutput"
+                    }
+                }
+            }
+        },
+        "dtos.RegisterTransactionInput": {
+            "type": "object",
+            "properties": {
+                "amount": {
+                    "description": "String decimal (e.g., \"1234.56\")",
+                    "type": "string",
+                    "example": "350.75"
+                },
+                "category_id": {
+                    "type": "string",
+                    "example": "550e8400-e29b-41d4-a716-446655440000"
+                },
+                "description": {
+                    "type": "string",
+                    "example": "Compras da semana"
+                },
+                "direction": {
+                    "description": "INCOME | EXPENSE",
+                    "type": "string",
+                    "enum": [
+                        "INCOME",
+                        "EXPENSE"
+                    ],
+                    "example": "EXPENSE"
+                },
+                "is_paid": {
+                    "type": "boolean",
+                    "example": true
+                },
+                "reference_month": {
+                    "description": "Formato: YYYY-MM",
+                    "type": "string",
+                    "example": "2025-01"
+                },
+                "title": {
+                    "type": "string",
+                    "example": "Supermercado Pão de Açúcar"
+                },
+                "type": {
+                    "description": "PIX | BOLETO | TRANSFER | CREDIT_CARD",
+                    "type": "string",
+                    "enum": [
+                        "PIX",
+                        "BOLETO",
+                        "TRANSFER",
+                        "CREDIT_CARD"
+                    ],
+                    "example": "PIX"
+                }
+            }
+        },
+        "dtos.TransactionItemOutput": {
+            "type": "object",
+            "properties": {
+                "amount": {
+                    "description": "String decimal (e.g., \"1234.56\")",
+                    "type": "string",
+                    "example": "350.75"
+                },
+                "category_id": {
+                    "type": "string",
+                    "example": "660e8400-e29b-41d4-a716-446655440001"
+                },
+                "created_at": {
+                    "type": "string",
+                    "example": "2025-01-15T10:30:00Z"
+                },
+                "description": {
+                    "type": "string",
+                    "example": "Compras da semana"
+                },
+                "direction": {
+                    "type": "string",
+                    "enum": [
+                        "INCOME",
+                        "EXPENSE"
+                    ],
+                    "example": "EXPENSE"
+                },
+                "id": {
+                    "type": "string",
+                    "example": "550e8400-e29b-41d4-a716-446655440000"
+                },
+                "is_paid": {
+                    "type": "boolean",
+                    "example": true
+                },
+                "title": {
+                    "type": "string",
+                    "example": "Supermercado Pão de Açúcar"
+                },
+                "type": {
+                    "type": "string",
+                    "enum": [
+                        "PIX",
+                        "BOLETO",
+                        "TRANSFER",
+                        "CREDIT_CARD"
+                    ],
+                    "example": "PIX"
+                },
+                "updated_at": {
+                    "type": "string",
+                    "example": "2025-01-20T08:00:00Z"
+                }
+            }
+        },
+        "dtos.TransactionPaginationMeta": {
+            "type": "object",
+            "properties": {
+                "has_next": {
+                    "type": "boolean",
+                    "example": true
+                },
+                "limit": {
+                    "type": "integer",
+                    "example": 20
+                },
+                "next_cursor": {
+                    "type": "string",
+                    "example": "eyJmIjp7InJlZmVyZW5jZV9tb250aCI6IjIwMjUtMDEifX0"
+                }
+            }
+        },
+        "dtos.UpdateTransactionItemInput": {
+            "type": "object",
+            "properties": {
+                "amount": {
+                    "description": "String decimal (e.g., \"1234.56\")",
+                    "type": "string",
+                    "example": "420.00"
+                },
+                "description": {
+                    "type": "string",
+                    "example": "Compras do mês"
+                },
+                "direction": {
+                    "type": "string",
+                    "enum": [
+                        "INCOME",
+                        "EXPENSE"
+                    ],
+                    "example": "EXPENSE"
+                },
+                "is_paid": {
+                    "type": "boolean",
+                    "example": false
+                },
+                "title": {
+                    "type": "string",
+                    "example": "Supermercado Extra"
+                },
+                "type": {
+                    "type": "string",
+                    "enum": [
+                        "PIX",
+                        "BOLETO",
+                        "TRANSFER",
+                        "CREDIT_CARD"
+                    ],
+                    "example": "PIX"
+                }
+            }
+        },
+        "httperrors.ProblemDetail": {
+            "type": "object",
+            "properties": {
+                "detail": {
+                    "type": "string"
+                },
+                "errors": {
+                    "type": "object",
+                    "additionalProperties": {}
+                },
+                "instance": {
+                    "type": "string"
+                },
+                "request_id": {
+                    "type": "string"
+                },
+                "status": {
+                    "type": "integer"
+                },
+                "timestamp": {
+                    "type": "string"
+                },
+                "title": {
+                    "type": "string"
+                },
+                "trace_id": {
+                    "type": "string"
+                },
+                "type": {
+                    "type": "string"
+                }
+            }
+        }
+    },
+    "securityDefinitions": {
+        "BearerAuth": {
+            "description": "Token JWT no formato: `Bearer {token}`",
+            "type": "apiKey",
+            "name": "Authorization",
+            "in": "header"
+        }
+    }
+}

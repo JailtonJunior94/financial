@@ -53,6 +53,25 @@ env-migrate: ## Migrate from old .env structure to new (cleanup duplicates)
 	fi
 
 # ============================================================================
+# DOCUMENTATION
+# ============================================================================
+
+.PHONY: docs-generate
+docs-generate: ## Generate Swagger/OpenAPI docs from source annotations (requires swag)
+	@echo "📚 Generating Swagger documentation..."
+	@if ! command -v swag &> /dev/null; then \
+		echo "📦 Installing swag CLI..."; \
+		go install github.com/swaggo/swag/cmd/swag@latest; \
+	fi
+	@swag init \
+		-g cmd/main.go \
+		--output docs \
+		--parseInternal \
+		--generatedTime false
+	@echo "✅ Docs generated: docs/swagger.json | docs/swagger.yaml | docs/docs.go"
+	@echo "📖 Serve via: http://localhost:8080/swagger/index.html (após adicionar rota swagger UI)"
+
+# ============================================================================
 # BUILD
 # ============================================================================
 
