@@ -1,0 +1,2584 @@
+{
+  "info": {
+    "_postman_id": "4d63f7f6-9a42-46f3-a623-98f3df745020",
+    "name": "Financial API - Complete",
+    "description": "Collection automatizada e idempotente para setup completo da API financeira. Execute via Collection Runner para criar categorias, subcategorias e budget de forma encadeada e sem duplicatas.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "auth": {
+    "type": "bearer",
+    "bearer": [
+      {
+        "key": "token",
+        "value": "{{token}}",
+        "type": "string"
+      }
+    ]
+  },
+  "variable": [
+    { "key": "base_url", "value": "http://localhost:8080", "type": "string" },
+    { "key": "token", "value": "", "type": "string" },
+    { "key": "user_id", "value": "", "type": "string" },
+    { "key": "user_email", "value": "", "type": "string" },
+    { "key": "all_categories_data", "value": "[]", "type": "string" },
+    { "key": "cat_custos_fixos_id", "value": "", "type": "string" },
+    { "key": "cat_conforto_id", "value": "", "type": "string" },
+    { "key": "cat_metas_id", "value": "", "type": "string" },
+    { "key": "cat_prazeres_id", "value": "", "type": "string" },
+    { "key": "cat_conhecimento_id", "value": "", "type": "string" },
+    { "key": "cat_liberdade_id", "value": "", "type": "string" },
+    { "key": "subcat_custos_casa_id", "value": "", "type": "string" },
+    { "key": "subcat_custos_supermercado_id", "value": "", "type": "string" },
+    { "key": "subcat_custos_abastecimento_id", "value": "", "type": "string" },
+    { "key": "subcat_custos_suplementos_id", "value": "", "type": "string" },
+    { "key": "subcat_custos_academia_id", "value": "", "type": "string" },
+    { "key": "subcat_conforto_lavagem_id", "value": "", "type": "string" },
+    { "key": "subcat_conforto_casa_id", "value": "", "type": "string" },
+    { "key": "subcat_conforto_restaurante_id", "value": "", "type": "string" },
+    { "key": "subcat_conforto_supermercado_id", "value": "", "type": "string" },
+    { "key": "subcat_metas_viagem_id", "value": "", "type": "string" },
+    { "key": "subcat_metas_festa_id", "value": "", "type": "string" },
+    { "key": "subcat_prazeres_lazer_id", "value": "", "type": "string" },
+    { "key": "subcat_prazeres_viagem_id", "value": "", "type": "string" },
+    { "key": "subcat_prazeres_restaurante_id", "value": "", "type": "string" },
+    { "key": "subcat_conhecimento_livros_id", "value": "", "type": "string" },
+    { "key": "subcat_conhecimento_cursos_id", "value": "", "type": "string" },
+    { "key": "subcat_liberdade_investimentos_id", "value": "", "type": "string" },
+    { "key": "budget_reference_month", "value": "2026-02", "type": "string" },
+    { "key": "budget_total_amount", "value": "13874.40", "type": "string" },
+    { "key": "budget_already_exists", "value": "false", "type": "string" },
+    { "key": "budget_id", "value": "", "type": "string" },
+    { "key": "category_id", "value": "", "type": "string" },
+    { "key": "card_id", "value": "", "type": "string" },
+    { "key": "payment_method_id", "value": "", "type": "string" },
+    { "key": "transaction_id", "value": "", "type": "string" },
+    { "key": "transaction_item_id", "value": "", "type": "string" },
+    { "key": "invoice_id", "value": "", "type": "string" },
+    { "key": "invoice_item_id", "value": "", "type": "string" }
+  ],
+  "item": [
+    {
+      "name": "🔐 Auth",
+      "description": "Autenticação e criação de usuário",
+      "item": [
+        {
+          "name": "Criar Usuário",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Usuário criado ou já existente', function() {",
+                  "    pm.expect(pm.response.code).to.be.oneOf([201, 409]);",
+                  "});",
+                  "",
+                  "if (pm.response.code === 201) {",
+                  "    const r = pm.response.json();",
+                  "    pm.collectionVariables.set('user_id', r.id || '');",
+                  "    pm.collectionVariables.set('user_email', r.email || '');",
+                  "    console.log('[OK] Usuário criado: ' + (r.email || ''));",
+                  "} else {",
+                  "    console.log('[SKIP] Usuário já existe, prosseguindo com login.');",
+                  "}"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "auth": { "type": "noauth" },
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Jailton Junior\",\n  \"email\": \"jailton.junior94@outlook.com\",\n  \"password\": \"@Helena@Lima@2025\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/v1/users",
+              "host": ["{{base_url}}"],
+              "path": ["api", "v1", "users"]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Login (Obter Token)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Login bem-sucedido', function() {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "pm.test('Token JWT retornado', function() {",
+                  "    const r = pm.response.json();",
+                  "    pm.expect(r.token, 'token').to.be.a('string').and.not.be.empty;",
+                  "    pm.collectionVariables.set('token', r.token);",
+                  "    console.log('[OK] Token armazenado com sucesso.');",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "auth": { "type": "noauth" },
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/x-www-form-urlencoded" }],
+            "body": {
+              "mode": "urlencoded",
+              "urlencoded": [
+                { "key": "email", "value": "jailton.junior94@outlook.com", "type": "text" },
+                { "key": "password", "value": "@Helena@Lima@2025", "type": "text" }
+              ]
+            },
+            "url": {
+              "raw": "{{base_url}}/api/v1/token",
+              "host": ["{{base_url}}"],
+              "path": ["api", "v1", "token"]
+            }
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "⚙️ Setup Automatizado",
+      "description": "Execução sequencial e idempotente: carrega estado atual, cria categorias/subcategorias e budget sem duplicatas.",
+      "item": [
+        {
+          "name": "1. Carregar Categorias Existentes",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status 200 - Categorias carregadas', function() {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "pm.test('Cache de categorias atualizado', function() {",
+                  "    const r = pm.response.json();",
+                  "    const categories = r.data || [];",
+                  "    pm.collectionVariables.set('all_categories_data', JSON.stringify(categories));",
+                  "    console.log('[OK] Cache atualizado com ' + categories.length + ' categorias raiz.');",
+                  "",
+                  "    // Restaurar IDs de categorias raiz existentes",
+                  "    var rootMap = {",
+                  "        'Custos fixos': 'cat_custos_fixos_id',",
+                  "        'Conforto': 'cat_conforto_id',",
+                  "        'Metas': 'cat_metas_id',",
+                  "        'Prazeres': 'cat_prazeres_id',",
+                  "        'Conhecimento': 'cat_conhecimento_id',",
+                  "        'Liberdade Financeira': 'cat_liberdade_id'",
+                  "    };",
+                  "    categories.forEach(function(c) {",
+                  "        if (rootMap[c.name]) {",
+                  "            pm.collectionVariables.set(rootMap[c.name], c.id);",
+                  "            console.log('[CACHE] ' + c.name + ' = ' + c.id);",
+                  "        }",
+                  "    });",
+                  "",
+                  "    // Restaurar IDs de subcategorias existentes",
+                  "    var subMap = {",
+                  "        'Custos fixos': {",
+                  "            'Casa': 'subcat_custos_casa_id',",
+                  "            'Supermercado': 'subcat_custos_supermercado_id',",
+                  "            'Abastecimento': 'subcat_custos_abastecimento_id',",
+                  "            'Suplementos': 'subcat_custos_suplementos_id',",
+                  "            'Academia': 'subcat_custos_academia_id'",
+                  "        },",
+                  "        'Conforto': {",
+                  "            'Lavagem automotiva': 'subcat_conforto_lavagem_id',",
+                  "            'Casa': 'subcat_conforto_casa_id',",
+                  "            'Restaurante': 'subcat_conforto_restaurante_id',",
+                  "            'Supermercado': 'subcat_conforto_supermercado_id'",
+                  "        },",
+                  "        'Metas': {",
+                  "            'Viagem': 'subcat_metas_viagem_id',",
+                  "            'Festa': 'subcat_metas_festa_id'",
+                  "        },",
+                  "        'Prazeres': {",
+                  "            'Lazer': 'subcat_prazeres_lazer_id',",
+                  "            'Viagem': 'subcat_prazeres_viagem_id',",
+                  "            'Restaurante': 'subcat_prazeres_restaurante_id'",
+                  "        },",
+                  "        'Conhecimento': {",
+                  "            'Livros': 'subcat_conhecimento_livros_id',",
+                  "            'Cursos': 'subcat_conhecimento_cursos_id'",
+                  "        },",
+                  "        'Liberdade Financeira': {",
+                  "            'Investimentos': 'subcat_liberdade_investimentos_id'",
+                  "        }",
+                  "    };",
+                  "    categories.forEach(function(parent) {",
+                  "        if (subMap[parent.name] && Array.isArray(parent.children)) {",
+                  "            parent.children.forEach(function(child) {",
+                  "                var varName = subMap[parent.name][child.name];",
+                  "                if (varName) {",
+                  "                    pm.collectionVariables.set(varName, child.id);",
+                  "                    console.log('[CACHE] ' + parent.name + '/' + child.name + ' = ' + child.id);",
+                  "                }",
+                  "            });",
+                  "        }",
+                  "    });",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/api/v1/categories?limit=100",
+              "host": ["{{base_url}}"],
+              "path": ["api", "v1", "categories"],
+              "query": [{ "key": "limit", "value": "100" }]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "2.1 Categoria - Custos fixos",
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "var catName = 'Custos fixos';",
+                  "var varName = 'cat_custos_fixos_id';",
+                  "var existingId = pm.collectionVariables.get(varName);",
+                  "if (existingId) {",
+                  "    console.log('[SKIP] ' + catName + ' ja existe: ' + existingId);",
+                  "    pm.execution.skipRequest();",
+                  "}"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status 201 - Categoria criada', function() {",
+                  "    pm.response.to.have.status(201);",
+                  "});",
+                  "pm.test('ID retornado', function() {",
+                  "    const r = pm.response.json();",
+                  "    pm.expect(r.id, 'id').to.be.a('string').and.not.be.empty;",
+                  "    pm.collectionVariables.set('cat_custos_fixos_id', r.id);",
+                  "    console.log('[OK] cat_custos_fixos_id = ' + r.id);",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Custos fixos\",\n  \"sequence\": 1\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/v1/categories",
+              "host": ["{{base_url}}"],
+              "path": ["api", "v1", "categories"]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "2.2 Categoria - Conforto",
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "var existingId = pm.collectionVariables.get('cat_conforto_id');",
+                  "if (existingId) {",
+                  "    console.log('[SKIP] Conforto ja existe: ' + existingId);",
+                  "    pm.execution.skipRequest();",
+                  "}"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status 201 - Categoria criada', function() {",
+                  "    pm.response.to.have.status(201);",
+                  "});",
+                  "pm.test('ID retornado', function() {",
+                  "    const r = pm.response.json();",
+                  "    pm.expect(r.id, 'id').to.be.a('string').and.not.be.empty;",
+                  "    pm.collectionVariables.set('cat_conforto_id', r.id);",
+                  "    console.log('[OK] cat_conforto_id = ' + r.id);",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Conforto\",\n  \"sequence\": 2\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/v1/categories",
+              "host": ["{{base_url}}"],
+              "path": ["api", "v1", "categories"]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "2.3 Categoria - Metas",
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "var existingId = pm.collectionVariables.get('cat_metas_id');",
+                  "if (existingId) {",
+                  "    console.log('[SKIP] Metas ja existe: ' + existingId);",
+                  "    pm.execution.skipRequest();",
+                  "}"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status 201 - Categoria criada', function() {",
+                  "    pm.response.to.have.status(201);",
+                  "});",
+                  "pm.test('ID retornado', function() {",
+                  "    const r = pm.response.json();",
+                  "    pm.expect(r.id, 'id').to.be.a('string').and.not.be.empty;",
+                  "    pm.collectionVariables.set('cat_metas_id', r.id);",
+                  "    console.log('[OK] cat_metas_id = ' + r.id);",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Metas\",\n  \"sequence\": 3\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/v1/categories",
+              "host": ["{{base_url}}"],
+              "path": ["api", "v1", "categories"]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "2.4 Categoria - Prazeres",
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "var existingId = pm.collectionVariables.get('cat_prazeres_id');",
+                  "if (existingId) {",
+                  "    console.log('[SKIP] Prazeres ja existe: ' + existingId);",
+                  "    pm.execution.skipRequest();",
+                  "}"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status 201 - Categoria criada', function() {",
+                  "    pm.response.to.have.status(201);",
+                  "});",
+                  "pm.test('ID retornado', function() {",
+                  "    const r = pm.response.json();",
+                  "    pm.expect(r.id, 'id').to.be.a('string').and.not.be.empty;",
+                  "    pm.collectionVariables.set('cat_prazeres_id', r.id);",
+                  "    console.log('[OK] cat_prazeres_id = ' + r.id);",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Prazeres\",\n  \"sequence\": 4\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/v1/categories",
+              "host": ["{{base_url}}"],
+              "path": ["api", "v1", "categories"]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "2.5 Categoria - Conhecimento",
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "var existingId = pm.collectionVariables.get('cat_conhecimento_id');",
+                  "if (existingId) {",
+                  "    console.log('[SKIP] Conhecimento ja existe: ' + existingId);",
+                  "    pm.execution.skipRequest();",
+                  "}"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status 201 - Categoria criada', function() {",
+                  "    pm.response.to.have.status(201);",
+                  "});",
+                  "pm.test('ID retornado', function() {",
+                  "    const r = pm.response.json();",
+                  "    pm.expect(r.id, 'id').to.be.a('string').and.not.be.empty;",
+                  "    pm.collectionVariables.set('cat_conhecimento_id', r.id);",
+                  "    console.log('[OK] cat_conhecimento_id = ' + r.id);",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Conhecimento\",\n  \"sequence\": 5\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/v1/categories",
+              "host": ["{{base_url}}"],
+              "path": ["api", "v1", "categories"]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "2.6 Categoria - Liberdade Financeira",
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "var existingId = pm.collectionVariables.get('cat_liberdade_id');",
+                  "if (existingId) {",
+                  "    console.log('[SKIP] Liberdade Financeira ja existe: ' + existingId);",
+                  "    pm.execution.skipRequest();",
+                  "}"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status 201 - Categoria criada', function() {",
+                  "    pm.response.to.have.status(201);",
+                  "});",
+                  "pm.test('ID retornado', function() {",
+                  "    const r = pm.response.json();",
+                  "    pm.expect(r.id, 'id').to.be.a('string').and.not.be.empty;",
+                  "    pm.collectionVariables.set('cat_liberdade_id', r.id);",
+                  "    console.log('[OK] cat_liberdade_id = ' + r.id);",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Liberdade Financeira\",\n  \"sequence\": 6\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/v1/categories",
+              "host": ["{{base_url}}"],
+              "path": ["api", "v1", "categories"]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "3.1 Sub [Custos fixos] - Casa",
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "var parentId = pm.collectionVariables.get('cat_custos_fixos_id');",
+                  "if (!parentId) { throw new Error('[ABORT] cat_custos_fixos_id nao definido. Execute as categorias raiz primeiro.'); }",
+                  "var existingId = pm.collectionVariables.get('subcat_custos_casa_id');",
+                  "if (existingId) {",
+                  "    console.log('[SKIP] Casa (Custos fixos) ja existe: ' + existingId);",
+                  "    pm.execution.skipRequest();",
+                  "}"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status 201 - Subcategoria criada', function() {",
+                  "    pm.response.to.have.status(201);",
+                  "});",
+                  "pm.test('ID retornado', function() {",
+                  "    const r = pm.response.json();",
+                  "    pm.expect(r.id, 'id').to.be.a('string').and.not.be.empty;",
+                  "    pm.collectionVariables.set('subcat_custos_casa_id', r.id);",
+                  "    console.log('[OK] subcat_custos_casa_id = ' + r.id);",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"parent_id\": \"{{cat_custos_fixos_id}}\",\n  \"name\": \"Casa\",\n  \"sequence\": 1\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/v1/categories",
+              "host": ["{{base_url}}"],
+              "path": ["api", "v1", "categories"]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "3.2 Sub [Custos fixos] - Supermercado",
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "var parentId = pm.collectionVariables.get('cat_custos_fixos_id');",
+                  "if (!parentId) { throw new Error('[ABORT] cat_custos_fixos_id nao definido.'); }",
+                  "var existingId = pm.collectionVariables.get('subcat_custos_supermercado_id');",
+                  "if (existingId) {",
+                  "    console.log('[SKIP] Supermercado (Custos fixos) ja existe: ' + existingId);",
+                  "    pm.execution.skipRequest();",
+                  "}"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status 201 - Subcategoria criada', function() {",
+                  "    pm.response.to.have.status(201);",
+                  "});",
+                  "pm.test('ID retornado', function() {",
+                  "    const r = pm.response.json();",
+                  "    pm.expect(r.id, 'id').to.be.a('string').and.not.be.empty;",
+                  "    pm.collectionVariables.set('subcat_custos_supermercado_id', r.id);",
+                  "    console.log('[OK] subcat_custos_supermercado_id = ' + r.id);",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"parent_id\": \"{{cat_custos_fixos_id}}\",\n  \"name\": \"Supermercado\",\n  \"sequence\": 2\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/v1/categories",
+              "host": ["{{base_url}}"],
+              "path": ["api", "v1", "categories"]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "3.3 Sub [Custos fixos] - Abastecimento",
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "var parentId = pm.collectionVariables.get('cat_custos_fixos_id');",
+                  "if (!parentId) { throw new Error('[ABORT] cat_custos_fixos_id nao definido.'); }",
+                  "var existingId = pm.collectionVariables.get('subcat_custos_abastecimento_id');",
+                  "if (existingId) {",
+                  "    console.log('[SKIP] Abastecimento (Custos fixos) ja existe: ' + existingId);",
+                  "    pm.execution.skipRequest();",
+                  "}"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status 201 - Subcategoria criada', function() {",
+                  "    pm.response.to.have.status(201);",
+                  "});",
+                  "pm.test('ID retornado', function() {",
+                  "    const r = pm.response.json();",
+                  "    pm.expect(r.id, 'id').to.be.a('string').and.not.be.empty;",
+                  "    pm.collectionVariables.set('subcat_custos_abastecimento_id', r.id);",
+                  "    console.log('[OK] subcat_custos_abastecimento_id = ' + r.id);",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"parent_id\": \"{{cat_custos_fixos_id}}\",\n  \"name\": \"Abastecimento\",\n  \"sequence\": 3\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/v1/categories",
+              "host": ["{{base_url}}"],
+              "path": ["api", "v1", "categories"]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "3.4 Sub [Custos fixos] - Suplementos",
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "var parentId = pm.collectionVariables.get('cat_custos_fixos_id');",
+                  "if (!parentId) { throw new Error('[ABORT] cat_custos_fixos_id nao definido.'); }",
+                  "var existingId = pm.collectionVariables.get('subcat_custos_suplementos_id');",
+                  "if (existingId) {",
+                  "    console.log('[SKIP] Suplementos (Custos fixos) ja existe: ' + existingId);",
+                  "    pm.execution.skipRequest();",
+                  "}"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status 201 - Subcategoria criada', function() {",
+                  "    pm.response.to.have.status(201);",
+                  "});",
+                  "pm.test('ID retornado', function() {",
+                  "    const r = pm.response.json();",
+                  "    pm.expect(r.id, 'id').to.be.a('string').and.not.be.empty;",
+                  "    pm.collectionVariables.set('subcat_custos_suplementos_id', r.id);",
+                  "    console.log('[OK] subcat_custos_suplementos_id = ' + r.id);",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"parent_id\": \"{{cat_custos_fixos_id}}\",\n  \"name\": \"Suplementos\",\n  \"sequence\": 4\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/v1/categories",
+              "host": ["{{base_url}}"],
+              "path": ["api", "v1", "categories"]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "3.5 Sub [Custos fixos] - Academia",
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "var parentId = pm.collectionVariables.get('cat_custos_fixos_id');",
+                  "if (!parentId) { throw new Error('[ABORT] cat_custos_fixos_id nao definido.'); }",
+                  "var existingId = pm.collectionVariables.get('subcat_custos_academia_id');",
+                  "if (existingId) {",
+                  "    console.log('[SKIP] Academia (Custos fixos) ja existe: ' + existingId);",
+                  "    pm.execution.skipRequest();",
+                  "}"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status 201 - Subcategoria criada', function() {",
+                  "    pm.response.to.have.status(201);",
+                  "});",
+                  "pm.test('ID retornado', function() {",
+                  "    const r = pm.response.json();",
+                  "    pm.expect(r.id, 'id').to.be.a('string').and.not.be.empty;",
+                  "    pm.collectionVariables.set('subcat_custos_academia_id', r.id);",
+                  "    console.log('[OK] subcat_custos_academia_id = ' + r.id);",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"parent_id\": \"{{cat_custos_fixos_id}}\",\n  \"name\": \"Academia\",\n  \"sequence\": 5\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/v1/categories",
+              "host": ["{{base_url}}"],
+              "path": ["api", "v1", "categories"]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "4.1 Sub [Conforto] - Lavagem automotiva",
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "var parentId = pm.collectionVariables.get('cat_conforto_id');",
+                  "if (!parentId) { throw new Error('[ABORT] cat_conforto_id nao definido.'); }",
+                  "var existingId = pm.collectionVariables.get('subcat_conforto_lavagem_id');",
+                  "if (existingId) {",
+                  "    console.log('[SKIP] Lavagem automotiva (Conforto) ja existe: ' + existingId);",
+                  "    pm.execution.skipRequest();",
+                  "}"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status 201 - Subcategoria criada', function() {",
+                  "    pm.response.to.have.status(201);",
+                  "});",
+                  "pm.test('ID retornado', function() {",
+                  "    const r = pm.response.json();",
+                  "    pm.expect(r.id, 'id').to.be.a('string').and.not.be.empty;",
+                  "    pm.collectionVariables.set('subcat_conforto_lavagem_id', r.id);",
+                  "    console.log('[OK] subcat_conforto_lavagem_id = ' + r.id);",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"parent_id\": \"{{cat_conforto_id}}\",\n  \"name\": \"Lavagem automotiva\",\n  \"sequence\": 1\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/v1/categories",
+              "host": ["{{base_url}}"],
+              "path": ["api", "v1", "categories"]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "4.2 Sub [Conforto] - Casa",
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "var parentId = pm.collectionVariables.get('cat_conforto_id');",
+                  "if (!parentId) { throw new Error('[ABORT] cat_conforto_id nao definido.'); }",
+                  "var existingId = pm.collectionVariables.get('subcat_conforto_casa_id');",
+                  "if (existingId) {",
+                  "    console.log('[SKIP] Casa (Conforto) ja existe: ' + existingId);",
+                  "    pm.execution.skipRequest();",
+                  "}"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status 201 - Subcategoria criada', function() {",
+                  "    pm.response.to.have.status(201);",
+                  "});",
+                  "pm.test('ID retornado', function() {",
+                  "    const r = pm.response.json();",
+                  "    pm.expect(r.id, 'id').to.be.a('string').and.not.be.empty;",
+                  "    pm.collectionVariables.set('subcat_conforto_casa_id', r.id);",
+                  "    console.log('[OK] subcat_conforto_casa_id = ' + r.id);",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"parent_id\": \"{{cat_conforto_id}}\",\n  \"name\": \"Casa\",\n  \"sequence\": 2\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/v1/categories",
+              "host": ["{{base_url}}"],
+              "path": ["api", "v1", "categories"]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "4.3 Sub [Conforto] - Restaurante",
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "var parentId = pm.collectionVariables.get('cat_conforto_id');",
+                  "if (!parentId) { throw new Error('[ABORT] cat_conforto_id nao definido.'); }",
+                  "var existingId = pm.collectionVariables.get('subcat_conforto_restaurante_id');",
+                  "if (existingId) {",
+                  "    console.log('[SKIP] Restaurante (Conforto) ja existe: ' + existingId);",
+                  "    pm.execution.skipRequest();",
+                  "}"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status 201 - Subcategoria criada', function() {",
+                  "    pm.response.to.have.status(201);",
+                  "});",
+                  "pm.test('ID retornado', function() {",
+                  "    const r = pm.response.json();",
+                  "    pm.expect(r.id, 'id').to.be.a('string').and.not.be.empty;",
+                  "    pm.collectionVariables.set('subcat_conforto_restaurante_id', r.id);",
+                  "    console.log('[OK] subcat_conforto_restaurante_id = ' + r.id);",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"parent_id\": \"{{cat_conforto_id}}\",\n  \"name\": \"Restaurante\",\n  \"sequence\": 3\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/v1/categories",
+              "host": ["{{base_url}}"],
+              "path": ["api", "v1", "categories"]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "4.4 Sub [Conforto] - Supermercado",
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "var parentId = pm.collectionVariables.get('cat_conforto_id');",
+                  "if (!parentId) { throw new Error('[ABORT] cat_conforto_id nao definido.'); }",
+                  "var existingId = pm.collectionVariables.get('subcat_conforto_supermercado_id');",
+                  "if (existingId) {",
+                  "    console.log('[SKIP] Supermercado (Conforto) ja existe: ' + existingId);",
+                  "    pm.execution.skipRequest();",
+                  "}"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status 201 - Subcategoria criada', function() {",
+                  "    pm.response.to.have.status(201);",
+                  "});",
+                  "pm.test('ID retornado', function() {",
+                  "    const r = pm.response.json();",
+                  "    pm.expect(r.id, 'id').to.be.a('string').and.not.be.empty;",
+                  "    pm.collectionVariables.set('subcat_conforto_supermercado_id', r.id);",
+                  "    console.log('[OK] subcat_conforto_supermercado_id = ' + r.id);",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"parent_id\": \"{{cat_conforto_id}}\",\n  \"name\": \"Supermercado\",\n  \"sequence\": 4\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/v1/categories",
+              "host": ["{{base_url}}"],
+              "path": ["api", "v1", "categories"]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "5.1 Sub [Metas] - Viagem",
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "var parentId = pm.collectionVariables.get('cat_metas_id');",
+                  "if (!parentId) { throw new Error('[ABORT] cat_metas_id nao definido.'); }",
+                  "var existingId = pm.collectionVariables.get('subcat_metas_viagem_id');",
+                  "if (existingId) {",
+                  "    console.log('[SKIP] Viagem (Metas) ja existe: ' + existingId);",
+                  "    pm.execution.skipRequest();",
+                  "}"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status 201 - Subcategoria criada', function() {",
+                  "    pm.response.to.have.status(201);",
+                  "});",
+                  "pm.test('ID retornado', function() {",
+                  "    const r = pm.response.json();",
+                  "    pm.expect(r.id, 'id').to.be.a('string').and.not.be.empty;",
+                  "    pm.collectionVariables.set('subcat_metas_viagem_id', r.id);",
+                  "    console.log('[OK] subcat_metas_viagem_id = ' + r.id);",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"parent_id\": \"{{cat_metas_id}}\",\n  \"name\": \"Viagem\",\n  \"sequence\": 1\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/v1/categories",
+              "host": ["{{base_url}}"],
+              "path": ["api", "v1", "categories"]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "5.2 Sub [Metas] - Festa",
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "var parentId = pm.collectionVariables.get('cat_metas_id');",
+                  "if (!parentId) { throw new Error('[ABORT] cat_metas_id nao definido.'); }",
+                  "var existingId = pm.collectionVariables.get('subcat_metas_festa_id');",
+                  "if (existingId) {",
+                  "    console.log('[SKIP] Festa (Metas) ja existe: ' + existingId);",
+                  "    pm.execution.skipRequest();",
+                  "}"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status 201 - Subcategoria criada', function() {",
+                  "    pm.response.to.have.status(201);",
+                  "});",
+                  "pm.test('ID retornado', function() {",
+                  "    const r = pm.response.json();",
+                  "    pm.expect(r.id, 'id').to.be.a('string').and.not.be.empty;",
+                  "    pm.collectionVariables.set('subcat_metas_festa_id', r.id);",
+                  "    console.log('[OK] subcat_metas_festa_id = ' + r.id);",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"parent_id\": \"{{cat_metas_id}}\",\n  \"name\": \"Festa\",\n  \"sequence\": 2\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/v1/categories",
+              "host": ["{{base_url}}"],
+              "path": ["api", "v1", "categories"]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "6.1 Sub [Prazeres] - Lazer",
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "var parentId = pm.collectionVariables.get('cat_prazeres_id');",
+                  "if (!parentId) { throw new Error('[ABORT] cat_prazeres_id nao definido.'); }",
+                  "var existingId = pm.collectionVariables.get('subcat_prazeres_lazer_id');",
+                  "if (existingId) {",
+                  "    console.log('[SKIP] Lazer (Prazeres) ja existe: ' + existingId);",
+                  "    pm.execution.skipRequest();",
+                  "}"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status 201 - Subcategoria criada', function() {",
+                  "    pm.response.to.have.status(201);",
+                  "});",
+                  "pm.test('ID retornado', function() {",
+                  "    const r = pm.response.json();",
+                  "    pm.expect(r.id, 'id').to.be.a('string').and.not.be.empty;",
+                  "    pm.collectionVariables.set('subcat_prazeres_lazer_id', r.id);",
+                  "    console.log('[OK] subcat_prazeres_lazer_id = ' + r.id);",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"parent_id\": \"{{cat_prazeres_id}}\",\n  \"name\": \"Lazer\",\n  \"sequence\": 1\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/v1/categories",
+              "host": ["{{base_url}}"],
+              "path": ["api", "v1", "categories"]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "6.2 Sub [Prazeres] - Viagem",
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "var parentId = pm.collectionVariables.get('cat_prazeres_id');",
+                  "if (!parentId) { throw new Error('[ABORT] cat_prazeres_id nao definido.'); }",
+                  "var existingId = pm.collectionVariables.get('subcat_prazeres_viagem_id');",
+                  "if (existingId) {",
+                  "    console.log('[SKIP] Viagem (Prazeres) ja existe: ' + existingId);",
+                  "    pm.execution.skipRequest();",
+                  "}"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status 201 - Subcategoria criada', function() {",
+                  "    pm.response.to.have.status(201);",
+                  "});",
+                  "pm.test('ID retornado', function() {",
+                  "    const r = pm.response.json();",
+                  "    pm.expect(r.id, 'id').to.be.a('string').and.not.be.empty;",
+                  "    pm.collectionVariables.set('subcat_prazeres_viagem_id', r.id);",
+                  "    console.log('[OK] subcat_prazeres_viagem_id = ' + r.id);",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"parent_id\": \"{{cat_prazeres_id}}\",\n  \"name\": \"Viagem\",\n  \"sequence\": 2\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/v1/categories",
+              "host": ["{{base_url}}"],
+              "path": ["api", "v1", "categories"]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "6.3 Sub [Prazeres] - Restaurante",
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "var parentId = pm.collectionVariables.get('cat_prazeres_id');",
+                  "if (!parentId) { throw new Error('[ABORT] cat_prazeres_id nao definido.'); }",
+                  "var existingId = pm.collectionVariables.get('subcat_prazeres_restaurante_id');",
+                  "if (existingId) {",
+                  "    console.log('[SKIP] Restaurante (Prazeres) ja existe: ' + existingId);",
+                  "    pm.execution.skipRequest();",
+                  "}"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status 201 - Subcategoria criada', function() {",
+                  "    pm.response.to.have.status(201);",
+                  "});",
+                  "pm.test('ID retornado', function() {",
+                  "    const r = pm.response.json();",
+                  "    pm.expect(r.id, 'id').to.be.a('string').and.not.be.empty;",
+                  "    pm.collectionVariables.set('subcat_prazeres_restaurante_id', r.id);",
+                  "    console.log('[OK] subcat_prazeres_restaurante_id = ' + r.id);",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"parent_id\": \"{{cat_prazeres_id}}\",\n  \"name\": \"Restaurante\",\n  \"sequence\": 3\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/v1/categories",
+              "host": ["{{base_url}}"],
+              "path": ["api", "v1", "categories"]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "7.1 Sub [Conhecimento] - Livros",
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "var parentId = pm.collectionVariables.get('cat_conhecimento_id');",
+                  "if (!parentId) { throw new Error('[ABORT] cat_conhecimento_id nao definido.'); }",
+                  "var existingId = pm.collectionVariables.get('subcat_conhecimento_livros_id');",
+                  "if (existingId) {",
+                  "    console.log('[SKIP] Livros (Conhecimento) ja existe: ' + existingId);",
+                  "    pm.execution.skipRequest();",
+                  "}"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status 201 - Subcategoria criada', function() {",
+                  "    pm.response.to.have.status(201);",
+                  "});",
+                  "pm.test('ID retornado', function() {",
+                  "    const r = pm.response.json();",
+                  "    pm.expect(r.id, 'id').to.be.a('string').and.not.be.empty;",
+                  "    pm.collectionVariables.set('subcat_conhecimento_livros_id', r.id);",
+                  "    console.log('[OK] subcat_conhecimento_livros_id = ' + r.id);",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"parent_id\": \"{{cat_conhecimento_id}}\",\n  \"name\": \"Livros\",\n  \"sequence\": 1\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/v1/categories",
+              "host": ["{{base_url}}"],
+              "path": ["api", "v1", "categories"]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "7.2 Sub [Conhecimento] - Cursos",
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "var parentId = pm.collectionVariables.get('cat_conhecimento_id');",
+                  "if (!parentId) { throw new Error('[ABORT] cat_conhecimento_id nao definido.'); }",
+                  "var existingId = pm.collectionVariables.get('subcat_conhecimento_cursos_id');",
+                  "if (existingId) {",
+                  "    console.log('[SKIP] Cursos (Conhecimento) ja existe: ' + existingId);",
+                  "    pm.execution.skipRequest();",
+                  "}"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status 201 - Subcategoria criada', function() {",
+                  "    pm.response.to.have.status(201);",
+                  "});",
+                  "pm.test('ID retornado', function() {",
+                  "    const r = pm.response.json();",
+                  "    pm.expect(r.id, 'id').to.be.a('string').and.not.be.empty;",
+                  "    pm.collectionVariables.set('subcat_conhecimento_cursos_id', r.id);",
+                  "    console.log('[OK] subcat_conhecimento_cursos_id = ' + r.id);",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"parent_id\": \"{{cat_conhecimento_id}}\",\n  \"name\": \"Cursos\",\n  \"sequence\": 2\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/v1/categories",
+              "host": ["{{base_url}}"],
+              "path": ["api", "v1", "categories"]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "8.1 Sub [Liberdade Financeira] - Investimentos",
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "var parentId = pm.collectionVariables.get('cat_liberdade_id');",
+                  "if (!parentId) { throw new Error('[ABORT] cat_liberdade_id nao definido.'); }",
+                  "var existingId = pm.collectionVariables.get('subcat_liberdade_investimentos_id');",
+                  "if (existingId) {",
+                  "    console.log('[SKIP] Investimentos (Liberdade Financeira) ja existe: ' + existingId);",
+                  "    pm.execution.skipRequest();",
+                  "}"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status 201 - Subcategoria criada', function() {",
+                  "    pm.response.to.have.status(201);",
+                  "});",
+                  "pm.test('ID retornado', function() {",
+                  "    const r = pm.response.json();",
+                  "    pm.expect(r.id, 'id').to.be.a('string').and.not.be.empty;",
+                  "    pm.collectionVariables.set('subcat_liberdade_investimentos_id', r.id);",
+                  "    console.log('[OK] subcat_liberdade_investimentos_id = ' + r.id);",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"parent_id\": \"{{cat_liberdade_id}}\",\n  \"name\": \"Investimentos\",\n  \"sequence\": 1\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/v1/categories",
+              "host": ["{{base_url}}"],
+              "path": ["api", "v1", "categories"]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "9.1 Verificar Budget Existente",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status 200 - Lista de budgets obtida', function() {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "var refMonth = pm.collectionVariables.get('budget_reference_month') || '2026-02';",
+                  "var r = pm.response.json();",
+                  "var budgets = (r.data || []);",
+                  "var existing = budgets.find(function(b) { return b.reference_month === refMonth; });",
+                  "",
+                  "if (existing) {",
+                  "    pm.collectionVariables.set('budget_id', existing.id);",
+                  "    pm.collectionVariables.set('budget_already_exists', 'true');",
+                  "    console.log('[FOUND] Budget ' + refMonth + ' ja existe: ' + existing.id);",
+                  "} else {",
+                  "    pm.collectionVariables.set('budget_already_exists', 'false');",
+                  "    console.log('[NOT FOUND] Budget ' + refMonth + ' sera criado.');",
+                  "}"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/api/v1/budgets?limit=100",
+              "host": ["{{base_url}}"],
+              "path": ["api", "v1", "budgets"],
+              "query": [{ "key": "limit", "value": "100" }]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "9.2 Criar Budget - R$ 13.874,40",
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "// Idempotencia: pular se ja existe",
+                  "if (pm.collectionVariables.get('budget_already_exists') === 'true') {",
+                  "    console.log('[SKIP] Budget ja existe para ' + pm.collectionVariables.get('budget_reference_month'));",
+                  "    pm.execution.skipRequest();",
+                  "    return;",
+                  "}",
+                  "",
+                  "// Validar IDs das categorias raiz",
+                  "var catMap = {",
+                  "    'Custos fixos': pm.collectionVariables.get('cat_custos_fixos_id'),",
+                  "    'Conforto': pm.collectionVariables.get('cat_conforto_id'),",
+                  "    'Metas': pm.collectionVariables.get('cat_metas_id'),",
+                  "    'Prazeres': pm.collectionVariables.get('cat_prazeres_id'),",
+                  "    'Conhecimento': pm.collectionVariables.get('cat_conhecimento_id'),",
+                  "    'Liberdade Financeira': pm.collectionVariables.get('cat_liberdade_id')",
+                  "};",
+                  "var missing = Object.keys(catMap).filter(function(k) { return !catMap[k]; });",
+                  "if (missing.length > 0) {",
+                  "    throw new Error('[ABORT] IDs de categoria ausentes: ' + missing.join(', '));",
+                  "}",
+                  "",
+                  "// Verificar soma dos percentuais = 100%",
+                  "var distribution = { 'Custos fixos': 40, 'Conforto': 10, 'Metas': 15, 'Prazeres': 10, 'Conhecimento': 5, 'Liberdade Financeira': 20 };",
+                  "var totalPct = Object.values(distribution).reduce(function(sum, v) { return sum + v; }, 0);",
+                  "if (Math.abs(totalPct - 100) > 0.001) {",
+                  "    throw new Error('[ABORT] Soma dos percentuais deve ser 100%. Atual: ' + totalPct);",
+                  "}",
+                  "",
+                  "var refMonth = pm.collectionVariables.get('budget_reference_month') || '2026-02';",
+                  "var totalAmount = pm.collectionVariables.get('budget_total_amount') || '13874.40';",
+                  "",
+                  "var body = {",
+                  "    reference_month: refMonth,",
+                  "    total_amount: totalAmount,",
+                  "    currency: 'BRL',",
+                  "    items: [",
+                  "        { category_id: catMap['Custos fixos'],       percentage_goal: '40.00' },",
+                  "        { category_id: catMap['Conforto'],           percentage_goal: '10.00' },",
+                  "        { category_id: catMap['Metas'],              percentage_goal: '15.00' },",
+                  "        { category_id: catMap['Prazeres'],           percentage_goal: '10.00' },",
+                  "        { category_id: catMap['Conhecimento'],       percentage_goal: '5.00'  },",
+                  "        { category_id: catMap['Liberdade Financeira'], percentage_goal: '20.00' }",
+                  "    ]",
+                  "};",
+                  "",
+                  "pm.request.body.update({ mode: 'raw', raw: JSON.stringify(body) });",
+                  "console.log('[PRE] Body do budget montado. Total: R$ ' + totalAmount + ' | ' + totalPct + '%');"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status 201 - Budget criado', function() {",
+                  "    pm.response.to.have.status(201);",
+                  "});",
+                  "",
+                  "pm.test('Budget ID retornado', function() {",
+                  "    const r = pm.response.json();",
+                  "    pm.expect(r.id, 'id').to.be.a('string').and.not.be.empty;",
+                  "    pm.collectionVariables.set('budget_id', r.id);",
+                  "    console.log('[OK] budget_id = ' + r.id);",
+                  "});",
+                  "",
+                  "pm.test('Reference month correto', function() {",
+                  "    const r = pm.response.json();",
+                  "    var expected = pm.collectionVariables.get('budget_reference_month') || '2026-02';",
+                  "    pm.expect(r.reference_month).to.equal(expected);",
+                  "});",
+                  "",
+                  "pm.test('Total amount correto', function() {",
+                  "    const r = pm.response.json();",
+                  "    pm.expect(parseFloat(r.total_amount)).to.be.closeTo(13874.40, 0.01);",
+                  "});",
+                  "",
+                  "pm.test('Currency BRL', function() {",
+                  "    const r = pm.response.json();",
+                  "    pm.expect(r.currency).to.equal('BRL');",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{}",
+              "options": { "raw": { "language": "json" } }
+            },
+            "url": {
+              "raw": "{{base_url}}/api/v1/budgets",
+              "host": ["{{base_url}}"],
+              "path": ["api", "v1", "budgets"]
+            }
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "Categories",
+      "description": "CRUD de categorias hierárquicas",
+      "item": [
+        {
+          "name": "Listar Categorias",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status 200', function() { pm.response.to.have.status(200); });",
+                  "pm.test('Estrutura paginada', function() {",
+                  "    const r = pm.response.json();",
+                  "    pm.expect(r).to.have.property('data').that.is.an('array');",
+                  "    pm.expect(r).to.have.property('pagination');",
+                  "    if (r.data.length > 0) {",
+                  "        pm.collectionVariables.set('category_id', r.data[0].id);",
+                  "    }",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/api/v1/categories?limit=20",
+              "host": ["{{base_url}}"],
+              "path": ["api", "v1", "categories"],
+              "query": [
+                { "key": "limit", "value": "20" },
+                { "key": "cursor", "value": "", "disabled": true }
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Buscar Categoria por ID",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status 200', function() { pm.response.to.have.status(200); });",
+                  "pm.test('Categoria retornada', function() {",
+                  "    const r = pm.response.json();",
+                  "    pm.expect(r).to.have.property('id').that.is.a('string');",
+                  "    pm.expect(r).to.have.property('name').that.is.a('string');",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/api/v1/categories/{{category_id}}",
+              "host": ["{{base_url}}"],
+              "path": ["api", "v1", "categories", "{{category_id}}"]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Criar Categoria",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status 201', function() { pm.response.to.have.status(201); });",
+                  "pm.test('ID retornado', function() {",
+                  "    const r = pm.response.json();",
+                  "    pm.expect(r.id).to.be.a('string').and.not.be.empty;",
+                  "    pm.collectionVariables.set('category_id', r.id);",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Nova Categoria\",\n  \"sequence\": 99\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/v1/categories",
+              "host": ["{{base_url}}"],
+              "path": ["api", "v1", "categories"]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Criar Subcategoria",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status 201', function() { pm.response.to.have.status(201); });",
+                  "pm.test('ID retornado', function() {",
+                  "    const r = pm.response.json();",
+                  "    pm.expect(r.id).to.be.a('string').and.not.be.empty;",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"parent_id\": \"{{category_id}}\",\n  \"name\": \"Nova Subcategoria\",\n  \"sequence\": 1\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/v1/categories",
+              "host": ["{{base_url}}"],
+              "path": ["api", "v1", "categories"]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Atualizar Categoria",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status 200', function() { pm.response.to.have.status(200); });",
+                  "pm.test('Categoria atualizada', function() {",
+                  "    const r = pm.response.json();",
+                  "    pm.expect(r).to.have.property('id');",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "PUT",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Categoria Atualizada\",\n  \"sequence\": 99\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/v1/categories/{{category_id}}",
+              "host": ["{{base_url}}"],
+              "path": ["api", "v1", "categories", "{{category_id}}"]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Deletar Categoria",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status 204', function() { pm.response.to.have.status(204); });"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/api/v1/categories/{{category_id}}",
+              "host": ["{{base_url}}"],
+              "path": ["api", "v1", "categories", "{{category_id}}"]
+            }
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "Cards",
+      "description": "Gerenciamento de cartões de crédito",
+      "item": [
+        {
+          "name": "Listar Cartões",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status 200', function() { pm.response.to.have.status(200); });",
+                  "pm.test('Estrutura paginada', function() {",
+                  "    const r = pm.response.json();",
+                  "    pm.expect(r).to.have.property('data').that.is.an('array');",
+                  "    if (r.data.length > 0) { pm.collectionVariables.set('card_id', r.data[0].id); }",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/api/v1/cards?limit=10",
+              "host": ["{{base_url}}"],
+              "path": ["api", "v1", "cards"],
+              "query": [
+                { "key": "limit", "value": "10" },
+                { "key": "cursor", "value": "", "disabled": true }
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Buscar Cartão por ID",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status 200', function() { pm.response.to.have.status(200); });",
+                  "pm.test('Cartão retornado', function() {",
+                  "    const r = pm.response.json();",
+                  "    pm.expect(r).to.have.property('id');",
+                  "    pm.expect(r).to.have.property('name');",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/api/v1/cards/{{card_id}}",
+              "host": ["{{base_url}}"],
+              "path": ["api", "v1", "cards", "{{card_id}}"]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Criar Cartão",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status 201', function() { pm.response.to.have.status(201); });",
+                  "pm.test('ID retornado', function() {",
+                  "    const r = pm.response.json();",
+                  "    pm.expect(r.id).to.be.a('string').and.not.be.empty;",
+                  "    pm.collectionVariables.set('card_id', r.id);",
+                  "    console.log('[OK] card_id = ' + r.id);",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"XP Visa\",\n  \"due_day\": 1,\n  \"closing_offset_days\": 7\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/v1/cards",
+              "host": ["{{base_url}}"],
+              "path": ["api", "v1", "cards"]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Atualizar Cartão",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status 200', function() { pm.response.to.have.status(200); });"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "PUT",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"XP Visa Platinum\",\n  \"due_day\": 1,\n  \"closing_offset_days\": 7\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/v1/cards/{{card_id}}",
+              "host": ["{{base_url}}"],
+              "path": ["api", "v1", "cards", "{{card_id}}"]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Deletar Cartão",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status 204', function() { pm.response.to.have.status(204); });"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/api/v1/cards/{{card_id}}",
+              "host": ["{{base_url}}"],
+              "path": ["api", "v1", "cards", "{{card_id}}"]
+            }
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "Payment Methods",
+      "description": "Métodos de pagamento (PIX, Boleto, etc.)",
+      "item": [
+        {
+          "name": "Listar Métodos de Pagamento",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status 200', function() { pm.response.to.have.status(200); });",
+                  "const r = pm.response.json();",
+                  "const list = Array.isArray(r) ? r : (r.data || []);",
+                  "if (list.length > 0) { pm.collectionVariables.set('payment_method_id', list[0].id); }"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "auth": { "type": "noauth" },
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/api/v1/payment-methods",
+              "host": ["{{base_url}}"],
+              "path": ["api", "v1", "payment-methods"]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Buscar Método de Pagamento por ID",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status 200', function() { pm.response.to.have.status(200); });"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "auth": { "type": "noauth" },
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/api/v1/payment-methods/{{payment_method_id}}",
+              "host": ["{{base_url}}"],
+              "path": ["api", "v1", "payment-methods", "{{payment_method_id}}"]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Criar Método de Pagamento",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status 201', function() { pm.response.to.have.status(201); });",
+                  "pm.test('ID retornado', function() {",
+                  "    const r = pm.response.json();",
+                  "    pm.expect(r.id).to.be.a('string').and.not.be.empty;",
+                  "    pm.collectionVariables.set('payment_method_id', r.id);",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "auth": { "type": "noauth" },
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"PIX\",\n  \"code\": \"PIX\",\n  \"description\": \"Pagamento instantâneo\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/v1/payment-methods",
+              "host": ["{{base_url}}"],
+              "path": ["api", "v1", "payment-methods"]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Atualizar Método de Pagamento",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status 200', function() { pm.response.to.have.status(200); });"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "auth": { "type": "noauth" },
+            "method": "PUT",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"PIX - Transferência Instantânea\",\n  \"description\": \"Sistema de pagamento instantâneo brasileiro\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/v1/payment-methods/{{payment_method_id}}",
+              "host": ["{{base_url}}"],
+              "path": ["api", "v1", "payment-methods", "{{payment_method_id}}"]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Deletar Método de Pagamento",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status 204', function() { pm.response.to.have.status(204); });"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "auth": { "type": "noauth" },
+            "method": "DELETE",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/api/v1/payment-methods/{{payment_method_id}}",
+              "host": ["{{base_url}}"],
+              "path": ["api", "v1", "payment-methods", "{{payment_method_id}}"]
+            }
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "Transactions",
+      "description": "Gerenciamento de transações mensais (receitas e despesas)",
+      "item": [
+        {
+          "name": "Listar Transações",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status 200', function() { pm.response.to.have.status(200); });",
+                  "pm.test('Estrutura paginada', function() {",
+                  "    const r = pm.response.json();",
+                  "    pm.expect(r).to.have.property('data').that.is.an('array');",
+                  "    if (r.data.length > 0) {",
+                  "        pm.collectionVariables.set('transaction_id', r.data[0].id);",
+                  "        if (r.data[0].items && r.data[0].items.length > 0) {",
+                  "            pm.collectionVariables.set('transaction_item_id', r.data[0].items[0].id);",
+                  "        }",
+                  "    }",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/api/v1/transactions?limit=10",
+              "host": ["{{base_url}}"],
+              "path": ["api", "v1", "transactions"],
+              "query": [
+                { "key": "limit", "value": "10" },
+                { "key": "cursor", "value": "", "disabled": true }
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Buscar Transação por ID",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status 200', function() { pm.response.to.have.status(200); });",
+                  "pm.test('Transação retornada', function() {",
+                  "    const r = pm.response.json();",
+                  "    pm.expect(r).to.have.property('id');",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/api/v1/transactions/{{transaction_id}}",
+              "host": ["{{base_url}}"],
+              "path": ["api", "v1", "transactions", "{{transaction_id}}"]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Criar Transação - Receita (Salário)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status 201', function() { pm.response.to.have.status(201); });",
+                  "pm.test('ID retornado', function() {",
+                  "    const r = pm.response.json();",
+                  "    pm.expect(r.id).to.be.a('string').and.not.be.empty;",
+                  "    pm.collectionVariables.set('transaction_id', r.id);",
+                  "    if (r.items && r.items.length > 0) {",
+                  "        pm.collectionVariables.set('transaction_item_id', r.items[0].id);",
+                  "    }",
+                  "    console.log('[OK] transaction_id = ' + r.id);",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"reference_month\": \"2026-02\",\n  \"category_id\": \"{{cat_custos_fixos_id}}\",\n  \"title\": \"Salário\",\n  \"description\": \"Salário mensal\",\n  \"amount\": \"13874.40\",\n  \"direction\": \"INCOME\",\n  \"type\": \"TRANSFER\",\n  \"is_paid\": true\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/v1/transactions",
+              "host": ["{{base_url}}"],
+              "path": ["api", "v1", "transactions"]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Criar Transação - Despesa (Conta de Luz)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status 201', function() { pm.response.to.have.status(201); });",
+                  "pm.test('ID retornado', function() {",
+                  "    const r = pm.response.json();",
+                  "    pm.expect(r.id).to.be.a('string').and.not.be.empty;",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"reference_month\": \"2026-02\",\n  \"category_id\": \"{{subcat_custos_casa_id}}\",\n  \"title\": \"Conta de Luz\",\n  \"description\": \"Energia elétrica fevereiro\",\n  \"amount\": \"245.93\",\n  \"direction\": \"EXPENSE\",\n  \"type\": \"PIX\",\n  \"is_paid\": true\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/v1/transactions",
+              "host": ["{{base_url}}"],
+              "path": ["api", "v1", "transactions"]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Atualizar Item de Transação",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status 200', function() { pm.response.to.have.status(200); });"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "PUT",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"title\": \"Conta de Luz - Corrigida\",\n  \"description\": \"Energia elétrica fevereiro - corrigido\",\n  \"amount\": \"255.50\",\n  \"direction\": \"EXPENSE\",\n  \"type\": \"BOLETO\",\n  \"is_paid\": true\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/v1/transactions/{{transaction_id}}/items/{{transaction_item_id}}",
+              "host": ["{{base_url}}"],
+              "path": ["api", "v1", "transactions", "{{transaction_id}}", "items", "{{transaction_item_id}}"]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Deletar Item de Transação",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status 204', function() { pm.response.to.have.status(204); });"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/api/v1/transactions/{{transaction_id}}/items/{{transaction_item_id}}",
+              "host": ["{{base_url}}"],
+              "path": ["api", "v1", "transactions", "{{transaction_id}}", "items", "{{transaction_item_id}}"]
+            }
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "Budgets",
+      "description": "Orçamentos mensais com distribuição percentual por categoria",
+      "item": [
+        {
+          "name": "Listar Orçamentos",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status 200', function() { pm.response.to.have.status(200); });",
+                  "pm.test('Estrutura paginada', function() {",
+                  "    const r = pm.response.json();",
+                  "    pm.expect(r).to.have.property('data').that.is.an('array');",
+                  "    if (r.data.length > 0) { pm.collectionVariables.set('budget_id', r.data[0].id); }",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/api/v1/budgets?limit=10",
+              "host": ["{{base_url}}"],
+              "path": ["api", "v1", "budgets"],
+              "query": [
+                { "key": "limit", "value": "10" },
+                { "key": "cursor", "value": "", "disabled": true }
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Buscar Orçamento por ID",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status 200', function() { pm.response.to.have.status(200); });",
+                  "pm.test('Orçamento retornado com itens', function() {",
+                  "    const r = pm.response.json();",
+                  "    pm.expect(r).to.have.property('id');",
+                  "    pm.expect(r).to.have.property('total_amount');",
+                  "    pm.expect(r).to.have.property('reference_month');",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/api/v1/budgets/{{budget_id}}",
+              "host": ["{{base_url}}"],
+              "path": ["api", "v1", "budgets", "{{budget_id}}"]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Atualizar Orçamento",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status 200', function() { pm.response.to.have.status(200); });"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "PUT",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"total_amount\": \"13874.40\",\n  \"items\": [\n    { \"category_id\": \"{{cat_custos_fixos_id}}\", \"percentage_goal\": \"40.00\" },\n    { \"category_id\": \"{{cat_conforto_id}}\", \"percentage_goal\": \"10.00\" },\n    { \"category_id\": \"{{cat_metas_id}}\", \"percentage_goal\": \"15.00\" },\n    { \"category_id\": \"{{cat_prazeres_id}}\", \"percentage_goal\": \"10.00\" },\n    { \"category_id\": \"{{cat_conhecimento_id}}\", \"percentage_goal\": \"5.00\" },\n    { \"category_id\": \"{{cat_liberdade_id}}\", \"percentage_goal\": \"20.00\" }\n  ]\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/v1/budgets/{{budget_id}}",
+              "host": ["{{base_url}}"],
+              "path": ["api", "v1", "budgets", "{{budget_id}}"]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Deletar Orçamento",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status 204', function() { pm.response.to.have.status(204); });"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/api/v1/budgets/{{budget_id}}",
+              "host": ["{{base_url}}"],
+              "path": ["api", "v1", "budgets", "{{budget_id}}"]
+            }
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "Invoices",
+      "description": "Faturas de cartão de crédito com compras à vista e parceladas",
+      "item": [
+        {
+          "name": "Listar Faturas por Mês",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status 200', function() { pm.response.to.have.status(200); });",
+                  "pm.test('Estrutura paginada', function() {",
+                  "    const r = pm.response.json();",
+                  "    pm.expect(r).to.have.property('data').that.is.an('array');",
+                  "    if (r.data.length > 0) { pm.collectionVariables.set('invoice_id', r.data[0].id); }",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/api/v1/invoices?month=2026-02&limit=10",
+              "host": ["{{base_url}}"],
+              "path": ["api", "v1", "invoices"],
+              "query": [
+                { "key": "month", "value": "2026-02" },
+                { "key": "limit", "value": "10" },
+                { "key": "cursor", "value": "", "disabled": true }
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Listar Faturas por Cartão",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status 200', function() { pm.response.to.have.status(200); });"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/api/v1/invoices?cardId={{card_id}}&limit=10",
+              "host": ["{{base_url}}"],
+              "path": ["api", "v1", "invoices"],
+              "query": [
+                { "key": "cardId", "value": "{{card_id}}" },
+                { "key": "limit", "value": "10" },
+                { "key": "cursor", "value": "", "disabled": true }
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Buscar Fatura por ID",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status 200', function() { pm.response.to.have.status(200); });",
+                  "pm.test('Fatura retornada', function() {",
+                  "    const r = pm.response.json();",
+                  "    pm.expect(r).to.have.property('id');",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/api/v1/invoices/{{invoice_id}}",
+              "host": ["{{base_url}}"],
+              "path": ["api", "v1", "invoices", "{{invoice_id}}"]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Criar Compra à Vista",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status 201', function() { pm.response.to.have.status(201); });",
+                  "pm.test('Item de fatura criado', function() {",
+                  "    const r = pm.response.json();",
+                  "    pm.expect(r).to.have.property('id');",
+                  "    if (r.items && r.items.length > 0) {",
+                  "        pm.collectionVariables.set('invoice_item_id', r.items[0].id);",
+                  "    }",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"card_id\": \"{{card_id}}\",\n  \"category_id\": \"{{subcat_conforto_restaurante_id}}\",\n  \"purchase_date\": \"2026-02-10\",\n  \"description\": \"Restaurante - Jantar\",\n  \"total_amount\": \"150.00\",\n  \"currency\": \"BRL\",\n  \"installment_total\": 1\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/v1/invoice-items",
+              "host": ["{{base_url}}"],
+              "path": ["api", "v1", "invoice-items"]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Criar Compra Parcelada",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status 201', function() { pm.response.to.have.status(201); });",
+                  "pm.test('Parcelas distribuídas', function() {",
+                  "    const r = pm.response.json();",
+                  "    pm.expect(r).to.have.property('id');",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"card_id\": \"{{card_id}}\",\n  \"category_id\": \"{{subcat_conhecimento_cursos_id}}\",\n  \"purchase_date\": \"2026-02-15\",\n  \"description\": \"Curso de Programação\",\n  \"total_amount\": \"1200.00\",\n  \"currency\": \"BRL\",\n  \"installment_total\": 6\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/v1/invoice-items",
+              "host": ["{{base_url}}"],
+              "path": ["api", "v1", "invoice-items"]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Atualizar Compra",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status 200', function() { pm.response.to.have.status(200); });"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "PUT",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"category_id\": \"{{subcat_conforto_restaurante_id}}\",\n  \"description\": \"Restaurante - Jantar atualizado\",\n  \"total_amount\": \"165.00\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/v1/invoice-items/{{invoice_item_id}}",
+              "host": ["{{base_url}}"],
+              "path": ["api", "v1", "invoice-items", "{{invoice_item_id}}"]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Deletar Compra",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status 204', function() { pm.response.to.have.status(204); });"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/api/v1/invoice-items/{{invoice_item_id}}",
+              "host": ["{{base_url}}"],
+              "path": ["api", "v1", "invoice-items", "{{invoice_item_id}}"]
+            }
+          },
+          "response": []
+        }
+      ]
+    }
+  ]
+}
