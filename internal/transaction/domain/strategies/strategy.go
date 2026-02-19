@@ -29,18 +29,23 @@ type TransactionStrategy interface {
 	) (*entities.TransactionItem, error)
 }
 
-// GetStrategy retorna a strategy apropriada para o tipo de transação.
+// strategyRegistry mapeia cada TransactionType à sua TransactionStrategy correspondente.
+// Inicializado com os tipos do domínio; extensível via Register sem alterar este arquivo (OCP).
+var strategyRegistry = map[transactionVos.TransactionType]TransactionStrategy{
+	transactionVos.TypePix:        &PixStrategy{},
+	transactionVos.TypeBoleto:     &BoletoStrategy{},
+	transactionVos.TypeTransfer:   &TransferStrategy{},
+	transactionVos.TypeCreditCard: &CreditCardStrategy{},
+}
+
+// GetStrategy retorna a strategy associada ao tipo informado.
+// Retorna nil se o tipo não estiver registrado.
 func GetStrategy(transactionType transactionVos.TransactionType) TransactionStrategy {
-	switch transactionType {
-	case transactionVos.TypePix:
-		return &PixStrategy{}
-	case transactionVos.TypeBoleto:
-		return &BoletoStrategy{}
-	case transactionVos.TypeTransfer:
-		return &TransferStrategy{}
-	case transactionVos.TypeCreditCard:
-		return &CreditCardStrategy{}
-	default:
-		return nil
-	}
+	return strategyRegistry[transactionType]
+}
+
+// Register associa uma TransactionStrategy a um TransactionType.
+// Permite adicionar novos tipos de transação sem modificar este arquivo (OCP).
+func Register(transactionType transactionVos.TransactionType, strategy TransactionStrategy) {
+	strategyRegistry[transactionType] = strategy
 }

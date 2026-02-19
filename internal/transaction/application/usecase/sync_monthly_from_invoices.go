@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 
+	appstrategies "github.com/jailtonjunior94/financial/internal/transaction/application/strategies"
 	"github.com/jailtonjunior94/financial/internal/transaction/domain/interfaces"
 	transactionVos "github.com/jailtonjunior94/financial/internal/transaction/domain/vos"
 
@@ -22,6 +23,7 @@ type (
 		uow                  uow.UnitOfWork
 		repo                 interfaces.TransactionRepository
 		invoiceTotalProvider interfaces.InvoiceTotalProvider
+		ccItemPersister      appstrategies.CreditCardItemPersister
 		o11y                 observability.Observability
 	}
 )
@@ -30,12 +32,14 @@ func NewSyncMonthlyFromInvoicesUseCase(
 	uow uow.UnitOfWork,
 	repo interfaces.TransactionRepository,
 	invoiceTotalProvider interfaces.InvoiceTotalProvider,
+	ccItemPersister appstrategies.CreditCardItemPersister,
 	o11y observability.Observability,
 ) SyncMonthlyFromInvoicesUseCase {
 	return &syncMonthlyFromInvoicesUseCase{
 		uow:                  uow,
 		repo:                 repo,
 		invoiceTotalProvider: invoiceTotalProvider,
+		ccItemPersister:      ccItemPersister,
 		o11y:                 o11y,
 	}
 }
@@ -49,9 +53,7 @@ func (u *syncMonthlyFromInvoicesUseCase) Execute(
 	ctx, span := u.o11y.Tracer().Start(ctx, "sync_monthly_from_invoices_usecase.execute")
 	defer span.End()
 
-	// Execute within transaction
 	err := u.uow.Do(ctx, func(ctx context.Context, tx database.DBTX) error {
-		// Get total invoice amount for the month (all cards)
 		invoiceTotal, err := u.invoiceTotalProvider.GetClosedInvoiceTotal(ctx, userID, referenceMonth)
 		if err != nil {
 			return fmt.Errorf("failed to get invoice total: %w", err)
@@ -63,18 +65,25 @@ func (u *syncMonthlyFromInvoicesUseCase) Execute(
 			observability.Int64("total_cents", invoiceTotal.Cents()),
 		)
 
-		// Find or create monthly aggregate
 		monthlyAggregate, err := u.repo.FindOrCreateMonthly(ctx, tx, userID, referenceMonth)
 		if err != nil {
 			return fmt.Errorf("failed to find or create monthly transaction: %w", err)
 		}
 
-		// Update or create credit card item with invoice total
+		// Snapshot de IDs existentes antes da mutação do aggregate (determina INSERT vs UPDATE)
+		existingIDs := make(map[string]struct{}, len(monthlyAggregate.Items))
+		for _, item := range monthlyAggregate.Items {
+			existingIDs[item.ID.String()] = struct{}{}
+		}
+
 		if err := monthlyAggregate.UpdateOrCreateCreditCardItem(categoryID, invoiceTotal, false); err != nil {
 			return fmt.Errorf("failed to update or create credit card item: %w", err)
 		}
 
-		// Persist changes
+		if err := u.ccItemPersister.Persist(ctx, tx, monthlyAggregate, existingIDs); err != nil {
+			return fmt.Errorf("failed to persist credit card items: %w", err)
+		}
+
 		if err := u.repo.UpdateMonthly(ctx, tx, monthlyAggregate); err != nil {
 			return fmt.Errorf("failed to update monthly transaction: %w", err)
 		}

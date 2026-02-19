@@ -15,6 +15,8 @@ import (
 	"github.com/JailtonJunior94/devkit-go/pkg/observability/otel"
 
 	"github.com/jailtonjunior94/financial/configs"
+	invoiceadapters "github.com/jailtonjunior94/financial/internal/invoice/infrastructure/adapters"
+	invoicerepos "github.com/jailtonjunior94/financial/internal/invoice/infrastructure/repositories"
 	"github.com/jailtonjunior94/financial/internal/transaction"
 	"github.com/jailtonjunior94/financial/pkg/auth"
 	"github.com/jailtonjunior94/financial/pkg/database"
@@ -184,11 +186,14 @@ func (app *application) Start() error {
 	// Dummy tokenValidator (consumer não precisa validar tokens)
 	jwtAdapter := auth.NewJwtAdapter(app.config, app.o11y)
 
+	invoiceRepo := invoicerepos.NewInvoiceRepository(app.dbManager.DB(), app.o11y)
+	invoiceTotalProvider := invoiceadapters.NewInvoiceTotalProviderAdapter(invoiceRepo)
+
 	transactionModule, err := transaction.NewTransactionModule(
 		app.dbManager.DB(),
 		app.o11y,
 		jwtAdapter,
-		nil, // invoiceTotalProvider não é necessário no consumer
+		invoiceTotalProvider,
 	)
 	if err != nil {
 		return fmt.Errorf("failed to create transaction module: %w", err)

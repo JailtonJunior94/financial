@@ -54,8 +54,9 @@ func (s *service) SaveEvent(ctx context.Context, tx database.DBTX, event *Outbox
 		return ErrInvalidPayload
 	}
 
-	// Persistir evento
-	if err := s.repository.Save(ctx, event); err != nil {
+	// Persistir evento dentro da mesma transação
+	txRepository := NewRepository(tx, s.o11y)
+	if err := txRepository.Save(ctx, event); err != nil {
 		s.o11y.Logger().Error(ctx, "failed to save outbox event",
 			observability.Error(err),
 			observability.String("aggregate_type", event.AggregateType),
