@@ -73,7 +73,7 @@ func Run() error {
 	userModule := user.NewUserModule(dbManager.DB(), cfg, o11y)
 	cardModule := card.NewCardModule(dbManager.DB(), o11y, jwtAdapter)
 
-	budgetModule, err := budget.NewBudgetModule(dbManager.DB(), o11y, jwtAdapter)
+	budgetModule, err := budget.NewBudgetModule(dbManager.DB(), o11y, jwtAdapter, nil)
 	if err != nil {
 		return fmt.Errorf("run: failed to create budget module: %v", err)
 	}

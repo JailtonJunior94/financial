@@ -15,6 +15,7 @@ import (
 	"github.com/JailtonJunior94/devkit-go/pkg/observability/otel"
 
 	"github.com/jailtonjunior94/financial/configs"
+	"github.com/jailtonjunior94/financial/internal/budget"
 	invoiceadapters "github.com/jailtonjunior94/financial/internal/invoice/infrastructure/adapters"
 	invoicerepos "github.com/jailtonjunior94/financial/internal/invoice/infrastructure/repositories"
 	"github.com/jailtonjunior94/financial/internal/transaction"
@@ -182,12 +183,11 @@ func NewApplication() (*application, error) {
 func (app *application) Start() error {
 	app.o11y.Logger().Info(app.ctx, "starting consumer...")
 
-	// ✅ Inicializar TransactionModule (para processar eventos de invoice)
-	// Dummy tokenValidator (consumer não precisa validar tokens)
 	jwtAdapter := auth.NewJwtAdapter(app.config, app.o11y)
 
 	invoiceRepo := invoicerepos.NewInvoiceRepository(app.dbManager.DB(), app.o11y)
 	invoiceTotalProvider := invoiceadapters.NewInvoiceTotalProviderAdapter(invoiceRepo)
+	invoiceCategoryTotalProvider := invoiceadapters.NewInvoiceCategoryTotalAdapter(invoiceRepo)
 
 	transactionModule, err := transaction.NewTransactionModule(
 		app.dbManager.DB(),
@@ -199,17 +199,31 @@ func (app *application) Start() error {
 		return fmt.Errorf("failed to create transaction module: %w", err)
 	}
 
-	// ✅ Registrar handler para processar eventos de purchase
+	budgetModule, err := budget.NewBudgetModule(
+		app.dbManager.DB(),
+		app.o11y,
+		jwtAdapter,
+		invoiceCategoryTotalProvider,
+	)
+	if err != nil {
+		return fmt.Errorf("failed to create budget module: %w", err)
+	}
+
+	// Registrar handler composto: transaction sync + budget sync para cada evento de purchase.
+	// Cada consumer mantém idempotência independente via consumerName distinto.
 	topics := transactionModule.PurchaseEventConsumer.Topics()
 	for _, topic := range topics {
 		handler := func(ctx context.Context, msg rabbitmq.Message) error {
-			// Converter rabbitmq.Message para messaging.Message
-			return transactionModule.PurchaseEventConsumer.Handle(ctx, &messaging.Message{
+			m := &messaging.Message{
 				ID:      msg.MessageID,
 				Topic:   msg.RoutingKey,
 				Payload: msg.Body,
 				Headers: msg.Headers,
-			})
+			}
+			if err := transactionModule.PurchaseEventConsumer.Handle(ctx, m); err != nil {
+				return err
+			}
+			return budgetModule.BudgetEventConsumer.Handle(ctx, m)
 		}
 		app.consumer.RegisterHandler(topic, handler)
 	}
