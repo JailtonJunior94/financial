@@ -361,17 +361,32 @@ func (r *budgetRepository) ListPaginated(ctx context.Context, params interfaces.
 		budget.UpdatedAt = helpers.ParseNullableTime(updatedAt)
 		budget.DeletedAt = helpers.ParseNullableTime(deletedAt)
 
-		// Load budget items for each budget
-		items, err := r.findItemsByBudgetID(ctx, budget.ID)
-		if err != nil {
-			return nil, err
-		}
-		budget.Items = items
-
 		budgets = append(budgets, &budget)
 	}
 
-	return budgets, rows.Err()
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+
+	// Bulk-fetch items for all budgets in a single query (avoids N+1)
+	ids := make([]vos.UUID, len(budgets))
+	for i, b := range budgets {
+		ids[i] = b.ID
+	}
+
+	itemsByBudget, err := r.findItemsByBudgetIDs(ctx, ids)
+	if err != nil {
+		return nil, err
+	}
+
+	for _, b := range budgets {
+		b.Items = itemsByBudget[b.ID.String()]
+		if b.Items == nil {
+			b.Items = []*entities.BudgetItem{}
+		}
+	}
+
+	return budgets, nil
 }
 
 func (r *budgetRepository) Update(ctx context.Context, budget *entities.Budget) error {
@@ -431,6 +446,84 @@ func (r *budgetRepository) UpdateItem(ctx context.Context, item *entities.Budget
 		return err
 	}
 	return nil
+}
+
+func (r *budgetRepository) findItemsByBudgetIDs(ctx context.Context, ids []vos.UUID) (map[string][]*entities.BudgetItem, error) {
+	if len(ids) == 0 {
+		return map[string][]*entities.BudgetItem{}, nil
+	}
+
+	placeholders := make([]string, len(ids))
+	args := make([]any, len(ids))
+	for i, id := range ids {
+		placeholders[i] = fmt.Sprintf("$%d", i+1)
+		args[i] = id.Value
+	}
+
+	query := fmt.Sprintf(`select
+			id,
+			budget_id,
+			category_id,
+			percentage_goal,
+			amount_goal,
+			amount_used,
+			created_at,
+			updated_at,
+			deleted_at
+		from budget_items
+		where budget_id IN (%s) and deleted_at is null
+		order by budget_id, created_at`, strings.Join(placeholders, ", "))
+
+	rows, err := r.db.QueryContext(ctx, query, args...)
+	if err != nil {
+		return nil, err
+	}
+	defer func() { _ = rows.Close() }()
+
+	result := make(map[string][]*entities.BudgetItem)
+	for rows.Next() {
+		var item entities.BudgetItem
+		var updatedAt, deletedAt *time.Time
+		var amountGoal, amountUsed, percentageGoal string
+
+		err := rows.Scan(
+			&item.ID.Value,
+			&item.BudgetID.Value,
+			&item.CategoryID.Value,
+			&percentageGoal,
+			&amountGoal,
+			&amountUsed,
+			&item.CreatedAt,
+			&updatedAt,
+			&deletedAt,
+		)
+		if err != nil {
+			return nil, err
+		}
+
+		item.PlannedAmount, err = vos.NewMoneyFromString(amountGoal, constants.DefaultCurrency)
+		if err != nil {
+			return nil, fmt.Errorf("failed to create Money from amount_goal: %w", err)
+		}
+
+		item.SpentAmount, err = vos.NewMoneyFromString(amountUsed, constants.DefaultCurrency)
+		if err != nil {
+			return nil, fmt.Errorf("failed to create Money from amount_used: %w", err)
+		}
+
+		item.PercentageGoal, err = money.NewPercentageFromString(percentageGoal)
+		if err != nil {
+			return nil, fmt.Errorf("failed to create Percentage from percentage_goal: %w", err)
+		}
+
+		item.UpdatedAt = helpers.ParseNullableTime(updatedAt)
+		item.DeletedAt = helpers.ParseNullableTime(deletedAt)
+
+		key := item.BudgetID.String()
+		result[key] = append(result[key], &item)
+	}
+
+	return result, rows.Err()
 }
 
 func (r *budgetRepository) findItemsByBudgetID(ctx context.Context, budgetID vos.UUID) ([]*entities.BudgetItem, error) {

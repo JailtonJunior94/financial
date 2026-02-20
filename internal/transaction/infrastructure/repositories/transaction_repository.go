@@ -5,11 +5,13 @@ import (
 	"database/sql"
 	"errors"
 	"fmt"
+	"strings"
 	"time"
 
 	"github.com/jailtonjunior94/financial/internal/transaction/domain/entities"
 	"github.com/jailtonjunior94/financial/internal/transaction/domain/interfaces"
 	transactionVos "github.com/jailtonjunior94/financial/internal/transaction/domain/vos"
+	pkgVos "github.com/jailtonjunior94/financial/pkg/domain/vos"
 
 	"github.com/JailtonJunior94/devkit-go/pkg/database"
 	"github.com/JailtonJunior94/devkit-go/pkg/observability"
@@ -37,7 +39,7 @@ func (r *transactionRepository) FindOrCreateMonthly(
 	ctx context.Context,
 	executor database.DBTX,
 	userID sharedVos.UUID,
-	referenceMonth transactionVos.ReferenceMonth,
+	referenceMonth pkgVos.ReferenceMonth,
 ) (*entities.MonthlyTransaction, error) {
 	ctx, span := r.o11y.Tracer().Start(ctx, "transaction_repository.find_or_create_monthly")
 	defer span.End()
@@ -125,7 +127,7 @@ func (r *transactionRepository) FindMonthlyByID(
 	}
 
 	// Parse reference month
-	monthly.ReferenceMonth, err = transactionVos.NewReferenceMonthFromString(refMonthStr)
+	monthly.ReferenceMonth, err = pkgVos.NewReferenceMonth(refMonthStr)
 	if err != nil {
 		return nil, err
 	}
@@ -369,7 +371,7 @@ func (r *transactionRepository) findMonthlyByUserAndMonth(
 	ctx context.Context,
 	executor database.DBTX,
 	userID sharedVos.UUID,
-	referenceMonth transactionVos.ReferenceMonth,
+	referenceMonth pkgVos.ReferenceMonth,
 ) (*entities.MonthlyTransaction, error) {
 	query := `
 		SELECT 
@@ -405,7 +407,7 @@ func (r *transactionRepository) findMonthlyByUserAndMonth(
 	}
 
 	// Parse values
-	monthly.ReferenceMonth, err = transactionVos.NewReferenceMonthFromString(refMonthStr)
+	monthly.ReferenceMonth, err = pkgVos.NewReferenceMonth(refMonthStr)
 	if err != nil {
 		return nil, err
 	}
@@ -464,6 +466,95 @@ func (r *transactionRepository) insertMonthly(
 	}
 
 	return nil
+}
+
+// findItemsByMonthlyIDs busca items de múltiplos aggregates em uma única query (evita N+1).
+func (r *transactionRepository) findItemsByMonthlyIDs(
+	ctx context.Context,
+	ids []sharedVos.UUID,
+) (map[string][]*entities.TransactionItem, error) {
+	if len(ids) == 0 {
+		return map[string][]*entities.TransactionItem{}, nil
+	}
+
+	placeholders := make([]string, len(ids))
+	args := make([]any, len(ids))
+	for i, id := range ids {
+		placeholders[i] = fmt.Sprintf("$%d", i+1)
+		args[i] = id.String()
+	}
+
+	query := fmt.Sprintf(`
+		SELECT
+			id, monthly_id, category_id, title, description,
+			amount, direction, type, is_paid,
+			created_at, updated_at, deleted_at
+		FROM transaction_items
+		WHERE monthly_id IN (%s)
+		ORDER BY monthly_id, created_at ASC
+	`, strings.Join(placeholders, ", "))
+
+	rows, err := r.db.QueryContext(ctx, query, args...)
+	if err != nil {
+		return nil, err
+	}
+	defer func() { _ = rows.Close() }()
+
+	result := make(map[string][]*entities.TransactionItem)
+
+	for rows.Next() {
+		var item entities.TransactionItem
+		var amountStr string
+		var direction, itemType string
+		var createdAt time.Time
+		var updatedAt, deletedAt sql.NullTime
+
+		err := rows.Scan(
+			&item.ID.Value,
+			&item.MonthlyID.Value,
+			&item.CategoryID.Value,
+			&item.Title,
+			&item.Description,
+			&amountStr,
+			&direction,
+			&itemType,
+			&item.IsPaid,
+			&createdAt,
+			&updatedAt,
+			&deletedAt,
+		)
+		if err != nil {
+			return nil, err
+		}
+
+		item.Amount, err = sharedVos.NewMoneyFromString(amountStr, sharedVos.CurrencyBRL)
+		if err != nil {
+			return nil, fmt.Errorf("failed to parse amount: %w", err)
+		}
+
+		item.Direction, err = transactionVos.NewTransactionDirection(direction)
+		if err != nil {
+			return nil, err
+		}
+
+		item.Type, err = transactionVos.NewTransactionType(itemType)
+		if err != nil {
+			return nil, err
+		}
+
+		item.CreatedAt = sharedVos.NewNullableTime(createdAt)
+		if updatedAt.Valid {
+			item.UpdatedAt = sharedVos.NewNullableTime(updatedAt.Time)
+		}
+		if deletedAt.Valid {
+			item.DeletedAt = sharedVos.NewNullableTime(deletedAt.Time)
+		}
+
+		key := item.MonthlyID.String()
+		result[key] = append(result[key], &item)
+	}
+
+	return result, rows.Err()
 }
 
 // findItemsByMonthlyID busca todos os items de um aggregate (exceto deletados).
@@ -618,7 +709,7 @@ func (r *transactionRepository) ListMonthlyPaginated(
 		}
 
 		// Parse reference month
-		monthly.ReferenceMonth, err = transactionVos.NewReferenceMonthFromString(refMonthStr)
+		monthly.ReferenceMonth, err = pkgVos.NewReferenceMonth(refMonthStr)
 		if err != nil {
 			return nil, err
 		}
@@ -645,17 +736,29 @@ func (r *transactionRepository) ListMonthlyPaginated(
 			monthly.UpdatedAt = sharedVos.NewNullableTime(updatedAt.Time)
 		}
 
-		// Load items for this monthly transaction
-		items, err := r.findItemsByMonthlyID(ctx, r.db, monthly.ID)
-		if err != nil {
-			return nil, err
-		}
-		monthly.LoadItems(items)
-
 		monthlyList = append(monthlyList, &monthly)
 	}
 
-	return monthlyList, rows.Err()
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+
+	// Bulk-fetch items for all monthly transactions in a single query (avoids N+1)
+	ids := make([]sharedVos.UUID, len(monthlyList))
+	for i, m := range monthlyList {
+		ids[i] = m.ID
+	}
+
+	itemsByMonthly, err := r.findItemsByMonthlyIDs(ctx, ids)
+	if err != nil {
+		return nil, err
+	}
+
+	for _, m := range monthlyList {
+		m.LoadItems(itemsByMonthly[m.ID.String()])
+	}
+
+	return monthlyList, nil
 }
 
 // GetMonthlyByID busca um monthly transaction por ID (sem executor UoW).

@@ -248,18 +248,32 @@ func (r *invoiceRepository) FindByUserAndMonth(
 		if err != nil {
 			return nil, err
 		}
-
-		// Carregar itens
-		items, err := r.findItemsByInvoiceID(ctx, invoice.ID)
-		if err != nil {
-			return nil, err
-		}
-		invoice.Items = items
-
 		invoices = append(invoices, invoice)
 	}
 
-	return invoices, rows.Err()
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+
+	// Bulk-fetch items for all invoices in a single query (avoids N+1)
+	ids := make([]vos.UUID, len(invoices))
+	for i, inv := range invoices {
+		ids[i] = inv.ID
+	}
+
+	itemsByInvoice, err := r.findItemsByInvoiceIDs(ctx, ids)
+	if err != nil {
+		return nil, err
+	}
+
+	for _, inv := range invoices {
+		inv.Items = itemsByInvoice[inv.ID.String()]
+		if inv.Items == nil {
+			inv.Items = []*entities.InvoiceItem{}
+		}
+	}
+
+	return invoices, nil
 }
 
 // ListByUserAndMonthPaginated busca faturas de um usuário em um mês com paginação cursor-based.
@@ -319,18 +333,32 @@ func (r *invoiceRepository) ListByUserAndMonthPaginated(
 		if err != nil {
 			return nil, err
 		}
-
-		// Carregar itens
-		items, err := r.findItemsByInvoiceID(ctx, invoice.ID)
-		if err != nil {
-			return nil, err
-		}
-		invoice.Items = items
-
 		invoices = append(invoices, invoice)
 	}
 
-	return invoices, rows.Err()
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+
+	// Bulk-fetch items for all invoices in a single query (avoids N+1)
+	ids := make([]vos.UUID, len(invoices))
+	for i, inv := range invoices {
+		ids[i] = inv.ID
+	}
+
+	itemsByInvoice, err := r.findItemsByInvoiceIDs(ctx, ids)
+	if err != nil {
+		return nil, err
+	}
+
+	for _, inv := range invoices {
+		inv.Items = itemsByInvoice[inv.ID.String()]
+		if inv.Items == nil {
+			inv.Items = []*entities.InvoiceItem{}
+		}
+	}
+
+	return invoices, nil
 }
 
 func (r *invoiceRepository) FindByCard(ctx context.Context, cardID vos.UUID) ([]*entities.Invoice, error) {
@@ -363,18 +391,32 @@ func (r *invoiceRepository) FindByCard(ctx context.Context, cardID vos.UUID) ([]
 		if err != nil {
 			return nil, err
 		}
-
-		// Carregar itens
-		items, err := r.findItemsByInvoiceID(ctx, invoice.ID)
-		if err != nil {
-			return nil, err
-		}
-		invoice.Items = items
-
 		invoices = append(invoices, invoice)
 	}
 
-	return invoices, rows.Err()
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+
+	// Bulk-fetch items for all invoices in a single query (avoids N+1)
+	ids := make([]vos.UUID, len(invoices))
+	for i, inv := range invoices {
+		ids[i] = inv.ID
+	}
+
+	itemsByInvoice, err := r.findItemsByInvoiceIDs(ctx, ids)
+	if err != nil {
+		return nil, err
+	}
+
+	for _, inv := range invoices {
+		inv.Items = itemsByInvoice[inv.ID.String()]
+		if inv.Items == nil {
+			inv.Items = []*entities.InvoiceItem{}
+		}
+	}
+
+	return invoices, nil
 }
 
 // ListByCard busca faturas de um cartão com cursor-based pagination.
@@ -430,22 +472,13 @@ func (r *invoiceRepository) ListByCard(ctx context.Context, params interfaces.Li
 	defer func() { _ = rows.Close() }()
 
 	// Scanear resultados
-	var invoices []*entities.Invoice
+	invoices := make([]*entities.Invoice, 0)
 	for rows.Next() {
 		invoice, err := r.scanInvoice(rows)
 		if err != nil {
 			span.RecordError(err)
 			return nil, err
 		}
-
-		// Carregar itens da fatura
-		items, err := r.findItemsByInvoiceID(ctx, invoice.ID)
-		if err != nil {
-			span.RecordError(err)
-			return nil, err
-		}
-		invoice.Items = items
-
 		invoices = append(invoices, invoice)
 	}
 
@@ -454,9 +487,23 @@ func (r *invoiceRepository) ListByCard(ctx context.Context, params interfaces.Li
 		return nil, err
 	}
 
-	// Garantir que retorna array vazio em vez de nil
-	if invoices == nil {
-		invoices = []*entities.Invoice{}
+	// Bulk-fetch items for all invoices in a single query (avoids N+1)
+	ids := make([]vos.UUID, len(invoices))
+	for i, inv := range invoices {
+		ids[i] = inv.ID
+	}
+
+	itemsByInvoice, err := r.findItemsByInvoiceIDs(ctx, ids)
+	if err != nil {
+		span.RecordError(err)
+		return nil, err
+	}
+
+	for _, inv := range invoices {
+		inv.Items = itemsByInvoice[inv.ID.String()]
+		if inv.Items == nil {
+			inv.Items = []*entities.InvoiceItem{}
+		}
 	}
 
 	return invoices, nil
@@ -565,6 +612,54 @@ func (r *invoiceRepository) FindItemsByPurchaseOrigin(
 	}
 
 	return items, rows.Err()
+}
+
+func (r *invoiceRepository) findItemsByInvoiceIDs(ctx context.Context, ids []vos.UUID) (map[string][]*entities.InvoiceItem, error) {
+	if len(ids) == 0 {
+		return map[string][]*entities.InvoiceItem{}, nil
+	}
+
+	placeholders := make([]string, len(ids))
+	args := make([]any, len(ids))
+	for i, id := range ids {
+		placeholders[i] = fmt.Sprintf("$%d", i+1)
+		args[i] = id.Value
+	}
+
+	query := fmt.Sprintf(`select
+		id,
+		invoice_id,
+		category_id,
+		purchase_date,
+		description,
+		total_amount,
+		installment_number,
+		installment_total,
+		installment_amount,
+		created_at,
+		updated_at,
+		deleted_at
+	from invoice_items
+	where invoice_id IN (%s) and deleted_at is null
+	order by invoice_id, purchase_date, installment_number`, strings.Join(placeholders, ", "))
+
+	rows, err := r.db.QueryContext(ctx, query, args...)
+	if err != nil {
+		return nil, err
+	}
+	defer func() { _ = rows.Close() }()
+
+	result := make(map[string][]*entities.InvoiceItem)
+	for rows.Next() {
+		item, err := r.scanInvoiceItemFromRows(rows)
+		if err != nil {
+			return nil, err
+		}
+		key := item.InvoiceID.String()
+		result[key] = append(result[key], item)
+	}
+
+	return result, rows.Err()
 }
 
 func (r *invoiceRepository) findItemsByInvoiceID(ctx context.Context, invoiceID vos.UUID) ([]*entities.InvoiceItem, error) {
