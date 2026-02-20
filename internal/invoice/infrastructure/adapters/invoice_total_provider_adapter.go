@@ -7,19 +7,18 @@ import (
 	sharedVos "github.com/JailtonJunior94/devkit-go/pkg/vos"
 
 	"github.com/jailtonjunior94/financial/internal/invoice/domain/interfaces"
-	invoiceVos "github.com/jailtonjunior94/financial/internal/invoice/domain/vos"
-	transactionInterfaces "github.com/jailtonjunior94/financial/internal/transaction/domain/interfaces"
-	transactionVos "github.com/jailtonjunior94/financial/internal/transaction/domain/vos"
+	pkginterfaces "github.com/jailtonjunior94/financial/pkg/domain/interfaces"
+	pkgVos "github.com/jailtonjunior94/financial/pkg/domain/vos"
 )
 
-// InvoiceTotalProviderAdapter implementa a interface InvoiceTotalProvider do módulo de transaction.
+// InvoiceTotalProviderAdapter implementa a interface InvoiceTotalProvider compartilhada.
 // Este adapter segue o padrão Port & Adapter para integração entre módulos.
 type InvoiceTotalProviderAdapter struct {
 	invoiceRepository interfaces.InvoiceRepository
 }
 
 // NewInvoiceTotalProviderAdapter cria um novo adapter.
-func NewInvoiceTotalProviderAdapter(invoiceRepository interfaces.InvoiceRepository) transactionInterfaces.InvoiceTotalProvider {
+func NewInvoiceTotalProviderAdapter(invoiceRepository interfaces.InvoiceRepository) pkginterfaces.InvoiceTotalProvider {
 	return &InvoiceTotalProviderAdapter{
 		invoiceRepository: invoiceRepository,
 	}
@@ -33,15 +32,8 @@ func NewInvoiceTotalProviderAdapter(invoiceRepository interfaces.InvoiceReposito
 func (a *InvoiceTotalProviderAdapter) GetClosedInvoiceTotal(
 	ctx context.Context,
 	userID sharedVos.UUID,
-	referenceMonth transactionVos.ReferenceMonth,
+	referenceMonth pkgVos.ReferenceMonth,
 ) (sharedVos.Money, error) {
-	// Converter ReferenceMonth do transaction para ReferenceMonth do invoice
-	// Ambos usam o mesmo formato (YYYY-MM), então podemos converter via string
-	invoiceRefMonth, err := invoiceVos.NewReferenceMonth(referenceMonth.String())
-	if err != nil {
-		return sharedVos.Money{}, fmt.Errorf("invalid reference month: %w", err)
-	}
-
 	// Buscar todas as faturas do usuário no mês
 	// TODO: Implementar filtragem por status="closed"
 	// Pendências para implementar este TODO:
@@ -49,8 +41,8 @@ func (a *InvoiceTotalProviderAdapter) GetClosedInvoiceTotal(
 	// 2. Adicionar campo Status na entidade Invoice (domain/entities/invoice.go)
 	// 3. Criar InvoiceStatus VO (domain/vos/invoice_status.go) com valores: open, closed, paid
 	// 4. Adicionar parâmetro status no método FindByUserAndMonth do repository
-	// 5. Atualizar esta chamada para: FindByUserAndMonth(ctx, userID, invoiceRefMonth, InvoiceStatusClosed)
-	invoices, err := a.invoiceRepository.FindByUserAndMonth(ctx, userID, invoiceRefMonth)
+	// 5. Atualizar esta chamada para: FindByUserAndMonth(ctx, userID, referenceMonth, InvoiceStatusClosed)
+	invoices, err := a.invoiceRepository.FindByUserAndMonth(ctx, userID, referenceMonth)
 	if err != nil {
 		return sharedVos.Money{}, fmt.Errorf("failed to find invoices: %w", err)
 	}

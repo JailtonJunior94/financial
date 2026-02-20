@@ -73,11 +73,6 @@ func Run() error {
 	userModule := user.NewUserModule(dbManager.DB(), cfg, o11y)
 	cardModule := card.NewCardModule(dbManager.DB(), o11y, jwtAdapter)
 
-	budgetModule, err := budget.NewBudgetModule(dbManager.DB(), o11y, jwtAdapter, nil)
-	if err != nil {
-		return fmt.Errorf("run: failed to create budget module: %v", err)
-	}
-
 	categoryModule := category.NewCategoryModule(dbManager.DB(), o11y, jwtAdapter)
 	paymentMethodModule := payment_method.NewPaymentMethodModule(dbManager.DB(), o11y)
 
@@ -85,24 +80,22 @@ func Run() error {
 	outboxRepository := outbox.NewRepository(dbManager.DB(), o11y)
 	outboxService := outbox.NewService(outboxRepository, o11y)
 
-	// Create transaction module first (without InvoiceTotalProvider for now)
-	// This breaks the circular dependency between Invoice and Transaction
-	transactionModule, err := transaction.NewTransactionModule(dbManager.DB(), o11y, jwtAdapter, nil)
-	if err != nil {
-		return fmt.Errorf("run: failed to create transaction module: %v", err)
-	}
-
-	// Now create invoice module with outbox service
-	// Events are persisted in outbox and processed asynchronously by worker
+	// Create invoice module first — it provides adapters needed by transaction and budget modules
 	invoiceModule, err := invoice.NewInvoiceModule(dbManager.DB(), o11y, jwtAdapter, cardModule.CardProvider, outboxService)
 	if err != nil {
 		return fmt.Errorf("run: failed to create invoice module: %v", err)
 	}
 
-	// Re-create transaction module with InvoiceTotalProvider
-	transactionModule, err = transaction.NewTransactionModule(dbManager.DB(), o11y, jwtAdapter, invoiceModule.InvoiceTotalProvider)
+	// Create transaction module with the InvoiceTotalProvider from invoice module
+	transactionModule, err := transaction.NewTransactionModule(dbManager.DB(), o11y, jwtAdapter, invoiceModule.InvoiceTotalProvider)
 	if err != nil {
 		return fmt.Errorf("run: failed to create transaction module: %v", err)
+	}
+
+	// Create budget module with the InvoiceCategoryTotalProvider from invoice module
+	budgetModule, err := budget.NewBudgetModule(dbManager.DB(), o11y, jwtAdapter, invoiceModule.InvoiceCategoryTotalProvider)
+	if err != nil {
+		return fmt.Errorf("run: failed to create budget module: %v", err)
 	}
 
 	srv, err := httpserver.New(

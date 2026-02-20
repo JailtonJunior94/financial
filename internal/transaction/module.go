@@ -9,6 +9,7 @@ import (
 
 	appstrategies "github.com/jailtonjunior94/financial/internal/transaction/application/strategies"
 	"github.com/jailtonjunior94/financial/internal/transaction/application/usecase"
+	transactiondomain "github.com/jailtonjunior94/financial/internal/transaction/domain"
 	"github.com/jailtonjunior94/financial/internal/transaction/domain/interfaces"
 	"github.com/jailtonjunior94/financial/internal/transaction/infrastructure/adapters"
 	"github.com/jailtonjunior94/financial/internal/transaction/infrastructure/http"
@@ -35,7 +36,7 @@ func NewTransactionModule(
 		invoiceTotalProvider = adapters.NewNoOpInvoiceTotalProvider()
 	}
 
-	errorHandler := httperrors.NewErrorHandler(o11y)
+	errorHandler := httperrors.NewErrorHandler(o11y, transactiondomain.ErrorMappings())
 	authMiddleware := middlewares.NewAuthorization(tokenValidator, o11y, errorHandler)
 
 	unitOfWork, err := uow.NewUnitOfWork(db)

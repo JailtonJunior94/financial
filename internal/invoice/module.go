@@ -8,20 +8,22 @@ import (
 	"github.com/JailtonJunior94/devkit-go/pkg/observability"
 
 	"github.com/jailtonjunior94/financial/internal/invoice/application/usecase"
+	invoicedomain "github.com/jailtonjunior94/financial/internal/invoice/domain"
 	"github.com/jailtonjunior94/financial/internal/invoice/domain/interfaces"
 	"github.com/jailtonjunior94/financial/internal/invoice/infrastructure/adapters"
 	"github.com/jailtonjunior94/financial/internal/invoice/infrastructure/http"
 	"github.com/jailtonjunior94/financial/internal/invoice/infrastructure/repositories"
-	transactionInterfaces "github.com/jailtonjunior94/financial/internal/transaction/domain/interfaces"
 	"github.com/jailtonjunior94/financial/pkg/api/httperrors"
 	"github.com/jailtonjunior94/financial/pkg/api/middlewares"
 	"github.com/jailtonjunior94/financial/pkg/auth"
+	pkginterfaces "github.com/jailtonjunior94/financial/pkg/domain/interfaces"
 	"github.com/jailtonjunior94/financial/pkg/outbox"
 )
 
 type InvoiceModule struct {
-	InvoiceRouter        *http.InvoiceRouter
-	InvoiceTotalProvider transactionInterfaces.InvoiceTotalProvider
+	InvoiceRouter                *http.InvoiceRouter
+	InvoiceTotalProvider         pkginterfaces.InvoiceTotalProvider
+	InvoiceCategoryTotalProvider pkginterfaces.InvoiceCategoryTotalProvider
 }
 
 func NewInvoiceModule(
@@ -31,7 +33,7 @@ func NewInvoiceModule(
 	cardProvider interfaces.CardProvider,
 	outboxService outbox.Service,
 ) (InvoiceModule, error) {
-	errorHandler := httperrors.NewErrorHandler(o11y)
+	errorHandler := httperrors.NewErrorHandler(o11y, invoicedomain.ErrorMappings())
 	authMiddleware := middlewares.NewAuthorization(tokenValidator, o11y, errorHandler)
 
 	// Create Unit of Work for transaction management
@@ -66,11 +68,13 @@ func NewInvoiceModule(
 	// Create router
 	invoiceRouter := http.NewInvoiceRouter(invoiceHandler, authMiddleware)
 
-	// Create InvoiceTotalProvider adapter for Transaction module integration
+	// Create provider adapters for cross-module integration
 	invoiceTotalProvider := adapters.NewInvoiceTotalProviderAdapter(invoiceRepository)
+	invoiceCategoryTotalProvider := adapters.NewInvoiceCategoryTotalAdapter(invoiceRepository)
 
 	return InvoiceModule{
-		InvoiceRouter:        invoiceRouter,
-		InvoiceTotalProvider: invoiceTotalProvider,
+		InvoiceRouter:                invoiceRouter,
+		InvoiceTotalProvider:         invoiceTotalProvider,
+		InvoiceCategoryTotalProvider: invoiceCategoryTotalProvider,
 	}, nil
 }

@@ -6,17 +6,16 @@ import (
 
 	sharedVos "github.com/JailtonJunior94/devkit-go/pkg/vos"
 
-	budgetInterfaces "github.com/jailtonjunior94/financial/internal/budget/domain/interfaces"
-	budgetVos "github.com/jailtonjunior94/financial/internal/budget/domain/vos"
 	"github.com/jailtonjunior94/financial/internal/invoice/domain/interfaces"
-	invoiceVos "github.com/jailtonjunior94/financial/internal/invoice/domain/vos"
+	pkginterfaces "github.com/jailtonjunior94/financial/pkg/domain/interfaces"
+	pkgVos "github.com/jailtonjunior94/financial/pkg/domain/vos"
 )
 
 type invoiceCategoryTotalAdapter struct {
 	invoiceRepository interfaces.InvoiceRepository
 }
 
-func NewInvoiceCategoryTotalAdapter(invoiceRepository interfaces.InvoiceRepository) budgetInterfaces.InvoiceCategoryTotalProvider {
+func NewInvoiceCategoryTotalAdapter(invoiceRepository interfaces.InvoiceRepository) pkginterfaces.InvoiceCategoryTotalProvider {
 	return &invoiceCategoryTotalAdapter{invoiceRepository: invoiceRepository}
 }
 
@@ -25,15 +24,10 @@ func NewInvoiceCategoryTotalAdapter(invoiceRepository interfaces.InvoiceReposito
 func (a *invoiceCategoryTotalAdapter) GetCategoryTotal(
 	ctx context.Context,
 	userID sharedVos.UUID,
-	referenceMonth budgetVos.ReferenceMonth,
+	referenceMonth pkgVos.ReferenceMonth,
 	categoryID sharedVos.UUID,
 ) (sharedVos.Money, error) {
-	invoiceRefMonth, err := invoiceVos.NewReferenceMonth(referenceMonth.String())
-	if err != nil {
-		return sharedVos.Money{}, fmt.Errorf("invalid reference month: %w", err)
-	}
-
-	invoices, err := a.invoiceRepository.FindByUserAndMonth(ctx, userID, invoiceRefMonth)
+	invoices, err := a.invoiceRepository.FindByUserAndMonth(ctx, userID, referenceMonth)
 	if err != nil {
 		return sharedVos.Money{}, fmt.Errorf("failed to find invoices: %w", err)
 	}

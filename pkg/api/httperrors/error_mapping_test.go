@@ -5,14 +5,23 @@ import (
 	"net/http"
 	"testing"
 
-	budgetdomain "github.com/jailtonjunior94/financial/internal/budget/domain"
-	invoicedomain "github.com/jailtonjunior94/financial/internal/invoice/domain"
-	transactiondomain "github.com/jailtonjunior94/financial/internal/transaction/domain"
 	customerrors "github.com/jailtonjunior94/financial/pkg/custom_errors"
 )
 
 func TestErrorMapper_MapError_ValidationErrors(t *testing.T) {
-	mapper := NewErrorMapper()
+	// Sentinel errors to test the extra-mappings registration mechanism.
+	// This mirrors how each domain module registers its own errors at startup.
+	errDomainValidation := errors.New("domain validation error")
+	errDomainNotFound := errors.New("domain not found error")
+	errDomainConflict := errors.New("domain conflict error")
+	errServiceUnavailable := errors.New("service unavailable error")
+
+	mapper := NewErrorMapper(map[error]ErrorMapping{
+		errDomainValidation:   {Status: http.StatusBadRequest, Message: "Validation failed"},
+		errDomainNotFound:     {Status: http.StatusNotFound, Message: "Not found"},
+		errDomainConflict:     {Status: http.StatusConflict, Message: "Conflict"},
+		errServiceUnavailable: {Status: http.StatusServiceUnavailable, Message: "Service unavailable"},
+	})
 
 	tests := []struct {
 		name           string
@@ -20,94 +29,56 @@ func TestErrorMapper_MapError_ValidationErrors(t *testing.T) {
 		expectedStatus int
 		description    string
 	}{
-		// Budget validation errors should return 400
+		// Extra domain-specific mappings registered at construction
 		{
-			name:           "ErrBudgetInvalidTotal returns 400",
-			err:            budgetdomain.ErrBudgetInvalidTotal,
+			name:           "registered domain validation error returns 400",
+			err:            errDomainValidation,
 			expectedStatus: http.StatusBadRequest,
-			description:    "Budget validation errors should return 400 Bad Request, not 500",
+			description:    "Domain validation errors registered via extra should return 400 Bad Request",
 		},
 		{
-			name:           "ErrBudgetPercentageExceeds100 returns 400",
-			err:            budgetdomain.ErrBudgetPercentageExceeds100,
-			expectedStatus: http.StatusBadRequest,
-			description:    "Budget percentage validation should return 400 Bad Request",
+			name:           "registered domain not-found error returns 404",
+			err:            errDomainNotFound,
+			expectedStatus: http.StatusNotFound,
+			description:    "Domain not-found errors registered via extra should return 404 Not Found",
 		},
 		{
-			name:           "ErrBudgetNoItems returns 400",
-			err:            budgetdomain.ErrBudgetNoItems,
-			expectedStatus: http.StatusBadRequest,
-			description:    "Budget items validation should return 400 Bad Request",
-		},
-		{
-			name:           "ErrInvalidPercentage returns 400",
-			err:            budgetdomain.ErrInvalidPercentage,
-			expectedStatus: http.StatusBadRequest,
-			description:    "Invalid percentage should return 400 Bad Request",
-		},
-		{
-			name:           "ErrDuplicateCategory returns 409",
-			err:            budgetdomain.ErrDuplicateCategory,
+			name:           "registered domain conflict error returns 409",
+			err:            errDomainConflict,
 			expectedStatus: http.StatusConflict,
-			description:    "Duplicate category should return 409 Conflict",
-		},
-
-		// Budget not found errors should return 404
-		{
-			name:           "ErrBudgetNotFound returns 404",
-			err:            budgetdomain.ErrBudgetNotFound,
-			expectedStatus: http.StatusNotFound,
-			description:    "Budget not found should return 404 Not Found",
+			description:    "Domain conflict errors registered via extra should return 409 Conflict",
 		},
 		{
-			name:           "ErrBudgetItemNotFound returns 404",
-			err:            budgetdomain.ErrBudgetItemNotFound,
-			expectedStatus: http.StatusNotFound,
-			description:    "Budget item not found should return 404 Not Found",
-		},
-
-		// Transaction validation errors should return 400
-		{
-			name:           "ErrInvalidReferenceMonth returns 400",
-			err:            transactiondomain.ErrInvalidReferenceMonth,
-			expectedStatus: http.StatusBadRequest,
-			description:    "Invalid reference month should return 400 Bad Request",
-		},
-		{
-			name:           "ErrCannotUpdateDeletedItem returns 400",
-			err:            transactiondomain.ErrCannotUpdateDeletedItem,
-			expectedStatus: http.StatusBadRequest,
-			description:    "Cannot update deleted item should return 400 Bad Request",
-		},
-		{
-			name:           "ErrTransactionItemNotFound returns 404",
-			err:            transactiondomain.ErrTransactionItemNotFound,
-			expectedStatus: http.StatusNotFound,
-			description:    "Transaction item not found should return 404 Not Found",
-		},
-
-		// Invoice validation errors should return 400
-		{
-			name:           "ErrInvoiceHasNoItems returns 400",
-			err:            invoicedomain.ErrInvoiceHasNoItems,
-			expectedStatus: http.StatusBadRequest,
-			description:    "Invoice with no items should return 400 Bad Request",
-		},
-
-		// Service errors should return 503
-		{
-			name:           "ErrInvoiceProviderUnavailable returns 503",
-			err:            transactiondomain.ErrInvoiceProviderUnavailable,
+			name:           "registered service unavailable error returns 503",
+			err:            errServiceUnavailable,
 			expectedStatus: http.StatusServiceUnavailable,
-			description:    "Service unavailable should return 503 Service Unavailable",
+			description:    "Service unavailable errors registered via extra should return 503",
 		},
 
-		// Custom errors validation
+		// Base mappings from pkg/custom_errors (always present without extra)
 		{
 			name:           "customerrors.ErrBudgetInvalidTotal returns 400",
 			err:            customerrors.ErrBudgetInvalidTotal,
 			expectedStatus: http.StatusBadRequest,
 			description:    "Custom error budget validation should return 400 Bad Request",
+		},
+		{
+			name:           "customerrors.ErrUserNotFound returns 404",
+			err:            customerrors.ErrUserNotFound,
+			expectedStatus: http.StatusNotFound,
+			description:    "User not found should return 404 Not Found",
+		},
+		{
+			name:           "customerrors.ErrEmailAlreadyExists returns 409",
+			err:            customerrors.ErrEmailAlreadyExists,
+			expectedStatus: http.StatusConflict,
+			description:    "Email already exists should return 409 Conflict",
+		},
+		{
+			name:           "customerrors.ErrUnauthorized returns 401",
+			err:            customerrors.ErrUnauthorized,
+			expectedStatus: http.StatusUnauthorized,
+			description:    "Unauthorized should return 401 Unauthorized",
 		},
 	}
 
@@ -162,5 +133,20 @@ func TestErrorMapper_MapError_UnmappedErrors(t *testing.T) {
 				)
 			}
 		})
+	}
+}
+
+func TestErrorMapper_ExtraMappingsOverrideBase(t *testing.T) {
+	// Verify that extra mappings can override base mappings.
+	mapper := NewErrorMapper(map[error]ErrorMapping{
+		customerrors.ErrUserNotFound: {Status: http.StatusBadRequest, Message: "Custom override"},
+	})
+
+	mapping := mapper.MapError(customerrors.ErrUserNotFound)
+	if mapping.Status != http.StatusBadRequest {
+		t.Errorf("extra mapping should override base: expected 400, got %d", mapping.Status)
+	}
+	if mapping.Message != "Custom override" {
+		t.Errorf("extra mapping message mismatch: expected 'Custom override', got %q", mapping.Message)
 	}
 }

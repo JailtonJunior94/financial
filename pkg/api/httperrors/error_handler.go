@@ -26,10 +26,12 @@ type errorHandler struct {
 }
 
 // NewErrorHandler creates a new error handler with observability.
-func NewErrorHandler(o11y observability.Observability) ErrorHandler {
+// Domain-specific error mappings can be provided so each module registers
+// its own errors without the pkg package importing internal domain packages.
+func NewErrorHandler(o11y observability.Observability, extra ...map[error]ErrorMapping) ErrorHandler {
 	return &errorHandler{
 		o11y:   o11y,
-		mapper: NewErrorMapper(),
+		mapper: NewErrorMapper(extra...),
 	}
 }
 

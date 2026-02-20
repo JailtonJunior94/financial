@@ -5,6 +5,7 @@ import (
 	"fmt"
 
 	"github.com/jailtonjunior94/financial/internal/budget/application/usecase"
+	budgetdomain "github.com/jailtonjunior94/financial/internal/budget/domain"
 	"github.com/jailtonjunior94/financial/internal/budget/domain/interfaces"
 	budgethttp "github.com/jailtonjunior94/financial/internal/budget/infrastructure/http"
 	"github.com/jailtonjunior94/financial/internal/budget/infrastructure/messaging"
@@ -28,7 +29,7 @@ func NewBudgetModule(
 	tokenValidator auth.TokenValidator,
 	invoiceCategoryTotal interfaces.InvoiceCategoryTotalProvider,
 ) (BudgetModule, error) {
-	errorHandler := httperrors.NewErrorHandler(o11y)
+	errorHandler := httperrors.NewErrorHandler(o11y, budgetdomain.ErrorMappings())
 	authMiddleware := middlewares.NewAuthorization(tokenValidator, o11y, errorHandler)
 
 	unitOfWork, err := uow.NewUnitOfWork(db)
