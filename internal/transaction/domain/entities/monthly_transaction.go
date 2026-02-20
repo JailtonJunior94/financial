@@ -7,6 +7,7 @@ import (
 	sharedVos "github.com/JailtonJunior94/devkit-go/pkg/vos"
 
 	transactionVos "github.com/jailtonjunior94/financial/internal/transaction/domain/vos"
+	pkgVos "github.com/jailtonjunior94/financial/pkg/domain/vos"
 )
 
 // MonthlyTransaction é o Aggregate Root que representa o consolidado financeiro mensal.
@@ -19,7 +20,7 @@ import (
 type MonthlyTransaction struct {
 	ID             sharedVos.UUID
 	UserID         sharedVos.UUID
-	ReferenceMonth transactionVos.ReferenceMonth
+	ReferenceMonth pkgVos.ReferenceMonth
 	TotalIncome    sharedVos.Money
 	TotalExpense   sharedVos.Money
 	TotalAmount    sharedVos.Money
@@ -31,7 +32,7 @@ type MonthlyTransaction struct {
 // NewMonthlyTransaction cria um novo MonthlyTransaction.
 func NewMonthlyTransaction(
 	userID sharedVos.UUID,
-	referenceMonth transactionVos.ReferenceMonth,
+	referenceMonth pkgVos.ReferenceMonth,
 ) (*MonthlyTransaction, error) {
 	// Cria o aggregate com valores zerados
 	currency := sharedVos.CurrencyBRL
@@ -201,6 +202,12 @@ func (m *MonthlyTransaction) activeItems() []*TransactionItem {
 		}
 	}
 	return active
+}
+
+// FindItemByID expõe a busca de item por ID.
+// Necessário para que o use case obtenha o item atualizado pelo aggregate antes de persistir.
+func (m *MonthlyTransaction) FindItemByID(itemID sharedVos.UUID) *TransactionItem {
+	return m.findItemByID(itemID)
 }
 
 // findItemByID encontra um item pelo ID.

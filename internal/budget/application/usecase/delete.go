@@ -57,11 +57,8 @@ func (u *deleteBudgetUseCase) Execute(ctx context.Context, budgetID string) erro
 			return domain.ErrBudgetNotFound
 		}
 
-		// Soft delete (sets DeletedAt timestamp)
-		budget.Delete()
-
-		// Update budget in database
-		if err := budgetRepository.Update(ctx, budget); err != nil {
+		// Soft delete via repositório (persiste deleted_at no banco)
+		if err := budgetRepository.Delete(ctx, id); err != nil {
 			return err
 		}
 

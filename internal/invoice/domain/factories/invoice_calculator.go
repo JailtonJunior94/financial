@@ -3,10 +3,40 @@ package factories
 import (
 	"time"
 
-	invoiceVos "github.com/jailtonjunior94/financial/internal/invoice/domain/vos"
+	pkgVos "github.com/jailtonjunior94/financial/pkg/domain/vos"
 )
 
-// InvoiceCalculator contém a lógica de cálculo de fatura segundo padrão brasileiro.
+const (
+	// ClosingDay é o dia fixo de fechamento da fatura — D_fech = 24.
+	//
+	// Contrato:
+	//   dia_compra ≤ 24  →  pertence ao ciclo atual   (offset = 1)
+	//   dia_compra ≥ 25  →  pertence ao ciclo seguinte (offset = 2)
+	//
+	// IMPORTANTE: "7 dias corridos antes do vencimento" é um mnemônico
+	// válido apenas para meses com 30 dias. A regra canônica é esta constante.
+	ClosingDay = 24
+
+	// DueDay é o dia fixo de vencimento da fatura — D_venc = 1.
+	DueDay = 1
+)
+
+// InvoiceCalculator implementa a regra determinística de alocação de ciclo de fatura.
+//
+// Modelo formal:
+//
+//	Ciclo C(v) para vencimento 01/M = [ 25/(M-2), 24/(M-1) ]  (intervalo fechado)
+//
+//	f(purchaseDate):
+//	  offset = 1  se purchaseDate.Day() ≤ ClosingDay
+//	  offset = 2  se purchaseDate.Day() ≥ 25
+//	  invoice_due_date = 01 / (month + offset)   (aritmética ordinal de meses)
+//
+// Propriedades:
+//   - Total:           toda LocalDate mapeia para exatamente 1 invoice_due_date
+//   - Determinística:  sem dependência de clock, timezone ou estado externo
+//   - Idempotente:     f(f(x)) ≠ f(x) por tipo, mas f é pura — mesmo input, mesmo output
+//   - Auditável:       sem ramos ocultos, sem estado global
 type InvoiceCalculator struct{}
 
 // NewInvoiceCalculator cria um novo calculador de faturas.
@@ -14,94 +44,55 @@ func NewInvoiceCalculator() *InvoiceCalculator {
 	return &InvoiceCalculator{}
 }
 
-// calculateClosingDay calcula o dia de fechamento da fatura.
-// Usa a mesma lógica do módulo Card (fonte da verdade).
-// Regra: closingDay = dueDay - closingOffsetDays.
-// Se resultado <= 0, volta para o mês anterior.
-func (c *InvoiceCalculator) calculateClosingDay(referenceYear int, referenceMonth time.Month, dueDay int, closingOffsetDays int) time.Time {
-	closingDay := dueDay - closingOffsetDays
-
-	// Se ficou negativo ou zero, volta para o mês anterior
-	if closingDay <= 0 {
-		// Pega o último dia do mês anterior
-		firstDayOfReferenceMonth := time.Date(referenceYear, referenceMonth, 1, 0, 0, 0, 0, time.UTC)
-		lastDayOfPreviousMonth := firstDayOfReferenceMonth.AddDate(0, 0, -1)
-
-		// Calcula o dia de fechamento no mês anterior
-		// Exemplo: vence dia 1, offset 7 → fecha dia 24 do mês anterior (31 - 7 = 24)
-		closingDay = lastDayOfPreviousMonth.Day() - closingOffsetDays
-
-		return time.Date(referenceYear, referenceMonth, 1, 0, 0, 0, 0, time.UTC).AddDate(0, -1, closingDay-1)
+// CalculateInvoiceMonth determina o mês de fatura (ReferenceMonth) de uma compra.
+//
+// A única decisão lógica é o comparador contra ClosingDay (24):
+//
+//	purchaseDate.Day() ≤ 24  →  invoice = 01/(m+1)
+//	purchaseDate.Day() ≥ 25  →  invoice = 01/(m+2)
+//
+// Aritmética em ordinal de meses (base 0) garante correção em viradas de ano
+// sem qualquer lógica especial para dezembro/janeiro.
+func (c *InvoiceCalculator) CalculateInvoiceMonth(purchaseDate time.Time) pkgVos.ReferenceMonth {
+	offset := 1
+	if purchaseDate.Day() > ClosingDay {
+		offset = 2
 	}
 
-	return time.Date(referenceYear, referenceMonth, closingDay, 0, 0, 0, 0, time.UTC)
+	y := purchaseDate.Year()
+	m := int(purchaseDate.Month())
+
+	// Ordinal 0-indexed: elimina ambiguidade de virada de ano.
+	// Invariante: totalMonths mod 12 ∈ [0, 11]
+	totalMonths := y*12 + (m - 1) + offset
+	dueYear := totalMonths / 12
+	dueMonth := time.Month(totalMonths%12 + 1)
+
+	return pkgVos.NewReferenceMonthFromDate(
+		time.Date(dueYear, dueMonth, 1, 0, 0, 0, 0, time.UTC),
+	)
 }
 
-// CalculateInvoiceMonth calcula qual mês de fatura uma compra pertence.
-// baseado nas regras brasileiras de faturamento.
+// CalculateDueDate retorna a data de vencimento da fatura para um mês de referência.
 //
-// Regra CRÍTICA:
-// - Se purchaseDate < closingDate → fatura do mês vigente.
-// - Se purchaseDate >= closingDate → fatura do mês seguinte.
-//
-// Usa < e NUNCA <= (determinístico).
-func (c *InvoiceCalculator) CalculateInvoiceMonth(purchaseDate time.Time, dueDay int, closingOffsetDays int) invoiceVos.ReferenceMonth {
-	// Calcula o vencimento potencial no mês da compra
-	dueDate := time.Date(purchaseDate.Year(), purchaseDate.Month(), dueDay, 0, 0, 0, 0, time.UTC)
-
-	// Se o vencimento do mês da compra já passou, olha para o próximo mês
-	// Exemplo: compra dia 24/dez com vencimento dia 1 → próximo vencimento é 01/jan
-	if dueDate.Before(purchaseDate) {
-		dueDate = dueDate.AddDate(0, 1, 0)
-	}
-
-	// Calcula a data de fechamento para essa fatura
-	closingDate := c.calculateClosingDay(dueDate.Year(), dueDate.Month(), dueDay, closingOffsetDays)
-
-	// Regra determinística: usa < e NUNCA <=
-	if purchaseDate.Before(closingDate) {
-		// Compra ANTES do fechamento → vai para esta fatura
-		firstDayOfMonth := time.Date(dueDate.Year(), dueDate.Month(), 1, 0, 0, 0, 0, time.UTC)
-		return invoiceVos.NewReferenceMonthFromDate(firstDayOfMonth)
-	}
-
-	// Compra NO DIA ou APÓS o fechamento → vai para a fatura do próximo mês
-	nextDueDate := dueDate.AddDate(0, 1, 0)
-	firstDayOfNextMonth := time.Date(nextDueDate.Year(), nextDueDate.Month(), 1, 0, 0, 0, 0, time.UTC)
-	return invoiceVos.NewReferenceMonthFromDate(firstDayOfNextMonth)
+// D_venc = 1: o vencimento é sempre o primeiro dia do mês de referência.
+func (c *InvoiceCalculator) CalculateDueDate(referenceMonth pkgVos.ReferenceMonth) time.Time {
+	return referenceMonth.FirstDay()
 }
 
-// CalculateDueDate calcula a data de vencimento da fatura.
-// baseado no mês de referência e no dia de vencimento do cartão.
-func (c *InvoiceCalculator) CalculateDueDate(referenceMonth invoiceVos.ReferenceMonth, dueDay int) time.Time {
-	year := referenceMonth.Year()
-	month := referenceMonth.Month()
-
-	// Cria a data de vencimento no dia especificado do mês
-	dueDate := time.Date(year, month, dueDay, 0, 0, 0, 0, time.UTC)
-
-	// Se o dia não existe no mês (ex: 31 de fevereiro), Go ajusta automaticamente
-	// para o último dia válido do mês
-	return dueDate
-}
-
-// CalculateInstallmentMonths calcula os meses de referência para cada parcela.
-// de uma compra parcelada.
+// CalculateInstallmentMonths retorna os ReferenceMonth de cada parcela de uma compra parcelada.
 //
-// Retorna um slice com os ReferenceMonth de cada parcela.
+// A primeira parcela usa CalculateInvoiceMonth; as demais são meses consecutivos.
+// O slice retornado tem exatamente installmentTotal elementos.
 func (c *InvoiceCalculator) CalculateInstallmentMonths(
 	purchaseDate time.Time,
-	dueDay int,
-	closingOffsetDays int,
 	installmentTotal int,
-) []invoiceVos.ReferenceMonth {
-	months := make([]invoiceVos.ReferenceMonth, installmentTotal)
+) []pkgVos.ReferenceMonth {
+	months := make([]pkgVos.ReferenceMonth, installmentTotal)
 
-	// Primeira parcela: calcula normalmente
-	firstMonth := c.CalculateInvoiceMonth(purchaseDate, dueDay, closingOffsetDays)
+	firstMonth := c.CalculateInvoiceMonth(purchaseDate)
 	months[0] = firstMonth
 
-	// Demais parcelas: meses subsequentes
 	for i := 1; i < installmentTotal; i++ {
 		months[i] = firstMonth.AddMonths(i)
 	}

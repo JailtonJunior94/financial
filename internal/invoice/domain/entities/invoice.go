@@ -8,7 +8,7 @@ import (
 	"github.com/JailtonJunior94/devkit-go/pkg/vos"
 
 	"github.com/jailtonjunior94/financial/internal/invoice/domain"
-	invoiceVos "github.com/jailtonjunior94/financial/internal/invoice/domain/vos"
+	pkgVos "github.com/jailtonjunior94/financial/pkg/domain/vos"
 )
 
 // Invoice é o Aggregate Root que representa uma fatura mensal de cartão.
@@ -16,7 +16,7 @@ type Invoice struct {
 	entity.Base
 	UserID         vos.UUID
 	CardID         vos.UUID
-	ReferenceMonth invoiceVos.ReferenceMonth
+	ReferenceMonth pkgVos.ReferenceMonth
 	DueDate        time.Time
 	TotalAmount    vos.Money
 	Items          []*InvoiceItem
@@ -26,7 +26,7 @@ type Invoice struct {
 func NewInvoice(
 	userID vos.UUID,
 	cardID vos.UUID,
-	referenceMonth invoiceVos.ReferenceMonth,
+	referenceMonth pkgVos.ReferenceMonth,
 	dueDate time.Time,
 	currency vos.Currency,
 ) *Invoice {
@@ -99,6 +99,32 @@ func (inv *Invoice) FindItemByID(itemID vos.UUID) *InvoiceItem {
 		return nil
 	}
 	return inv.Items[idx]
+}
+
+// UpdateItemDetails atualiza os campos de um item via aggregate root e recalcula o total.
+// Toda mutação de InvoiceItem deve passar por aqui para garantir consistência.
+func (inv *Invoice) UpdateItemDetails(
+	itemID vos.UUID,
+	categoryID vos.UUID,
+	description string,
+	totalAmount vos.Money,
+	installmentAmount vos.Money,
+) error {
+	item := inv.FindItemByID(itemID)
+	if item == nil {
+		return domain.ErrInvoiceItemNotFound
+	}
+
+	item.CategoryID = categoryID
+	item.Description = description
+	item.TotalAmount = totalAmount
+	item.InstallmentAmount = installmentAmount
+	item.UpdatedAt = vos.NewNullableTime(time.Now().UTC())
+
+	inv.recalculateTotalAmount()
+	inv.UpdatedAt = vos.NewNullableTime(time.Now().UTC())
+
+	return nil
 }
 
 // RecalculateTotal recalcula o valor total da fatura com base nos itens.

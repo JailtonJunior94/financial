@@ -95,52 +95,46 @@ func (u *deletePurchaseUseCase) Execute(ctx context.Context, userID string, item
 			return fmt.Errorf("no items found for purchase")
 		}
 
-		// Track affected invoices for total recalculation
-		affectedInvoices := make(map[string]struct{})
-
-		// Delete all items from the purchase
+		// Agrupa itens por fatura (compras parceladas afetam N faturas)
+		itemsByInvoice := make(map[string][]*entities.InvoiceItem)
 		for _, item := range items {
-			if err := invoiceRepo.DeleteItem(ctx, item.ID); err != nil {
-				return err
-			}
-
-			// Track affected invoice
-			affectedInvoices[item.InvoiceID.String()] = struct{}{}
+			itemsByInvoice[item.InvoiceID.String()] = append(itemsByInvoice[item.InvoiceID.String()], item)
 		}
 
-		// Recalculate totals for all affected invoices
-		currency := items[0].TotalAmount.Currency()
-		affectedMonthsMap := make(map[string]bool)
+		monthsList := make([]string, 0, len(itemsByInvoice))
 
-		for invoiceIDStr := range affectedInvoices {
+		// Para cada fatura afetada: carrega o aggregate, remove via aggregate, persiste
+		for invoiceIDStr, invoiceItems := range itemsByInvoice {
 			invoiceID, _ := vos.NewUUIDFromString(invoiceIDStr)
-			invoice, err := invoiceRepo.FindByID(ctx, invoiceID)
+			inv, err := invoiceRepo.FindByID(ctx, invoiceID)
 			if err != nil {
 				return err
 			}
-
-			// Recalculate total from remaining items
-			var total vos.Money
-			total, _ = vos.NewMoneyFromFloat(0, currency)
-
-			for _, item := range invoice.Items {
-				total, _ = total.Add(item.InstallmentAmount)
+			if inv == nil {
+				return domain.ErrInvoiceNotFound
 			}
 
-			invoice.TotalAmount = total
-			if err := invoiceRepo.Update(ctx, invoice); err != nil {
+			for _, item := range invoiceItems {
+				// Remoção via aggregate root — mantém invariantes e recalcula total
+				if err := inv.RemoveItem(item.ID); err != nil {
+					return err
+				}
+
+				// Persiste a remoção no banco
+				if err := invoiceRepo.DeleteItem(ctx, item.ID); err != nil {
+					return err
+				}
+			}
+
+			// Persiste o total recalculado da fatura
+			if err := invoiceRepo.Update(ctx, inv); err != nil {
 				return err
 			}
 
-			// Track affected month
-			month := invoice.ReferenceMonth.String()
-			affectedMonthsMap[month] = true
+			monthsList = append(monthsList, inv.ReferenceMonth.String())
 		}
 
-		// Convert map to slice
-		for month := range affectedMonthsMap {
-			affectedMonths = append(affectedMonths, month)
-		}
+		affectedMonths = monthsList
 
 		// ✅ Salvar evento no outbox dentro da mesma transação
 		aggregateID, err := uuid.Parse(userID)

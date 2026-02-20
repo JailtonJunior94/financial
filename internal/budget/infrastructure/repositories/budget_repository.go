@@ -10,7 +10,7 @@ import (
 
 	"github.com/jailtonjunior94/financial/internal/budget/domain/entities"
 	"github.com/jailtonjunior94/financial/internal/budget/domain/interfaces"
-	budgetVos "github.com/jailtonjunior94/financial/internal/budget/domain/vos"
+	pkgVos "github.com/jailtonjunior94/financial/pkg/domain/vos"
 
 	"github.com/JailtonJunior94/devkit-go/pkg/database"
 	"github.com/JailtonJunior94/devkit-go/pkg/observability"
@@ -184,7 +184,7 @@ func (r *budgetRepository) FindByID(ctx context.Context, id vos.UUID) (*entities
 		return nil, fmt.Errorf("failed to create Percentage from percentage_used: %w", err)
 	}
 
-	budget.ReferenceMonth = budgetVos.NewReferenceMonthFromDate(referenceDate)
+	budget.ReferenceMonth = pkgVos.NewReferenceMonthFromDate(referenceDate)
 	budget.UpdatedAt = helpers.ParseNullableTime(updatedAt)
 	budget.DeletedAt = helpers.ParseNullableTime(deletedAt)
 
@@ -198,7 +198,7 @@ func (r *budgetRepository) FindByID(ctx context.Context, id vos.UUID) (*entities
 	return &budget, nil
 }
 
-func (r *budgetRepository) FindByUserIDAndReferenceMonth(ctx context.Context, userID vos.UUID, referenceMonth budgetVos.ReferenceMonth) (*entities.Budget, error) {
+func (r *budgetRepository) FindByUserIDAndReferenceMonth(ctx context.Context, userID vos.UUID, referenceMonth pkgVos.ReferenceMonth) (*entities.Budget, error) {
 	ctx, span := r.o11y.Tracer().Start(ctx, "budget_repository.find_by_user_and_month")
 	defer span.End()
 
@@ -258,7 +258,7 @@ func (r *budgetRepository) FindByUserIDAndReferenceMonth(ctx context.Context, us
 		return nil, fmt.Errorf("failed to create Percentage from percentage_used: %w", err)
 	}
 
-	budget.ReferenceMonth = budgetVos.NewReferenceMonthFromDate(referenceDate)
+	budget.ReferenceMonth = pkgVos.NewReferenceMonthFromDate(referenceDate)
 	budget.UpdatedAt = helpers.ParseNullableTime(updatedAt)
 	budget.DeletedAt = helpers.ParseNullableTime(deletedAt)
 
@@ -356,7 +356,7 @@ func (r *budgetRepository) ListPaginated(ctx context.Context, params interfaces.
 			return nil, fmt.Errorf("failed to create Percentage from percentage_used: %w", err)
 		}
 
-		budget.ReferenceMonth = budgetVos.NewReferenceMonthFromDate(referenceDate)
+		budget.ReferenceMonth = pkgVos.NewReferenceMonthFromDate(referenceDate)
 		budget.UpdatedAt = helpers.ParseNullableTime(updatedAt)
 		budget.DeletedAt = helpers.ParseNullableTime(deletedAt)
 
@@ -397,6 +397,17 @@ func (r *budgetRepository) Update(ctx context.Context, budget *entities.Budget) 
 		return err
 	}
 	return nil
+}
+
+func (r *budgetRepository) Delete(ctx context.Context, id vos.UUID) error {
+	ctx, span := r.o11y.Tracer().Start(ctx, "budget_repository.delete")
+	defer span.End()
+
+	now := time.Now().UTC()
+	query := `update budgets set deleted_at = $2, updated_at = $2 where id = $1`
+
+	_, err := r.db.ExecContext(ctx, query, id.Value, now)
+	return err
 }
 
 func (r *budgetRepository) UpdateItem(ctx context.Context, item *entities.BudgetItem) error {

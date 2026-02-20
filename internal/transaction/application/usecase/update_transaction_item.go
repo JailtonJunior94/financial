@@ -90,19 +90,25 @@ func (u *updateTransactionItemUseCase) Execute(
 	// Execute within transaction
 	var monthly *dtos.MonthlyTransactionOutput
 	err = u.uow.Do(ctx, func(ctx context.Context, tx database.DBTX) error {
-		// Find item
+		// Busca o item para obter o MonthlyID do aggregate
 		item, err := u.repo.FindItemByID(ctx, tx, user, itemUUID)
 		if err != nil {
 			return fmt.Errorf("failed to find item: %w", err)
 		}
+		if item == nil {
+			return fmt.Errorf("transaction item not found")
+		}
 
-		// Find monthly aggregate
+		// Carrega o aggregate completo
 		monthlyAggregate, err := u.repo.FindMonthlyByID(ctx, tx, user, item.MonthlyID)
 		if err != nil {
 			return fmt.Errorf("failed to find monthly transaction: %w", err)
 		}
+		if monthlyAggregate == nil {
+			return fmt.Errorf("monthly transaction not found")
+		}
 
-		// Update item through aggregate (recalculates totals)
+		// Aplica a mutação via aggregate (recalcula totais internamente)
 		if err := monthlyAggregate.UpdateItem(
 			itemUUID,
 			input.Title,
@@ -115,8 +121,14 @@ func (u *updateTransactionItemUseCase) Execute(
 			return fmt.Errorf("failed to update item: %w", err)
 		}
 
-		// Persist changes
-		if err := u.repo.UpdateItem(ctx, tx, item); err != nil {
+		// Obtém o item ATUALIZADO do aggregate (não a cópia antiga de FindItemByID)
+		updatedItem := monthlyAggregate.FindItemByID(itemUUID)
+		if updatedItem == nil {
+			return fmt.Errorf("item not found in aggregate after update")
+		}
+
+		// Persiste o item com os valores atualizados
+		if err := u.repo.UpdateItem(ctx, tx, updatedItem); err != nil {
 			return fmt.Errorf("failed to persist item: %w", err)
 		}
 

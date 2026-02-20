@@ -67,22 +67,21 @@ func (u *updatePurchaseUseCase) Execute(ctx context.Context, userID string, item
 	err = u.uow.Do(ctx, func(ctx context.Context, tx database.DBTX) error {
 		invoiceRepo := repositories.NewInvoiceRepository(tx, u.o11y)
 
-		// Find the item to get purchase origin details
-		item, err := invoiceRepo.FindByID(ctx, id)
+		// Busca a fatura pelo ID do item para obter os dados de origem da compra
+		invoice, err := invoiceRepo.FindByID(ctx, id)
 		if err != nil {
 			return err
 		}
-		if item == nil {
+		if invoice == nil {
 			return domain.ErrInvoiceItemNotFound
 		}
 
-		// Get the first item to extract purchase origin
-		if len(item.Items) == 0 {
+		if len(invoice.Items) == 0 {
 			return fmt.Errorf("no items found")
 		}
-		firstItem := item.Items[0]
+		firstItem := invoice.Items[0]
 
-		// Find all items from the same purchase
+		// Busca todos os itens da mesma compra (parcelamentos)
 		items, err := invoiceRepo.FindItemsByPurchaseOrigin(
 			ctx,
 			firstItem.PurchaseDate.Format("2006-01-02"),
@@ -97,7 +96,7 @@ func (u *updatePurchaseUseCase) Execute(ctx context.Context, userID string, item
 			return fmt.Errorf("no items found for purchase")
 		}
 
-		// Parse new total amount from string (half-even rounding)
+		// Calcula novo valor da parcela
 		currency := items[0].TotalAmount.Currency()
 		newTotalAmount, err := money.NewMoney(input.TotalAmount, currency)
 		if err != nil {
@@ -109,59 +108,48 @@ func (u *updatePurchaseUseCase) Execute(ctx context.Context, userID string, item
 			return fmt.Errorf("failed to calculate installment amount: %w", err)
 		}
 
-		// Track affected invoices for total recalculation
-		affectedInvoices := make(map[string]struct{})
-
-		// Update each item
+		// Agrupa itens por fatura (compras parceladas afetam N faturas)
+		itemsByInvoice := make(map[string][]*entities.InvoiceItem)
 		for _, item := range items {
-			item.CategoryID = categoryID
-			item.Description = input.Description
-			item.TotalAmount = newTotalAmount
-			item.InstallmentAmount = newInstallmentAmount
-
-			if err := invoiceRepo.UpdateItem(ctx, item); err != nil {
-				return err
-			}
-
-			// Track affected invoice
-			affectedInvoices[item.InvoiceID.String()] = struct{}{}
+			itemsByInvoice[item.InvoiceID.String()] = append(itemsByInvoice[item.InvoiceID.String()], item)
 		}
 
-		// Store updated items for response
-		updatedItems = items
+		monthsList := make([]string, 0, len(itemsByInvoice))
 
-		// Recalculate totals for all affected invoices
-		for invoiceIDStr := range affectedInvoices {
+		// Para cada fatura afetada: carrega o aggregate, aplica a mutação via aggregate
+		for invoiceIDStr, invoiceItems := range itemsByInvoice {
 			invoiceID, _ := vos.NewUUIDFromString(invoiceIDStr)
-			invoice, err := invoiceRepo.FindByID(ctx, invoiceID)
+			inv, err := invoiceRepo.FindByID(ctx, invoiceID)
 			if err != nil {
 				return err
 			}
-
-			// Recalculate total from items
-			var total vos.Money
-			total, _ = vos.NewMoney(0, currency)
-
-			for _, item := range invoice.Items {
-				total, _ = total.Add(item.InstallmentAmount)
+			if inv == nil {
+				return domain.ErrInvoiceNotFound
 			}
 
-			invoice.TotalAmount = total
-			if err := invoiceRepo.Update(ctx, invoice); err != nil {
+			for _, item := range invoiceItems {
+				// Mutação via aggregate root — mantém invariantes e recalcula total
+				if err := inv.UpdateItemDetails(item.ID, categoryID, input.Description, newTotalAmount, newInstallmentAmount); err != nil {
+					return err
+				}
+
+				// Persiste o item atualizado (obtido do aggregate)
+				updatedItem := inv.FindItemByID(item.ID)
+				if err := invoiceRepo.UpdateItem(ctx, updatedItem); err != nil {
+					return err
+				}
+			}
+
+			// Persiste o total recalculado da fatura
+			if err := invoiceRepo.Update(ctx, inv); err != nil {
 				return err
 			}
+
+			monthsList = append(monthsList, inv.ReferenceMonth.String())
 		}
 
-		// ✅ Salvar evento no outbox dentro da mesma transação
-		// Collect affected months from the affected invoices
-		monthsList := make([]string, 0, len(affectedInvoices))
-		for invoiceIDStr := range affectedInvoices {
-			invoiceID, _ := vos.NewUUIDFromString(invoiceIDStr)
-			invoice, err := invoiceRepo.FindByID(ctx, invoiceID)
-			if err == nil && invoice != nil {
-				monthsList = append(monthsList, invoice.ReferenceMonth.String())
-			}
-		}
+		// Coleta os itens atualizados para a resposta
+		updatedItems = items
 
 		// Converter userID string para UUID
 		aggregateID, err := uuid.Parse(userID)

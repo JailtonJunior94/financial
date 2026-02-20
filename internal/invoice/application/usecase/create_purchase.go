@@ -17,8 +17,8 @@ import (
 	"github.com/jailtonjunior94/financial/internal/invoice/domain/events"
 	"github.com/jailtonjunior94/financial/internal/invoice/domain/factories"
 	"github.com/jailtonjunior94/financial/internal/invoice/domain/interfaces"
-	invoiceVos "github.com/jailtonjunior94/financial/internal/invoice/domain/vos"
 	"github.com/jailtonjunior94/financial/internal/invoice/infrastructure/repositories"
+	pkgVos "github.com/jailtonjunior94/financial/pkg/domain/vos"
 	"github.com/jailtonjunior94/financial/pkg/outbox"
 )
 
@@ -85,10 +85,9 @@ func (u *createPurchaseUseCase) Execute(ctx context.Context, userID string, inpu
 		return nil, fmt.Errorf("invalid total amount: %w", err)
 	}
 
-	// ✅ Obter informações de faturamento do cartão via CardProvider (desacoplado)
-	cardBillingInfo, err := u.cardProvider.GetCardBillingInfo(ctx, user, cardID)
-	if err != nil {
-		u.o11y.Logger().Error(ctx, "failed to get card billing info", observability.Error(err))
+	// ✅ Validar que o cartão pertence ao usuário via CardProvider (desacoplado)
+	if _, err := u.cardProvider.GetCardBillingInfo(ctx, user, cardID); err != nil {
+		u.o11y.Logger().Error(ctx, "failed to validate card ownership", observability.Error(err))
 		return nil, err
 	}
 
@@ -101,8 +100,6 @@ func (u *createPurchaseUseCase) Execute(ctx context.Context, userID string, inpu
 	// ✅ Usar InvoiceCalculator para determinar os meses de cada parcela
 	installmentMonths := u.invoiceCalculator.CalculateInstallmentMonths(
 		purchaseDate,
-		cardBillingInfo.DueDay,
-		cardBillingInfo.ClosingOffsetDays,
 		input.InstallmentTotal,
 	)
 
@@ -126,7 +123,6 @@ func (u *createPurchaseUseCase) Execute(ctx context.Context, userID string, inpu
 				user,
 				cardID,
 				referenceMonth,
-				cardBillingInfo.DueDay,
 				vos.CurrencyBRL,
 			)
 			if err != nil {
@@ -255,8 +251,7 @@ func (u *createPurchaseUseCase) findOrCreateInvoice(
 	repo interfaces.InvoiceRepository,
 	userID vos.UUID,
 	cardID vos.UUID,
-	referenceMonth invoiceVos.ReferenceMonth,
-	dueDay int,
+	referenceMonth pkgVos.ReferenceMonth,
 	currency vos.Currency,
 ) (*entities.Invoice, error) {
 	// Tentar buscar fatura existente
@@ -271,7 +266,7 @@ func (u *createPurchaseUseCase) findOrCreateInvoice(
 	}
 
 	// Se não encontrou, cria nova fatura
-	dueDate := u.invoiceCalculator.CalculateDueDate(referenceMonth, dueDay)
+	dueDate := u.invoiceCalculator.CalculateDueDate(referenceMonth)
 
 	invoice = entities.NewInvoice(userID, cardID, referenceMonth, dueDate, currency)
 
