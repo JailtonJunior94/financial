@@ -44,22 +44,29 @@ func NewBudgetItem(
 }
 
 // PercentageSpent calcula a porcentagem gasta em relação ao planejado.
+// Usa aritmética int64 pura: raw = (spentCents * 100_000) / plannedCents
+// com arredondamento half-up para a casa decimal de corte.
 func (b *BudgetItem) PercentageSpent() vos.Percentage {
 	// Evita divisão por zero
 	if b.PlannedAmount.IsZero() {
-		zeroPercentage, _ := vos.NewPercentage(0)
-		return zeroPercentage
+		zeroP, _ := vos.NewPercentage(0)
+		return zeroP
 	}
 
-	// Calcula: (SpentAmount / PlannedAmount) * 100
-	spentFloat := b.SpentAmount.Float()
-	plannedFloat := b.PlannedAmount.Float()
-	percentageFloat := (spentFloat / plannedFloat) * percentageScale
+	// Calcula: (SpentAmount / PlannedAmount) * 100 em escala int64 × 1000
+	spentCents := b.SpentAmount.Cents()
+	plannedCents := b.PlannedAmount.Cents()
+	numerator := spentCents * 100_000
+	raw := numerator / plannedCents
+	// arredondamento half-up do resto
+	if (numerator%plannedCents)*2 >= plannedCents {
+		raw++
+	}
 
-	percentageSpent, err := vos.NewPercentageFromFloat(percentageFloat)
+	percentageSpent, err := vos.NewPercentage(raw)
 	if err != nil {
-		zeroPercentage, _ := vos.NewPercentage(0)
-		return zeroPercentage
+		zeroP, _ := vos.NewPercentage(0)
+		return zeroP
 	}
 
 	return percentageSpent

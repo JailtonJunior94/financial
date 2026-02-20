@@ -17,8 +17,11 @@ var (
 	// MonthRegex valida meses no formato YYYY-MM
 	MonthRegex = regexp.MustCompile(`^\d{4}-\d{2}$`)
 
-	// MoneyRegex valida valores monetários (até 2 casas decimais)
-	MoneyRegex = regexp.MustCompile(`^\d+(\.\d{1,2})?$`)
+	// MoneyRegex valida valores monetários (até 2 casas decimais, máximo 15 dígitos inteiros)
+	MoneyRegex = regexp.MustCompile(`^\d{1,15}(\.\d{1,2})?$`)
+
+	// PercentageRegex valida valores percentuais (até 3 casas decimais, alinhado com NUMERIC(6,3))
+	PercentageRegex = regexp.MustCompile(`^\d+(\.\d{1,3})?$`)
 )
 
 // IsRequired verifica se o valor não está vazio.
@@ -55,6 +58,14 @@ func IsMoney(value string) bool {
 		return false
 	}
 	return MoneyRegex.MatchString(value)
+}
+
+// IsPercentage verifica se é um valor percentual válido (até 3 casas decimais).
+func IsPercentage(value string) bool {
+	if value == "" {
+		return false
+	}
+	return PercentageRegex.MatchString(value)
 }
 
 // IsPositiveInt verifica se é um inteiro positivo.

@@ -5,7 +5,6 @@ import (
 	"database/sql"
 	"errors"
 	"fmt"
-	"strconv"
 	"strings"
 	"time"
 
@@ -18,6 +17,7 @@ import (
 	"github.com/JailtonJunior94/devkit-go/pkg/vos"
 	"github.com/jailtonjunior94/financial/pkg/constants"
 	"github.com/jailtonjunior94/financial/pkg/helpers"
+	"github.com/jailtonjunior94/financial/pkg/money"
 )
 
 type budgetRepository struct {
@@ -179,7 +179,7 @@ func (r *budgetRepository) FindByID(ctx context.Context, id vos.UUID) (*entities
 		return nil, fmt.Errorf("failed to create Money from amount_used: %w", err)
 	}
 
-	budget.PercentageUsed, err = parsePercentageFromString(percentageUsed)
+	budget.PercentageUsed, err = money.NewPercentageFromString(percentageUsed)
 	if err != nil {
 		return nil, fmt.Errorf("failed to create Percentage from percentage_used: %w", err)
 	}
@@ -253,7 +253,7 @@ func (r *budgetRepository) FindByUserIDAndReferenceMonth(ctx context.Context, us
 		return nil, fmt.Errorf("failed to create Money from amount_used: %w", err)
 	}
 
-	budget.PercentageUsed, err = parsePercentageFromString(percentageUsed)
+	budget.PercentageUsed, err = money.NewPercentageFromString(percentageUsed)
 	if err != nil {
 		return nil, fmt.Errorf("failed to create Percentage from percentage_used: %w", err)
 	}
@@ -340,33 +340,18 @@ func (r *budgetRepository) ListPaginated(ctx context.Context, params interfaces.
 			return nil, err
 		}
 
-		// Parse values
-		amountGoalFloat, err := strconv.ParseFloat(amountGoal, 64)
-		if err != nil {
-			return nil, fmt.Errorf("failed to parse amount_goal: %w", err)
-		}
-
-		amountUsedFloat, err := strconv.ParseFloat(amountUsed, 64)
-		if err != nil {
-			return nil, fmt.Errorf("failed to parse amount_used: %w", err)
-		}
-
-		percentageUsedFloat, err := strconv.ParseFloat(percentageUsed, 64)
-		if err != nil {
-			return nil, fmt.Errorf("failed to parse percentage_used: %w", err)
-		}
-
-		budget.TotalAmount, err = vos.NewMoneyFromFloat(amountGoalFloat, constants.DefaultCurrency)
+		// Parse NUMERIC values from strings — consistent with FindByID/FindByUserAndMonth
+		budget.TotalAmount, err = vos.NewMoneyFromString(amountGoal, constants.DefaultCurrency)
 		if err != nil {
 			return nil, fmt.Errorf("failed to create Money from amount_goal: %w", err)
 		}
 
-		budget.SpentAmount, err = vos.NewMoneyFromFloat(amountUsedFloat, constants.DefaultCurrency)
+		budget.SpentAmount, err = vos.NewMoneyFromString(amountUsed, constants.DefaultCurrency)
 		if err != nil {
 			return nil, fmt.Errorf("failed to create Money from amount_used: %w", err)
 		}
 
-		budget.PercentageUsed, err = vos.NewPercentageFromFloat(percentageUsedFloat)
+		budget.PercentageUsed, err = money.NewPercentageFromString(percentageUsed)
 		if err != nil {
 			return nil, fmt.Errorf("failed to create Percentage from percentage_used: %w", err)
 		}
@@ -403,9 +388,9 @@ func (r *budgetRepository) Update(ctx context.Context, budget *entities.Budget) 
 		ctx,
 		query,
 		budget.ID.Value,
-		budget.TotalAmount,
-		budget.SpentAmount,
-		budget.PercentageUsed,
+		budget.TotalAmount.Float(),
+		budget.SpentAmount.Float(),
+		budget.PercentageUsed.Float(),
 		time.Now().UTC(),
 	)
 	if err != nil {
@@ -427,7 +412,7 @@ func (r *budgetRepository) UpdateItem(ctx context.Context, item *entities.Budget
 		ctx,
 		query,
 		item.ID.Value,
-		float64(item.SpentAmount.Cents())/100.0,
+		item.SpentAmount.Float(),
 		time.Now().UTC(),
 	)
 	if err != nil {
@@ -489,7 +474,7 @@ func (r *budgetRepository) findItemsByBudgetID(ctx context.Context, budgetID vos
 			return nil, fmt.Errorf("failed to create Money from amount_used: %w", err)
 		}
 
-		item.PercentageGoal, err = parsePercentageFromString(percentageGoal)
+		item.PercentageGoal, err = money.NewPercentageFromString(percentageGoal)
 		if err != nil {
 			return nil, fmt.Errorf("failed to create Percentage from percentage_goal: %w", err)
 		}
@@ -500,19 +485,4 @@ func (r *budgetRepository) findItemsByBudgetID(ctx context.Context, budgetID vos
 	}
 
 	return items, rows.Err()
-}
-
-// parsePercentageFromString converts a string percentage (e.g., "25.50") to a Percentage VO.
-// This avoids float precision issues by parsing the string directly to scaled int64.
-func parsePercentageFromString(s string) (vos.Percentage, error) {
-	percentageFloat, err := strconv.ParseFloat(s, 64)
-	if err != nil {
-		return vos.Percentage{}, fmt.Errorf("invalid percentage format: %w", err)
-	}
-
-	// Convert to int64 with scale 3 (25.5% → 25500)
-	// Using round to avoid truncation issues
-	percentageInt := int64(percentageFloat*1000 + 0.5)
-
-	return vos.NewPercentage(percentageInt)
 }

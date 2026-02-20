@@ -2,13 +2,13 @@ package factories
 
 import (
 	"fmt"
-	"strconv"
 
 	"github.com/JailtonJunior94/devkit-go/pkg/vos"
 
 	"github.com/jailtonjunior94/financial/internal/budget/application/dtos"
 	"github.com/jailtonjunior94/financial/internal/budget/domain/entities"
 	budgetVos "github.com/jailtonjunior94/financial/internal/budget/domain/vos"
+	"github.com/jailtonjunior94/financial/pkg/money"
 )
 
 func CreateBudget(userID string, input *dtos.BudgetCreateInput) (*entities.Budget, error) {
@@ -37,8 +37,8 @@ func CreateBudget(userID string, input *dtos.BudgetCreateInput) (*entities.Budge
 		return nil, fmt.Errorf("create_budget: unsupported currency: %s", input.Currency)
 	}
 
-	// Parse total amount from string (preserves precision)
-	totalAmount, err := vos.NewMoneyFromString(input.TotalAmount, currency)
+	// Parse total amount from string (half-even rounding)
+	totalAmount, err := money.NewMoney(input.TotalAmount, currency)
 	if err != nil {
 		return nil, fmt.Errorf("create_budget: invalid total amount: %w", err)
 	}
@@ -66,8 +66,8 @@ func CreateBudget(userID string, input *dtos.BudgetCreateInput) (*entities.Budge
 			return nil, fmt.Errorf("create_budget: failed to generate item ID: %w", err)
 		}
 
-		// Parse percentage from string (e.g., "25.50" -> Percentage VO)
-		percentage, err := parsePercentage(itemInput.PercentageGoal)
+		// Parse percentage from string (e.g., "25.50" -> Percentage VO, half-even)
+		percentage, err := money.NewPercentageFromString(itemInput.PercentageGoal)
 		if err != nil {
 			return nil, fmt.Errorf("create_budget: invalid percentage: %w", err)
 		}
@@ -84,20 +84,4 @@ func CreateBudget(userID string, input *dtos.BudgetCreateInput) (*entities.Budge
 	}
 
 	return budget, nil
-}
-
-// parsePercentage converts a string percentage (e.g., "25.50") to a Percentage VO.
-// This avoids float precision issues by parsing the string directly to scaled int64.
-func parsePercentage(s string) (vos.Percentage, error) {
-	// Parse string to float64
-	percentageFloat, err := strconv.ParseFloat(s, 64)
-	if err != nil {
-		return vos.Percentage{}, fmt.Errorf("invalid percentage format: %w", err)
-	}
-
-	// Convert to int64 with scale 3 (25.5% → 25500)
-	// Using round to avoid truncation issues
-	percentageInt := int64(percentageFloat*1000 + 0.5)
-
-	return vos.NewPercentage(percentageInt)
 }

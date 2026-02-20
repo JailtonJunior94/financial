@@ -7,6 +7,7 @@ import (
 	"github.com/jailtonjunior94/financial/internal/budget/application/dtos"
 	"github.com/jailtonjunior94/financial/internal/budget/domain"
 	"github.com/jailtonjunior94/financial/internal/budget/infrastructure/repositories"
+	"github.com/jailtonjunior94/financial/pkg/money"
 
 	"github.com/JailtonJunior94/devkit-go/pkg/database"
 	"github.com/JailtonJunior94/devkit-go/pkg/database/uow"
@@ -70,8 +71,8 @@ func (u *updateSpentAmountUseCase) Execute(ctx context.Context, budgetID, itemID
 			return domain.ErrBudgetItemNotFound
 		}
 
-		// Parse spent amount from string (preserves precision)
-		spentMoney, err := vos.NewMoneyFromString(input.SpentAmount, budget.TotalAmount.Currency())
+		// Parse spent amount from string (half-even rounding)
+		spentMoney, err := money.NewMoney(input.SpentAmount, budget.TotalAmount.Currency())
 		if err != nil {
 			return fmt.Errorf("invalid spent amount: %w", err)
 		}

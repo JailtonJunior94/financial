@@ -19,11 +19,6 @@ import (
 	"github.com/jailtonjunior94/financial/pkg/helpers"
 )
 
-const (
-	// currencyScale é usado para converter centavos para valor decimal (100 centavos = 1.00).
-	currencyScale = 100.0
-)
-
 // scanner é uma interface comum para *sql.Row e *sql.Rows.
 type scanner interface {
 	Scan(dest ...any) error
@@ -65,7 +60,7 @@ func (r *invoiceRepository) Insert(ctx context.Context, invoice *entities.Invoic
 		invoice.CardID.Value,
 		invoice.ReferenceMonth.ToTime(),
 		invoice.DueDate,
-		float64(invoice.TotalAmount.Cents())/currencyScale,
+		invoice.TotalAmount.Float(),
 		invoice.CreatedAt,
 		invoice.UpdatedAt.Ptr(),
 		invoice.DeletedAt.Ptr(),
@@ -100,10 +95,10 @@ func (r *invoiceRepository) InsertItems(ctx context.Context, items []*entities.I
 			item.CategoryID.Value,
 			item.PurchaseDate,
 			item.Description,
-			float64(item.TotalAmount.Cents())/currencyScale,
+			item.TotalAmount.Float(),
 			item.InstallmentNumber,
 			item.InstallmentTotal,
-			float64(item.InstallmentAmount.Cents())/currencyScale,
+			item.InstallmentAmount.Float(),
 			item.CreatedAt,
 			item.UpdatedAt.Ptr(),
 			item.DeletedAt.Ptr(),
@@ -477,7 +472,7 @@ func (r *invoiceRepository) Update(ctx context.Context, invoice *entities.Invoic
 		ctx,
 		query,
 		invoice.ID.Value,
-		float64(invoice.TotalAmount.Cents())/currencyScale,
+		invoice.TotalAmount.Float(),
 		time.Now().UTC(),
 	)
 
@@ -502,8 +497,8 @@ func (r *invoiceRepository) UpdateItem(ctx context.Context, item *entities.Invoi
 		item.ID.Value,
 		item.CategoryID.Value,
 		item.Description,
-		float64(item.TotalAmount.Cents())/currencyScale,
-		float64(item.InstallmentAmount.Cents())/currencyScale,
+		item.TotalAmount.Float(),
+		item.InstallmentAmount.Float(),
 		time.Now().UTC(),
 	)
 

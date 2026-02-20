@@ -12,6 +12,7 @@ import (
 	"github.com/google/uuid"
 
 	"github.com/jailtonjunior94/financial/internal/invoice/application/dtos"
+	"github.com/jailtonjunior94/financial/pkg/money"
 	"github.com/jailtonjunior94/financial/internal/invoice/domain/entities"
 	"github.com/jailtonjunior94/financial/internal/invoice/domain/events"
 	"github.com/jailtonjunior94/financial/internal/invoice/domain/factories"
@@ -78,8 +79,8 @@ func (u *createPurchaseUseCase) Execute(ctx context.Context, userID string, inpu
 		return nil, fmt.Errorf("invalid purchase date format: %w", err)
 	}
 
-	// Parse totalAmount from string (preserves precision)
-	totalAmount, err := vos.NewMoneyFromString(input.TotalAmount, vos.CurrencyBRL)
+	// Parse totalAmount from string (half-even rounding)
+	totalAmount, err := money.NewMoneyBRL(input.TotalAmount)
 	if err != nil {
 		return nil, fmt.Errorf("invalid total amount: %w", err)
 	}
@@ -233,10 +234,10 @@ func (u *createPurchaseUseCase) Execute(ctx context.Context, userID string, inpu
 			CategoryID:        item.CategoryID.String(),
 			PurchaseDate:      item.PurchaseDate.Format("2006-01-02"),
 			Description:       item.Description,
-			TotalAmount:       item.TotalAmount.String(),
+			TotalAmount:       fmt.Sprintf("%.2f", item.TotalAmount.Float()),
 			InstallmentNumber: item.InstallmentNumber,
 			InstallmentTotal:  item.InstallmentTotal,
-			InstallmentAmount: item.InstallmentAmount.String(),
+			InstallmentAmount: fmt.Sprintf("%.2f", item.InstallmentAmount.Float()),
 			InstallmentLabel:  installmentLabel,
 			CreatedAt:         item.CreatedAt,
 			UpdatedAt:         item.UpdatedAt.ValueOr(time.Time{}),

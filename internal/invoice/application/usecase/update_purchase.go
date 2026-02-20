@@ -13,6 +13,7 @@ import (
 	"github.com/google/uuid"
 
 	"github.com/jailtonjunior94/financial/internal/invoice/application/dtos"
+	"github.com/jailtonjunior94/financial/pkg/money"
 	"github.com/jailtonjunior94/financial/internal/invoice/domain"
 	"github.com/jailtonjunior94/financial/internal/invoice/domain/entities"
 	"github.com/jailtonjunior94/financial/internal/invoice/domain/events"
@@ -96,9 +97,9 @@ func (u *updatePurchaseUseCase) Execute(ctx context.Context, userID string, item
 			return fmt.Errorf("no items found for purchase")
 		}
 
-		// Parse new total amount from string (preserves precision)
+		// Parse new total amount from string (half-even rounding)
 		currency := items[0].TotalAmount.Currency()
-		newTotalAmount, err := vos.NewMoneyFromString(input.TotalAmount, currency)
+		newTotalAmount, err := money.NewMoney(input.TotalAmount, currency)
 		if err != nil {
 			return fmt.Errorf("invalid total amount: %w", err)
 		}
@@ -139,7 +140,7 @@ func (u *updatePurchaseUseCase) Execute(ctx context.Context, userID string, item
 
 			// Recalculate total from items
 			var total vos.Money
-			total, _ = vos.NewMoneyFromFloat(0, currency)
+			total, _ = vos.NewMoney(0, currency)
 
 			for _, item := range invoice.Items {
 				total, _ = total.Add(item.InstallmentAmount)
@@ -216,10 +217,10 @@ func (u *updatePurchaseUseCase) Execute(ctx context.Context, userID string, item
 			CategoryID:        item.CategoryID.String(),
 			PurchaseDate:      item.PurchaseDate.Format("2006-01-02"),
 			Description:       item.Description,
-			TotalAmount:       item.TotalAmount.String(),
+			TotalAmount:       fmt.Sprintf("%.2f", item.TotalAmount.Float()),
 			InstallmentNumber: item.InstallmentNumber,
 			InstallmentTotal:  item.InstallmentTotal,
-			InstallmentAmount: item.InstallmentAmount.String(),
+			InstallmentAmount: fmt.Sprintf("%.2f", item.InstallmentAmount.Float()),
 			InstallmentLabel:  installmentLabel,
 			CreatedAt:         item.CreatedAt,
 			UpdatedAt:         item.UpdatedAt.ValueOr(time.Time{}),

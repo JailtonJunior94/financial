@@ -2,6 +2,7 @@ package usecase
 
 import (
 	"context"
+	"fmt"
 	"time"
 
 	"github.com/JailtonJunior94/devkit-go/pkg/observability"
@@ -119,7 +120,7 @@ func (u *listMonthlyPaginatedUseCase) Execute(
 				CategoryID:  item.CategoryID.String(),
 				Title:       item.Title,
 				Description: item.Description,
-				Amount:      item.Amount.String(),
+				Amount:      fmt.Sprintf("%.2f", item.Amount.Float()),
 				Direction:   item.Direction.String(),
 				Type:        item.Type.String(),
 				IsPaid:      item.IsPaid,
@@ -131,9 +132,9 @@ func (u *listMonthlyPaginatedUseCase) Execute(
 		output[i] = &dtos.MonthlyTransactionOutput{
 			ID:             monthly.ID.String(),
 			ReferenceMonth: monthly.ReferenceMonth.String(),
-			TotalIncome:    monthly.TotalIncome.String(),
-			TotalExpense:   monthly.TotalExpense.String(),
-			TotalAmount:    monthly.TotalAmount.String(),
+			TotalIncome:    fmt.Sprintf("%.2f", monthly.TotalIncome.Float()),
+			TotalExpense:   fmt.Sprintf("%.2f", monthly.TotalExpense.Float()),
+			TotalAmount:    fmt.Sprintf("%.2f", monthly.TotalAmount.Float()),
 			Items:          items,
 			CreatedAt:      monthly.CreatedAt.ValueOr(time.Time{}),
 			UpdatedAt:      monthly.UpdatedAt.ValueOr(time.Time{}),

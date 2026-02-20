@@ -2,6 +2,7 @@ package usecase
 
 import (
 	"context"
+	"fmt"
 
 	"github.com/jailtonjunior94/financial/internal/budget/application/dtos"
 	"github.com/jailtonjunior94/financial/internal/budget/domain/factories"
@@ -64,9 +65,9 @@ func (u *createBudgetUseCase) Execute(ctx context.Context, userID string, input 
 		ID:             newBudget.ID.String(),
 		UserID:         newBudget.UserID.String(),
 		ReferenceMonth: newBudget.ReferenceMonth.String(),
-		TotalAmount:    newBudget.TotalAmount.String(),
-		SpentAmount:    newBudget.SpentAmount.String(),
-		PercentageUsed: newBudget.PercentageUsed.String(),
+		TotalAmount:    fmt.Sprintf("%.2f", newBudget.TotalAmount.Float()),
+		SpentAmount:    fmt.Sprintf("%.2f", newBudget.SpentAmount.Float()),
+		PercentageUsed: fmt.Sprintf("%.3f", newBudget.PercentageUsed.Float()),
 		Currency:       string(newBudget.TotalAmount.Currency()),
 		CreatedAt:      newBudget.CreatedAt,
 	}, nil

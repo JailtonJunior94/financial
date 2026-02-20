@@ -72,7 +72,7 @@ func (u *listInvoicesByMonthUseCase) toInvoiceListOutput(invoice *entities.Invoi
 		CardID:         invoice.CardID.String(),
 		ReferenceMonth: invoice.ReferenceMonth.String(),
 		DueDate:        invoice.DueDate.Format("2006-01-02"),
-		TotalAmount:    invoice.TotalAmount.String(),
+		TotalAmount:    fmt.Sprintf("%.2f", invoice.TotalAmount.Float()),
 		Currency:       string(invoice.TotalAmount.Currency()),
 		ItemCount:      len(invoice.Items),
 		CreatedAt:      invoice.CreatedAt,

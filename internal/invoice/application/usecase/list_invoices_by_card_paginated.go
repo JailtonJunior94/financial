@@ -2,6 +2,7 @@ package usecase
 
 import (
 	"context"
+	"fmt"
 
 	"github.com/JailtonJunior94/devkit-go/pkg/observability"
 	"github.com/JailtonJunior94/devkit-go/pkg/vos"
@@ -114,10 +115,10 @@ func (u *listInvoicesByCardPaginatedUseCase) Execute(
 				CategoryID:        item.CategoryID.String(),
 				PurchaseDate:      item.PurchaseDate.Format("2006-01-02"),
 				Description:       item.Description,
-				TotalAmount:       item.TotalAmount.String(),
+				TotalAmount:       fmt.Sprintf("%.2f", item.TotalAmount.Float()),
 				InstallmentNumber: item.InstallmentNumber,
 				InstallmentTotal:  item.InstallmentTotal,
-				InstallmentAmount: item.InstallmentAmount.String(),
+				InstallmentAmount: fmt.Sprintf("%.2f", item.InstallmentAmount.Float()),
 				InstallmentLabel:  item.InstallmentLabel(),
 				CreatedAt:         item.CreatedAt,
 				UpdatedAt:         item.UpdatedAt.ValueOr(item.CreatedAt),
@@ -130,7 +131,7 @@ func (u *listInvoicesByCardPaginatedUseCase) Execute(
 			CardID:         invoice.CardID.String(),
 			ReferenceMonth: invoice.ReferenceMonth.String(),
 			DueDate:        invoice.DueDate.Format("2006-01-02"),
-			TotalAmount:    invoice.TotalAmount.String(),
+			TotalAmount:    fmt.Sprintf("%.2f", invoice.TotalAmount.Float()),
 			Currency:       string(invoice.TotalAmount.Currency()),
 			ItemCount:      len(invoice.Items),
 			Items:          items,

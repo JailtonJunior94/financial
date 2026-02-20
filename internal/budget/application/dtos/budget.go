@@ -122,8 +122,8 @@ func (b *BudgetItemInput) Validate() validation.ValidationErrors {
 	if !validation.IsRequired(b.PercentageGoal) {
 		errs.Add("percentage_goal", "is required")
 	}
-	if !validation.IsMoney(b.PercentageGoal) {
-		errs.Add("percentage_goal", "must be a valid percentage value")
+	if !validation.IsPercentage(b.PercentageGoal) {
+		errs.Add("percentage_goal", "must be a valid percentage value (up to 3 decimal places)")
 	}
 
 	return errs
@@ -141,7 +141,7 @@ type BudgetOutput struct {
 	ReferenceMonth string             `json:"reference_month" example:"2025-01"` // YYYY-MM
 	TotalAmount    string             `json:"total_amount"    example:"5000.00"`
 	SpentAmount    string             `json:"spent_amount"    example:"2350.00"`
-	PercentageUsed string             `json:"percentage_used" example:"47.00"`
+	PercentageUsed string             `json:"percentage_used" example:"47.000"`
 	Currency       string             `json:"currency"        example:"BRL"      enums:"BRL,USD,EUR"`
 	Items          []BudgetItemOutput `json:"items,omitempty"`
 	CreatedAt      time.Time          `json:"created_at"      example:"2025-01-01T00:00:00Z"`
@@ -153,11 +153,11 @@ type BudgetItemOutput struct {
 	ID              string    `json:"id"               example:"770e8400-e29b-41d4-a716-446655440002"`
 	BudgetID        string    `json:"budget_id"        example:"550e8400-e29b-41d4-a716-446655440000"`
 	CategoryID      string    `json:"category_id"      example:"880e8400-e29b-41d4-a716-446655440003"`
-	PercentageGoal  string    `json:"percentage_goal"  example:"30.00"`
+	PercentageGoal  string    `json:"percentage_goal"  example:"30.000"`
 	PlannedAmount   string    `json:"planned_amount"   example:"1500.00"`
 	SpentAmount     string    `json:"spent_amount"     example:"700.00"`
 	RemainingAmount string    `json:"remaining_amount" example:"800.00"`
-	PercentageSpent string    `json:"percentage_spent" example:"46.67"`
+	PercentageSpent string    `json:"percentage_spent" example:"46.670"`
 	CreatedAt       time.Time `json:"created_at"       example:"2025-01-01T00:00:00Z"`
 	UpdatedAt       time.Time `json:"updated_at,omitempty" example:"2025-01-20T08:00:00Z"`
 }

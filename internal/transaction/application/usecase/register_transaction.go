@@ -7,6 +7,7 @@ import (
 
 	appstrategies "github.com/jailtonjunior94/financial/internal/transaction/application/strategies"
 	"github.com/jailtonjunior94/financial/internal/transaction/application/dtos"
+	"github.com/jailtonjunior94/financial/pkg/money"
 	"github.com/jailtonjunior94/financial/internal/transaction/domain/entities"
 	"github.com/jailtonjunior94/financial/internal/transaction/domain/interfaces"
 	"github.com/jailtonjunior94/financial/internal/transaction/domain/strategies"
@@ -86,7 +87,7 @@ func (u *registerTransactionUseCase) Execute(
 		return nil, fmt.Errorf("invalid transaction type: %w", err)
 	}
 
-	amount, err := sharedVos.NewMoneyFromString(input.Amount, sharedVos.CurrencyBRL)
+	amount, err := money.NewMoneyBRL(input.Amount)
 	if err != nil {
 		u.o11y.Logger().Error(ctx, "invalid amount", observability.Error(err))
 		return nil, fmt.Errorf("invalid amount: %w", err)
@@ -208,7 +209,7 @@ func (u *registerTransactionUseCase) toOutput(aggregate any) *dtos.MonthlyTransa
 			CategoryID:  item.CategoryID.String(),
 			Title:       item.Title,
 			Description: item.Description,
-			Amount:      item.Amount.String(),
+			Amount:      fmt.Sprintf("%.2f", item.Amount.Float()),
 			Direction:   item.Direction.String(),
 			Type:        item.Type.String(),
 			IsPaid:      item.IsPaid,
@@ -220,9 +221,9 @@ func (u *registerTransactionUseCase) toOutput(aggregate any) *dtos.MonthlyTransa
 	return &dtos.MonthlyTransactionOutput{
 		ID:             monthly.ID.String(),
 		ReferenceMonth: monthly.ReferenceMonth.String(),
-		TotalIncome:    monthly.TotalIncome.String(),
-		TotalExpense:   monthly.TotalExpense.String(),
-		TotalAmount:    monthly.TotalAmount.String(),
+		TotalIncome:    fmt.Sprintf("%.2f", monthly.TotalIncome.Float()),
+		TotalExpense:   fmt.Sprintf("%.2f", monthly.TotalExpense.Float()),
+		TotalAmount:    fmt.Sprintf("%.2f", monthly.TotalAmount.Float()),
 		Items:          items,
 		CreatedAt:      monthly.CreatedAt.ValueOr(time.Time{}),
 		UpdatedAt:      monthly.UpdatedAt.ValueOr(time.Time{}),

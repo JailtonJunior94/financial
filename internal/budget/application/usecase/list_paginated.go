@@ -2,6 +2,7 @@ package usecase
 
 import (
 	"context"
+	"fmt"
 
 	"github.com/JailtonJunior94/devkit-go/pkg/observability"
 	"github.com/JailtonJunior94/devkit-go/pkg/vos"
@@ -112,11 +113,11 @@ func (u *listBudgetsPaginatedUseCase) Execute(
 				ID:              item.ID.String(),
 				BudgetID:        item.BudgetID.String(),
 				CategoryID:      item.CategoryID.String(),
-				PercentageGoal:  item.PercentageGoal.String(),
-				PlannedAmount:   item.PlannedAmount.String(),
-				SpentAmount:     item.SpentAmount.String(),
-				RemainingAmount: item.RemainingAmount().String(),
-				PercentageSpent: item.PercentageSpent().String(),
+				PercentageGoal:  fmt.Sprintf("%.3f", item.PercentageGoal.Float()),
+				PlannedAmount:   fmt.Sprintf("%.2f", item.PlannedAmount.Float()),
+				SpentAmount:     fmt.Sprintf("%.2f", item.SpentAmount.Float()),
+				RemainingAmount: fmt.Sprintf("%.2f", item.RemainingAmount().Float()),
+				PercentageSpent: fmt.Sprintf("%.3f", item.PercentageSpent().Float()),
 				CreatedAt:       item.CreatedAt,
 				UpdatedAt:       item.UpdatedAt.ValueOr(item.CreatedAt),
 			}
@@ -126,9 +127,9 @@ func (u *listBudgetsPaginatedUseCase) Execute(
 			ID:             budget.ID.String(),
 			UserID:         budget.UserID.String(),
 			ReferenceMonth: budget.ReferenceMonth.String(),
-			TotalAmount:    budget.TotalAmount.String(),
-			SpentAmount:    budget.SpentAmount.String(),
-			PercentageUsed: budget.PercentageUsed.String(),
+			TotalAmount:    fmt.Sprintf("%.2f", budget.TotalAmount.Float()),
+			SpentAmount:    fmt.Sprintf("%.2f", budget.SpentAmount.Float()),
+			PercentageUsed: fmt.Sprintf("%.3f", budget.PercentageUsed.Float()),
 			Currency:       string(budget.TotalAmount.Currency()),
 			Items:          items,
 			CreatedAt:      budget.CreatedAt,

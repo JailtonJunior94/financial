@@ -184,9 +184,9 @@ func (r *transactionRepository) UpdateMonthly(
 	now := sharedVos.NewNullableTime(time.Now().UTC())
 
 	_, err := executor.ExecContext(ctx, query,
-		monthly.TotalIncome.Cents(),
-		monthly.TotalExpense.Cents(),
-		monthly.TotalAmount.Cents(),
+		monthly.TotalIncome.Float(),
+		monthly.TotalExpense.Float(),
+		monthly.TotalAmount.Float(),
 		now.ValueOr(time.Now().UTC()),
 		monthly.ID.String(),
 	)
@@ -221,7 +221,7 @@ func (r *transactionRepository) InsertItem(
 		item.CategoryID.String(),
 		item.Title,
 		item.Description,
-		item.Amount.Cents(),
+		item.Amount.Float(),
 		item.Direction.String(),
 		item.Type.String(),
 		item.IsPaid,
@@ -269,7 +269,7 @@ func (r *transactionRepository) UpdateItem(
 	_, err := executor.ExecContext(ctx, query,
 		item.Title,
 		item.Description,
-		item.Amount.Cents(),
+		item.Amount.Float(),
 		item.Direction.String(),
 		item.Type.String(),
 		item.IsPaid,
@@ -452,9 +452,9 @@ func (r *transactionRepository) insertMonthly(
 		monthly.ID.String(),
 		monthly.UserID.String(),
 		monthly.ReferenceMonth.String(),
-		monthly.TotalIncome.Cents(),
-		monthly.TotalExpense.Cents(),
-		monthly.TotalAmount.Cents(),
+		monthly.TotalIncome.Float(),
+		monthly.TotalExpense.Float(),
+		monthly.TotalAmount.Float(),
 		monthly.CreatedAt.ValueOr(time.Now().UTC()),
 	)
 

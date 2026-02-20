@@ -21,11 +21,6 @@ var (
 	zeroPercentage, _ = vos.NewPercentage(0)
 )
 
-const (
-	// percentageScale é usado para converter decimal para porcentagem (0.XX * 100 = XX%).
-	percentageScale = 100.0
-)
-
 // Budget é o Aggregate Root que garante a integridade do orçamento.
 type Budget struct {
 	entity.Base
@@ -199,6 +194,8 @@ func (b *Budget) recalculateSpentAmount() {
 }
 
 // recalculatePercentageUsed recalcula a porcentagem total utilizada.
+// Usa aritmética int64 pura: raw = (spentCents * 100_000) / totalCents
+// com arredondamento half-up para a casa decimal de corte.
 func (b *Budget) recalculatePercentageUsed() {
 	// Evita divisão por zero
 	if b.TotalAmount.IsZero() {
@@ -206,12 +203,18 @@ func (b *Budget) recalculatePercentageUsed() {
 		return
 	}
 
-	// Calcula: (SpentAmount / TotalAmount) * 100
-	spentFloat := b.SpentAmount.Float()
-	totalFloat := b.TotalAmount.Float()
-	percentageFloat := (spentFloat / totalFloat) * percentageScale
+	// Calcula: (SpentAmount / TotalAmount) * 100 em escala int64 × 1000
+	// Ex: spent=1000 cents, total=3000 cents → raw = 33333 → 33.333%
+	spentCents := b.SpentAmount.Cents()
+	totalCents := b.TotalAmount.Cents()
+	numerator := spentCents * 100_000
+	raw := numerator / totalCents
+	// arredondamento half-up do resto
+	if (numerator%totalCents)*2 >= totalCents {
+		raw++
+	}
 
-	percentageUsed, err := vos.NewPercentageFromFloat(percentageFloat)
+	percentageUsed, err := vos.NewPercentage(raw)
 	if err != nil {
 		b.PercentageUsed = zeroPercentage
 		return
