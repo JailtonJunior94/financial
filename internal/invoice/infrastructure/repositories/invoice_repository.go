@@ -10,7 +10,7 @@ import (
 
 	"github.com/jailtonjunior94/financial/internal/invoice/domain/entities"
 	"github.com/jailtonjunior94/financial/internal/invoice/domain/interfaces"
-	invoiceVos "github.com/jailtonjunior94/financial/internal/invoice/domain/vos"
+	pkgVos "github.com/jailtonjunior94/financial/pkg/domain/vos"
 
 	"github.com/JailtonJunior94/devkit-go/pkg/database"
 	"github.com/JailtonJunior94/devkit-go/pkg/observability"
@@ -169,7 +169,7 @@ func (r *invoiceRepository) FindByUserAndCardAndMonth(
 	ctx context.Context,
 	userID vos.UUID,
 	cardID vos.UUID,
-	referenceMonth invoiceVos.ReferenceMonth,
+	referenceMonth pkgVos.ReferenceMonth,
 ) (*entities.Invoice, error) {
 	ctx, span := r.o11y.Tracer().Start(ctx, "invoice_repository.find_by_user_card_month")
 	defer span.End()
@@ -187,10 +187,11 @@ func (r *invoiceRepository) FindByUserAndCardAndMonth(
 	from invoices
 	where user_id = $1
 	  and card_id = $2
-	  and to_char(reference_month, 'YYYY-MM') = $3
+	  and reference_month >= $3
+	  and reference_month < $4
 	  and deleted_at is null`
 
-	row := r.db.QueryRowContext(ctx, query, userID.Value, cardID.Value, referenceMonth.String())
+	row := r.db.QueryRowContext(ctx, query, userID.Value, cardID.Value, referenceMonth.FirstDay(), referenceMonth.AddMonths(1).FirstDay())
 
 	invoice, err := r.scanInvoice(row)
 	if err != nil {
@@ -213,7 +214,7 @@ func (r *invoiceRepository) FindByUserAndCardAndMonth(
 func (r *invoiceRepository) FindByUserAndMonth(
 	ctx context.Context,
 	userID vos.UUID,
-	referenceMonth invoiceVos.ReferenceMonth,
+	referenceMonth pkgVos.ReferenceMonth,
 ) ([]*entities.Invoice, error) {
 	ctx, span := r.o11y.Tracer().Start(ctx, "invoice_repository.find_by_user_month")
 	defer span.End()
@@ -230,11 +231,12 @@ func (r *invoiceRepository) FindByUserAndMonth(
 		deleted_at
 	from invoices
 	where user_id = $1
-	  and to_char(reference_month, 'YYYY-MM') = $2
+	  and reference_month >= $2
+	  and reference_month < $3
 	  and deleted_at is null
 	order by due_date`
 
-	rows, err := r.db.QueryContext(ctx, query, userID.Value, referenceMonth.String())
+	rows, err := r.db.QueryContext(ctx, query, userID.Value, referenceMonth.FirstDay(), referenceMonth.AddMonths(1).FirstDay())
 	if err != nil {
 		return nil, err
 	}
@@ -270,9 +272,10 @@ func (r *invoiceRepository) ListByUserAndMonthPaginated(
 
 	// Build WHERE clause with cursor
 	whereClause := `user_id = $1
-		AND to_char(reference_month, 'YYYY-MM') = $2
+		AND reference_month >= $2
+		AND reference_month < $3
 		AND deleted_at IS NULL`
-	args := []interface{}{params.UserID.Value, params.ReferenceMonth.String()}
+	args := []interface{}{params.UserID.Value, params.ReferenceMonth.FirstDay(), params.ReferenceMonth.AddMonths(1).FirstDay()}
 
 	cursorDueDate, hasDueDate := params.Cursor.GetString("due_date")
 	cursorID, hasID := params.Cursor.GetString("id")
@@ -280,8 +283,8 @@ func (r *invoiceRepository) ListByUserAndMonthPaginated(
 	if hasDueDate && hasID && cursorDueDate != "" && cursorID != "" {
 		// Keyset pagination: WHERE (due_date, id) > (cursor_due_date, cursor_id)
 		whereClause += ` AND (
-			due_date > $3
-			OR (due_date = $3 AND id > $4)
+			due_date > $4
+			OR (due_date = $4 AND id > $5)
 		)`
 		args = append(args, cursorDueDate, cursorID)
 	}
@@ -627,7 +630,7 @@ func (r *invoiceRepository) scanInvoice(s scanner) (*entities.Invoice, error) {
 		return nil, fmt.Errorf("failed to create Money from total_amount: %w", err)
 	}
 
-	invoice.ReferenceMonth = invoiceVos.NewReferenceMonthFromDate(referenceDate)
+	invoice.ReferenceMonth = pkgVos.NewReferenceMonthFromDate(referenceDate)
 	invoice.UpdatedAt = helpers.ParseNullableTime(updatedAt)
 	invoice.DeletedAt = helpers.ParseNullableTime(deletedAt)
 

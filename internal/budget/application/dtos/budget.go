@@ -1,6 +1,7 @@
 package dtos
 
 import (
+	"strconv"
 	"time"
 
 	"github.com/jailtonjunior94/financial/pkg/validation"
@@ -59,7 +60,7 @@ func (b *BudgetCreateInput) Validate() validation.ValidationErrors {
 		for i, item := range b.Items {
 			itemErrs := item.Validate()
 			for _, err := range itemErrs {
-				errs.Add(err.Field+"["+string(rune(i))+"]", err.Message)
+				errs.Add(err.Field+"["+strconv.Itoa(i)+"]", err.Message)
 			}
 		}
 	}
@@ -92,7 +93,7 @@ func (b *BudgetUpdateInput) Validate() validation.ValidationErrors {
 		for i, item := range b.Items {
 			itemErrs := item.Validate()
 			for _, err := range itemErrs {
-				errs.Add(err.Field+"["+string(rune(i))+"]", err.Message)
+				errs.Add(err.Field+"["+strconv.Itoa(i)+"]", err.Message)
 			}
 		}
 	}

@@ -126,7 +126,7 @@ func (r *budgetRepository) InsertItems(ctx context.Context, items []*entities.Bu
 	return nil
 }
 
-func (r *budgetRepository) FindByID(ctx context.Context, id vos.UUID) (*entities.Budget, error) {
+func (r *budgetRepository) FindByID(ctx context.Context, userID vos.UUID, id vos.UUID) (*entities.Budget, error) {
 	ctx, span := r.o11y.Tracer().Start(ctx, "budget_repository.find_by_id")
 	defer span.End()
 
@@ -141,9 +141,9 @@ func (r *budgetRepository) FindByID(ctx context.Context, id vos.UUID) (*entities
 				b.updated_at,
 				b.deleted_at
 			from budgets b
-			where b.id = $1 and b.deleted_at is null`
+			where b.id = $1 and b.user_id = $2 and b.deleted_at is null`
 
-	row := r.db.QueryRowContext(ctx, query, id.Value)
+	row := r.db.QueryRowContext(ctx, query, id.Value, userID.Value)
 
 	var budget entities.Budget
 	var updatedAt, deletedAt *time.Time
@@ -214,10 +214,11 @@ func (r *budgetRepository) FindByUserIDAndReferenceMonth(ctx context.Context, us
 				b.deleted_at
 			from budgets b
 			where b.user_id = $1
-			  and to_char(b.date, 'YYYY-MM') = $2
+			  and b.date >= $2
+			  and b.date < $3
 			  and b.deleted_at is null`
 
-	row := r.db.QueryRowContext(ctx, query, userID.Value, referenceMonth.String())
+	row := r.db.QueryRowContext(ctx, query, userID.Value, referenceMonth.FirstDay(), referenceMonth.AddMonths(1).FirstDay())
 
 	var budget entities.Budget
 	var updatedAt, deletedAt *time.Time

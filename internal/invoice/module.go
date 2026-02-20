@@ -48,9 +48,7 @@ func NewInvoiceModule(
 	updatePurchaseUseCase := usecase.NewUpdatePurchaseUseCase(uow, outboxService, o11y)
 	deletePurchaseUseCase := usecase.NewDeletePurchaseUseCase(uow, outboxService, o11y)
 	getInvoiceUseCase := usecase.NewGetInvoiceUseCase(invoiceRepository, o11y)
-	listInvoicesByMonthUseCase := usecase.NewListInvoicesByMonthUseCase(invoiceRepository, o11y)
 	listInvoicesByMonthPaginatedUseCase := usecase.NewListInvoicesByMonthPaginatedUseCase(invoiceRepository, o11y)
-	listInvoicesByCardUseCase := usecase.NewListInvoicesByCardUseCase(invoiceRepository, o11y)
 	listInvoicesByCardPaginatedUseCase := usecase.NewListInvoicesByCardPaginatedUseCase(invoiceRepository, o11y)
 
 	// Create handler
@@ -61,9 +59,7 @@ func NewInvoiceModule(
 		updatePurchaseUseCase,
 		deletePurchaseUseCase,
 		getInvoiceUseCase,
-		listInvoicesByMonthUseCase,
 		listInvoicesByMonthPaginatedUseCase,
-		listInvoicesByCardUseCase,
 		listInvoicesByCardPaginatedUseCase,
 	)
 

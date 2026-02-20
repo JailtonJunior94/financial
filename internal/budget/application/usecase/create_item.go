@@ -17,7 +17,7 @@ import (
 
 type (
 	CreateBudgetItemUseCase interface {
-		Execute(ctx context.Context, budgetID string, input *dtos.BudgetItemInput) error
+		Execute(ctx context.Context, userID string, budgetID string, input *dtos.BudgetItemInput) error
 	}
 
 	createBudgetItemUseCase struct {
@@ -36,9 +36,16 @@ func NewCreateBudgetItemUseCase(
 	}
 }
 
-func (u *createBudgetItemUseCase) Execute(ctx context.Context, budgetID string, input *dtos.BudgetItemInput) error {
+func (u *createBudgetItemUseCase) Execute(ctx context.Context, userID string, budgetID string, input *dtos.BudgetItemInput) error {
 	ctx, span := u.o11y.Tracer().Start(ctx, "create_budget_item_usecase.execute")
 	defer span.End()
+
+	// Parse userID
+	uid, err := vos.NewUUIDFromString(userID)
+	if err != nil {
+		span.RecordError(err)
+		return fmt.Errorf("invalid user_id: %w", err)
+	}
 
 	// Parse budget ID
 	id, err := vos.NewUUIDFromString(budgetID)
@@ -64,8 +71,8 @@ func (u *createBudgetItemUseCase) Execute(ctx context.Context, budgetID string, 
 	err = u.uow.Do(ctx, func(ctx context.Context, tx database.DBTX) error {
 		budgetRepository := repositories.NewBudgetRepository(tx, u.o11y)
 
-		// 1. Find the budget by ID
-		budget, err := budgetRepository.FindByID(ctx, id)
+		// 1. Find the budget by ID (scoped by userID to prevent IDOR)
+		budget, err := budgetRepository.FindByID(ctx, uid, id)
 		if err != nil {
 			span.RecordError(err)
 			return err

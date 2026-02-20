@@ -161,13 +161,19 @@ func (h *BudgetHandler) Find(w http.ResponseWriter, r *http.Request) {
 	ctx, span := h.o11y.Tracer().Start(r.Context(), "budget_handler.find")
 	defer span.End()
 
+	user, err := middlewares.GetUserFromContext(ctx)
+	if err != nil {
+		h.errorHandler.HandleError(w, r, err)
+		return
+	}
+
 	budgetID := r.PathValue("id")
 	if budgetID == "" {
 		h.errorHandler.HandleError(w, r, fmt.Errorf("budget_id is required"))
 		return
 	}
 
-	output, err := h.findBudgetUseCase.Execute(ctx, budgetID)
+	output, err := h.findBudgetUseCase.Execute(ctx, user.ID, budgetID)
 	if err != nil {
 		h.errorHandler.HandleError(w, r, err)
 		return
@@ -197,6 +203,12 @@ func (h *BudgetHandler) Update(w http.ResponseWriter, r *http.Request) {
 	ctx, span := h.o11y.Tracer().Start(r.Context(), "budget_handler.update")
 	defer span.End()
 
+	user, err := middlewares.GetUserFromContext(ctx)
+	if err != nil {
+		h.errorHandler.HandleError(w, r, err)
+		return
+	}
+
 	budgetID := r.PathValue("id")
 	if budgetID == "" {
 		h.errorHandler.HandleError(w, r, fmt.Errorf("budget_id is required"))
@@ -214,7 +226,7 @@ func (h *BudgetHandler) Update(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	output, err := h.updateBudgetUseCase.Execute(ctx, budgetID, input)
+	output, err := h.updateBudgetUseCase.Execute(ctx, user.ID, budgetID, input)
 	if err != nil {
 		h.errorHandler.HandleError(w, r, err)
 		return
@@ -241,13 +253,19 @@ func (h *BudgetHandler) Delete(w http.ResponseWriter, r *http.Request) {
 	ctx, span := h.o11y.Tracer().Start(r.Context(), "budget_handler.delete")
 	defer span.End()
 
+	user, err := middlewares.GetUserFromContext(ctx)
+	if err != nil {
+		h.errorHandler.HandleError(w, r, err)
+		return
+	}
+
 	budgetID := r.PathValue("id")
 	if budgetID == "" {
 		h.errorHandler.HandleError(w, r, fmt.Errorf("budget_id is required"))
 		return
 	}
 
-	err := h.deleteBudgetUseCase.Execute(ctx, budgetID)
+	err = h.deleteBudgetUseCase.Execute(ctx, user.ID, budgetID)
 	if err != nil {
 		h.errorHandler.HandleError(w, r, err)
 		return

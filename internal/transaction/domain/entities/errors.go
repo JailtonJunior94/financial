@@ -14,7 +14,6 @@ var (
 
 	// MonthlyTransaction errors.
 	ErrInvalidUserID               = errors.New("invalid user id")
-	ErrInvalidReferenceMonth       = errors.New("invalid reference month")
 	ErrItemNotFound                = errors.New("transaction item not found")
 	ErrItemDoesNotBelong           = errors.New("item does not belong to this monthly transaction")
 	ErrCreditCardItemAlreadyExists = errors.New("credit card item already exists for this month")

@@ -15,7 +15,7 @@ import (
 
 type (
 	DeleteBudgetUseCase interface {
-		Execute(ctx context.Context, budgetID string) error
+		Execute(ctx context.Context, userID string, budgetID string) error
 	}
 
 	deleteBudgetUseCase struct {
@@ -34,9 +34,15 @@ func NewDeleteBudgetUseCase(
 	}
 }
 
-func (u *deleteBudgetUseCase) Execute(ctx context.Context, budgetID string) error {
+func (u *deleteBudgetUseCase) Execute(ctx context.Context, userID string, budgetID string) error {
 	ctx, span := u.o11y.Tracer().Start(ctx, "delete_budget_usecase.execute")
 	defer span.End()
+
+	// Parse userID
+	uid, err := vos.NewUUIDFromString(userID)
+	if err != nil {
+		return fmt.Errorf("invalid user_id: %w", err)
+	}
 
 	// Parse budget ID
 	id, err := vos.NewUUIDFromString(budgetID)
@@ -47,8 +53,8 @@ func (u *deleteBudgetUseCase) Execute(ctx context.Context, budgetID string) erro
 	err = u.uow.Do(ctx, func(ctx context.Context, tx database.DBTX) error {
 		budgetRepository := repositories.NewBudgetRepository(tx, u.o11y)
 
-		// Find budget
-		budget, err := budgetRepository.FindByID(ctx, id)
+		// Find budget (scoped by userID to prevent IDOR)
+		budget, err := budgetRepository.FindByID(ctx, uid, id)
 		if err != nil {
 			return err
 		}

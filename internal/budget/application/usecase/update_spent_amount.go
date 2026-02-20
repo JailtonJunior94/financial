@@ -17,7 +17,7 @@ import (
 
 type (
 	UpdateSpentAmountUseCase interface {
-		Execute(ctx context.Context, budgetID, itemID string, input *dtos.UpdateSpentAmountInput) error
+		Execute(ctx context.Context, userID, budgetID, itemID string, input *dtos.UpdateSpentAmountInput) error
 	}
 
 	updateSpentAmountUseCase struct {
@@ -36,9 +36,15 @@ func NewUpdateSpentAmountUseCase(
 	}
 }
 
-func (u *updateSpentAmountUseCase) Execute(ctx context.Context, budgetID, itemID string, input *dtos.UpdateSpentAmountInput) error {
+func (u *updateSpentAmountUseCase) Execute(ctx context.Context, userID, budgetID, itemID string, input *dtos.UpdateSpentAmountInput) error {
 	ctx, span := u.o11y.Tracer().Start(ctx, "update_spent_amount_usecase.execute")
 	defer span.End()
+
+	// Parse userID
+	userUUID, err := vos.NewUUIDFromString(userID)
+	if err != nil {
+		return fmt.Errorf("invalid user ID: %w", err)
+	}
 
 	// Parse budgetID
 	budgetUUID, err := vos.NewUUIDFromString(budgetID)
@@ -56,8 +62,8 @@ func (u *updateSpentAmountUseCase) Execute(ctx context.Context, budgetID, itemID
 		// Criar repositório com a transação
 		budgetRepository := repositories.NewBudgetRepository(tx, u.o11y)
 
-		// Buscar o orçamento completo
-		budget, err := budgetRepository.FindByID(ctx, budgetUUID)
+		// Buscar o orçamento completo (scoped by userID to prevent IDOR)
+		budget, err := budgetRepository.FindByID(ctx, userUUID, budgetUUID)
 		if err != nil {
 			return err
 		}

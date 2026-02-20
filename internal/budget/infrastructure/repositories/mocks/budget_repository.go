@@ -93,8 +93,8 @@ func (_c *BudgetRepository_Delete_Call) RunAndReturn(run func(ctx context.Contex
 }
 
 // FindByID provides a mock function for the type BudgetRepository
-func (_mock *BudgetRepository) FindByID(ctx context.Context, id vos.UUID) (*entities.Budget, error) {
-	ret := _mock.Called(ctx, id)
+func (_mock *BudgetRepository) FindByID(ctx context.Context, userID vos.UUID, id vos.UUID) (*entities.Budget, error) {
+	ret := _mock.Called(ctx, userID, id)
 
 	if len(ret) == 0 {
 		panic("no return value specified for FindByID")
@@ -102,18 +102,18 @@ func (_mock *BudgetRepository) FindByID(ctx context.Context, id vos.UUID) (*enti
 
 	var r0 *entities.Budget
 	var r1 error
-	if returnFunc, ok := ret.Get(0).(func(context.Context, vos.UUID) (*entities.Budget, error)); ok {
-		return returnFunc(ctx, id)
+	if returnFunc, ok := ret.Get(0).(func(context.Context, vos.UUID, vos.UUID) (*entities.Budget, error)); ok {
+		return returnFunc(ctx, userID, id)
 	}
-	if returnFunc, ok := ret.Get(0).(func(context.Context, vos.UUID) *entities.Budget); ok {
-		r0 = returnFunc(ctx, id)
+	if returnFunc, ok := ret.Get(0).(func(context.Context, vos.UUID, vos.UUID) *entities.Budget); ok {
+		r0 = returnFunc(ctx, userID, id)
 	} else {
 		if ret.Get(0) != nil {
 			r0 = ret.Get(0).(*entities.Budget)
 		}
 	}
-	if returnFunc, ok := ret.Get(1).(func(context.Context, vos.UUID) error); ok {
-		r1 = returnFunc(ctx, id)
+	if returnFunc, ok := ret.Get(1).(func(context.Context, vos.UUID, vos.UUID) error); ok {
+		r1 = returnFunc(ctx, userID, id)
 	} else {
 		r1 = ret.Error(1)
 	}
@@ -127,12 +127,13 @@ type BudgetRepository_FindByID_Call struct {
 
 // FindByID is a helper method to define mock.On call
 //   - ctx context.Context
+//   - userID vos.UUID
 //   - id vos.UUID
-func (_e *BudgetRepository_Expecter) FindByID(ctx interface{}, id interface{}) *BudgetRepository_FindByID_Call {
-	return &BudgetRepository_FindByID_Call{Call: _e.mock.On("FindByID", ctx, id)}
+func (_e *BudgetRepository_Expecter) FindByID(ctx interface{}, userID interface{}, id interface{}) *BudgetRepository_FindByID_Call {
+	return &BudgetRepository_FindByID_Call{Call: _e.mock.On("FindByID", ctx, userID, id)}
 }
 
-func (_c *BudgetRepository_FindByID_Call) Run(run func(ctx context.Context, id vos.UUID)) *BudgetRepository_FindByID_Call {
+func (_c *BudgetRepository_FindByID_Call) Run(run func(ctx context.Context, userID vos.UUID, id vos.UUID)) *BudgetRepository_FindByID_Call {
 	_c.Call.Run(func(args mock.Arguments) {
 		var arg0 context.Context
 		if args[0] != nil {
@@ -142,10 +143,11 @@ func (_c *BudgetRepository_FindByID_Call) Run(run func(ctx context.Context, id v
 		if args[1] != nil {
 			arg1 = args[1].(vos.UUID)
 		}
-		run(
-			arg0,
-			arg1,
-		)
+		var arg2 vos.UUID
+		if args[2] != nil {
+			arg2 = args[2].(vos.UUID)
+		}
+		run(arg0, arg1, arg2)
 	})
 	return _c
 }
@@ -155,7 +157,7 @@ func (_c *BudgetRepository_FindByID_Call) Return(budget *entities.Budget, err er
 	return _c
 }
 
-func (_c *BudgetRepository_FindByID_Call) RunAndReturn(run func(ctx context.Context, id vos.UUID) (*entities.Budget, error)) *BudgetRepository_FindByID_Call {
+func (_c *BudgetRepository_FindByID_Call) RunAndReturn(run func(ctx context.Context, userID vos.UUID, id vos.UUID) (*entities.Budget, error)) *BudgetRepository_FindByID_Call {
 	_c.Call.Return(run)
 	return _c
 }

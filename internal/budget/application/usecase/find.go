@@ -15,7 +15,7 @@ import (
 
 type (
 	FindBudgetUseCase interface {
-		Execute(ctx context.Context, budgetID string) (*dtos.BudgetOutput, error)
+		Execute(ctx context.Context, userID string, budgetID string) (*dtos.BudgetOutput, error)
 	}
 
 	findBudgetUseCase struct {
@@ -34,9 +34,15 @@ func NewFindBudgetUseCase(
 	}
 }
 
-func (u *findBudgetUseCase) Execute(ctx context.Context, budgetID string) (*dtos.BudgetOutput, error) {
+func (u *findBudgetUseCase) Execute(ctx context.Context, userID string, budgetID string) (*dtos.BudgetOutput, error) {
 	ctx, span := u.o11y.Tracer().Start(ctx, "find_budget_usecase.execute")
 	defer span.End()
+
+	// Parse userID
+	uid, err := vos.NewUUIDFromString(userID)
+	if err != nil {
+		return nil, fmt.Errorf("invalid user_id: %w", err)
+	}
 
 	// Parse budget ID
 	id, err := vos.NewUUIDFromString(budgetID)
@@ -44,8 +50,8 @@ func (u *findBudgetUseCase) Execute(ctx context.Context, budgetID string) (*dtos
 		return nil, fmt.Errorf("invalid budget_id: %w", err)
 	}
 
-	// Find budget
-	budget, err := u.budgetRepository.FindByID(ctx, id)
+	// Find budget (scoped by userID to prevent IDOR)
+	budget, err := u.budgetRepository.FindByID(ctx, uid, id)
 	if err != nil {
 		return nil, err
 	}

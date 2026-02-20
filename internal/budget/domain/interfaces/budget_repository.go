@@ -20,7 +20,7 @@ type ListBudgetsParams struct {
 type BudgetRepository interface {
 	Insert(ctx context.Context, budget *entities.Budget) error
 	InsertItems(ctx context.Context, items []*entities.BudgetItem) error
-	FindByID(ctx context.Context, id vos.UUID) (*entities.Budget, error)
+	FindByID(ctx context.Context, userID vos.UUID, id vos.UUID) (*entities.Budget, error)
 	FindByUserIDAndReferenceMonth(ctx context.Context, userID vos.UUID, referenceMonth pkgVos.ReferenceMonth) (*entities.Budget, error)
 	ListPaginated(ctx context.Context, params ListBudgetsParams) ([]*entities.Budget, error)
 	Update(ctx context.Context, budget *entities.Budget) error
