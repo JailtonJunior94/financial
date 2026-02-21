@@ -4,6 +4,7 @@ import (
 	"context"
 	"database/sql"
 	"fmt"
+	"time"
 
 	"github.com/JailtonJunior94/devkit-go/pkg/database"
 	"github.com/google/uuid"
@@ -13,6 +14,7 @@ import (
 type ProcessedEventsRepository interface {
 	IsProcessed(ctx context.Context, eventID uuid.UUID, consumerName string) (bool, error)
 	MarkAsProcessed(ctx context.Context, eventID uuid.UUID, consumerName string) error
+	DeleteOldProcessed(ctx context.Context, olderThan time.Duration) (int64, error)
 }
 
 type processedEventsRepository struct {
@@ -64,4 +66,28 @@ func (r *processedEventsRepository) MarkAsProcessed(ctx context.Context, eventID
 	}
 
 	return nil
+}
+
+// DeleteOldProcessed remove registros de idempotência mais antigos que `olderThan`.
+// Permite controlar o crescimento da tabela processed_events sem perder proteção
+// para eventos recentes ainda sujeitos a redelivery.
+func (r *processedEventsRepository) DeleteOldProcessed(ctx context.Context, olderThan time.Duration) (int64, error) {
+	cutoffDate := time.Now().Add(-olderThan)
+
+	query := `
+		DELETE FROM processed_events
+		WHERE processed_at < $1
+	`
+
+	result, err := r.db.ExecContext(ctx, query, cutoffDate)
+	if err != nil {
+		return 0, fmt.Errorf("failed to delete old processed events: %w", err)
+	}
+
+	rowsAffected, err := result.RowsAffected()
+	if err != nil {
+		return 0, fmt.Errorf("failed to get rows affected: %w", err)
+	}
+
+	return rowsAffected, nil
 }
