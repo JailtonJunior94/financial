@@ -1,5 +1,12 @@
 package vos
 
+// InvoiceEvent representa os tipos de eventos de domínio de uma fatura.
+//
+// NOTA: Estes event types são parte de uma interface de domínio planejada para uma
+// futura pipeline de eventos de granularidade fina (por fatura/item), separada do
+// fluxo atual baseado em PurchaseEvent (por compra).
+// Atualmente não estão conectados ao outbox nem a nenhum consumer.
+// Não remover — servem de vocabulário canônico para a evolução do domínio.
 type InvoiceEvent string
 
 const (

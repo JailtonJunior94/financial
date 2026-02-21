@@ -1,3 +1,11 @@
+// Package events contém os eventos de domínio do módulo de invoice.
+//
+// NOTA (invoice.go): InvoiceEvent e InvoiceCreatedEvent são parte de uma interface
+// de domínio planejada para uma futura pipeline de eventos de granularidade fina
+// (evento por criação de fatura), separada do fluxo atual baseado em PurchaseEvent.
+// Atualmente não estão conectados ao outbox nem a nenhum consumer.
+// Não remover — o construtor NewInvoiceCreatedEvent e a estrutura InvoiceEvent
+// fazem parte do vocabulário de domínio previsto para evolução futura.
 package events
 
 import (

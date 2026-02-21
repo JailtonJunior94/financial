@@ -146,6 +146,7 @@ func (u *deletePurchaseUseCase) Execute(ctx context.Context, userID string, item
 		eventPayload := event.GetPayload().(events.PurchaseEventPayload)
 
 		payload := outbox.JSONBPayload{
+			"version":         eventPayload.Version,
 			"user_id":         eventPayload.UserID,
 			"category_id":     eventPayload.CategoryID,
 			"affected_months": eventPayload.AffectedMonths,

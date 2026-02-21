@@ -18,7 +18,6 @@ import (
 	"github.com/jailtonjunior94/financial/internal/invoice/domain/factories"
 	"github.com/jailtonjunior94/financial/internal/invoice/domain/interfaces"
 	"github.com/jailtonjunior94/financial/internal/invoice/infrastructure/repositories"
-	pkgVos "github.com/jailtonjunior94/financial/pkg/domain/vos"
 	"github.com/jailtonjunior94/financial/pkg/outbox"
 )
 
@@ -111,22 +110,22 @@ func (u *createPurchaseUseCase) Execute(ctx context.Context, userID string, inpu
 		// Criar repositório com transação
 		invoiceRepository := repositories.NewInvoiceRepository(tx, u.o11y)
 
-		// Para cada parcela, criar ou buscar a fatura e adicionar o item
+		// Para cada parcela, buscar ou criar a fatura de forma atômica
 		for i := 0; i < input.InstallmentTotal; i++ {
 			installmentNumber := i + 1
 			referenceMonth := installmentMonths[i]
 
-			// Buscar ou criar a fatura para este mês
-			invoice, err := u.findOrCreateInvoice(
-				ctx,
-				invoiceRepository,
-				user,
-				cardID,
-				referenceMonth,
-				vos.CurrencyBRL,
-			)
+			// UpsertInvoice: INSERT ... ON CONFLICT DO UPDATE RETURNING
+			// Atômico — elimina o race condition de criações concorrentes
+			// para o mesmo (user_id, card_id, reference_month).
+			dueDate := u.invoiceCalculator.CalculateDueDate(referenceMonth)
+			newInvoice := entities.NewInvoice(user, cardID, referenceMonth, dueDate, vos.CurrencyBRL)
+			invoiceID, _ := vos.NewUUID()
+			newInvoice.SetID(invoiceID)
+
+			invoice, err := invoiceRepository.UpsertInvoice(ctx, newInvoice)
 			if err != nil {
-				return fmt.Errorf("failed to find or create invoice: %w", err)
+				return fmt.Errorf("failed to upsert invoice: %w", err)
 			}
 
 			// Criar o item de fatura (parcela)
@@ -184,6 +183,7 @@ func (u *createPurchaseUseCase) Execute(ctx context.Context, userID string, inpu
 		eventPayload := event.GetPayload().(events.PurchaseEventPayload)
 
 		payload := outbox.JSONBPayload{
+			"version":         eventPayload.Version,
 			"user_id":         eventPayload.UserID,
 			"category_id":     eventPayload.CategoryID,
 			"affected_months": eventPayload.AffectedMonths,
@@ -245,39 +245,3 @@ func (u *createPurchaseUseCase) Execute(ctx context.Context, userID string, inpu
 	}, nil
 }
 
-// findOrCreateInvoice busca ou cria uma fatura para o mês de referência.
-func (u *createPurchaseUseCase) findOrCreateInvoice(
-	ctx context.Context,
-	repo interfaces.InvoiceRepository,
-	userID vos.UUID,
-	cardID vos.UUID,
-	referenceMonth pkgVos.ReferenceMonth,
-	currency vos.Currency,
-) (*entities.Invoice, error) {
-	// Tentar buscar fatura existente
-	invoice, err := repo.FindByUserAndCardAndMonth(ctx, userID, cardID, referenceMonth)
-	if err != nil {
-		return nil, err
-	}
-
-	// Se encontrou, retorna
-	if invoice != nil {
-		return invoice, nil
-	}
-
-	// Se não encontrou, cria nova fatura
-	dueDate := u.invoiceCalculator.CalculateDueDate(referenceMonth)
-
-	invoice = entities.NewInvoice(userID, cardID, referenceMonth, dueDate, currency)
-
-	// Gerar ID
-	invoiceID, _ := vos.NewUUID()
-	invoice.SetID(invoiceID)
-
-	// Persistir
-	if err := repo.Insert(ctx, invoice); err != nil {
-		return nil, err
-	}
-
-	return invoice, nil
-}

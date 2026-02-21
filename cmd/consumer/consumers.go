@@ -2,6 +2,7 @@ package consumer
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"os"
 	"os/signal"
@@ -264,6 +265,12 @@ func (app *application) Start() error {
 
 	// Registrar handler composto: transaction sync + budget sync para cada evento de purchase.
 	// Cada consumer mantém idempotência independente via consumerName distinto.
+	//
+	// Ambos os handlers executam independentemente: se um falhar, o outro ainda roda.
+	// errors.Join agrega os erros para que a mensagem seja reenfileirada (NACK) apenas
+	// se algum handler falhou, sem impedir que o outro seja executado.
+	// Na reentrega, cada handler verifica sua própria idempotência via processed_events,
+	// saltando o processamento que já foi concluído com sucesso.
 	topics := transactionModule.PurchaseEventConsumer.Topics()
 	for _, topic := range topics {
 		handler := func(ctx context.Context, msg rabbitmq.Message) error {
@@ -273,10 +280,18 @@ func (app *application) Start() error {
 				Payload: msg.Body,
 				Headers: msg.Headers,
 			}
+
+			var errs []error
+
 			if err := transactionModule.PurchaseEventConsumer.Handle(ctx, m); err != nil {
-				return err
+				errs = append(errs, fmt.Errorf("transaction: %w", err))
 			}
-			return budgetModule.BudgetEventConsumer.Handle(ctx, m)
+
+			if err := budgetModule.BudgetEventConsumer.Handle(ctx, m); err != nil {
+				errs = append(errs, fmt.Errorf("budget: %w", err))
+			}
+
+			return errors.Join(errs...)
 		}
 		app.consumer.RegisterHandler(topic, handler)
 	}

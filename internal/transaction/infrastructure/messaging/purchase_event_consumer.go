@@ -17,21 +17,12 @@ import (
 	"github.com/jailtonjunior94/financial/pkg/outbox"
 )
 
-// PurchaseEventPayload representa o payload dos eventos de purchase do outbox.
-type PurchaseEventPayload struct {
-	Version        int      `json:"version"`
-	UserID         string   `json:"user_id"`
-	CategoryID     string   `json:"category_id"`
-	AffectedMonths []string `json:"affected_months"`
-}
-
 // PurchaseEventConsumer processa eventos de purchase vindos do RabbitMQ.
 // Implementa messaging.Handler.
 type PurchaseEventConsumer struct {
-	syncUseCase       usecase.SyncMonthlyFromInvoicesUseCase
-	db                *sql.DB
+	syncUseCase         usecase.SyncMonthlyFromInvoicesUseCase
 	processedEventsRepo outbox.ProcessedEventsRepository
-	o11y              observability.Observability
+	o11y                observability.Observability
 }
 
 // NewPurchaseEventConsumer cria um novo consumer de eventos de purchase.
@@ -42,7 +33,6 @@ func NewPurchaseEventConsumer(
 ) *PurchaseEventConsumer {
 	return &PurchaseEventConsumer{
 		syncUseCase:         syncUseCase,
-		db:                  db,
 		processedEventsRepo: outbox.NewProcessedEventsRepository(db),
 		o11y:                o11y,
 	}
@@ -61,17 +51,19 @@ func (c *PurchaseEventConsumer) Handle(ctx context.Context, msg *messaging.Messa
 		return fmt.Errorf("invalid message ID format: %w", err)
 	}
 
-	// ✅ IDEMPOTÊNCIA: Verificar se evento já foi processado
-	processed, err := c.processedEventsRepo.IsProcessed(ctx, eventID, consumerName)
+	// ✅ IDEMPOTÊNCIA ATÔMICA: TryClaimEvent usa INSERT ... ON CONFLICT DO NOTHING,
+	// garantindo que apenas um worker processa o evento mesmo com consumers concorrentes.
+	// Elimina o race condition TOCTOU da abordagem anterior (IsProcessed + MarkAsProcessed).
+	claimed, err := c.processedEventsRepo.TryClaimEvent(ctx, eventID, consumerName)
 	if err != nil {
-		c.o11y.Logger().Error(ctx, "failed to check if event is processed",
+		c.o11y.Logger().Error(ctx, "failed to claim event",
 			observability.Error(err),
 			observability.String("event_id", eventID.String()),
 		)
-		return fmt.Errorf("failed to check idempotency: %w", err)
+		return fmt.Errorf("failed to claim event: %w", err)
 	}
 
-	if processed {
+	if !claimed {
 		c.o11y.Logger().Info(ctx, "event already processed, skipping",
 			observability.String("event_id", eventID.String()),
 		)
@@ -90,8 +82,8 @@ func (c *PurchaseEventConsumer) Handle(ctx context.Context, msg *messaging.Messa
 		observability.String("event_id", eventID.String()),
 	)
 
-	// Parse payload
-	var payload PurchaseEventPayload
+	// Parse payload usando o contrato canônico definido no módulo de invoice
+	var payload invoiceevents.PurchaseEventPayload
 	if err := json.Unmarshal(msg.Payload, &payload); err != nil {
 		return fmt.Errorf("failed to unmarshal purchase event: %w", err)
 	}
@@ -139,38 +131,19 @@ func (c *PurchaseEventConsumer) Handle(ctx context.Context, msg *messaging.Messa
 		)
 	}
 
-	// ✅ CORREÇÃO: Se houve erros, retornar para forçar retry da mensagem
+	// Se houve erros de sincronização, liberar o claim para que a mensagem seja
+	// reentregue pelo broker e processada novamente.
 	if len(syncErrors) > 0 {
+		if deleteErr := c.processedEventsRepo.DeleteClaim(ctx, eventID, consumerName); deleteErr != nil {
+			c.o11y.Logger().Error(ctx, "failed to delete claim after sync error",
+				observability.Error(deleteErr),
+				observability.String("event_id", eventID.String()),
+			)
+		}
 		return fmt.Errorf("failed to sync %d of %d months: %v", len(syncErrors), len(payload.AffectedMonths), syncErrors)
 	}
 
-	// ✅ IDEMPOTÊNCIA: Marcar evento como processado após sucesso
-	// Usar transação separada para garantir persistência mesmo se o processo morrer
-	tx, err := c.db.BeginTx(ctx, nil)
-	if err != nil {
-		c.o11y.Logger().Error(ctx, "failed to begin transaction for marking event",
-			observability.Error(err),
-		)
-		return fmt.Errorf("failed to begin transaction: %w", err)
-	}
-	defer tx.Rollback()
-
-	processedRepo := outbox.NewProcessedEventsRepository(tx)
-	if err := processedRepo.MarkAsProcessed(ctx, eventID, consumerName); err != nil {
-		c.o11y.Logger().Error(ctx, "failed to mark event as processed",
-			observability.Error(err),
-			observability.String("event_id", eventID.String()),
-		)
-		return fmt.Errorf("failed to mark as processed: %w", err)
-	}
-
-	if err := tx.Commit(); err != nil {
-		c.o11y.Logger().Error(ctx, "failed to commit processed event",
-			observability.Error(err),
-		)
-		return fmt.Errorf("failed to commit: %w", err)
-	}
-
+	// Claim inserido pelo TryClaimEvent permanece como registro permanente de idempotência.
 	c.o11y.Logger().Info(ctx, "purchase event processed successfully",
 		observability.String("event_id", eventID.String()),
 		observability.Int("months_synced", len(payload.AffectedMonths)),

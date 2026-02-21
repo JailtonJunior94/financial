@@ -30,6 +30,12 @@ type InvoiceRepository interface {
 	// Insert cria uma nova fatura
 	Insert(ctx context.Context, invoice *entities.Invoice) error
 
+	// UpsertInvoice insere ou retorna uma fatura existente de forma atômica.
+	// Usa INSERT ... ON CONFLICT DO UPDATE RETURNING para eliminar o race condition
+	// em criações concorrentes do mesmo cartão/mês. Retorna a fatura (nova ou existente)
+	// com seus itens já carregados.
+	UpsertInvoice(ctx context.Context, invoice *entities.Invoice) (*entities.Invoice, error)
+
 	// InsertItems cria múltiplos itens de fatura
 	InsertItems(ctx context.Context, items []*entities.InvoiceItem) error
 

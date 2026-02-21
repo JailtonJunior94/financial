@@ -87,13 +87,15 @@ func (j *JSONBPayload) Scan(value any) error {
 const MaxRetryCount = 3
 
 // retryBackoffDurations define o tempo de espera antes de cada tentativa.
-// Index = retry_count após o incremento (1-based).
+// Index = retry_count após o incremento (1-based), com progressão exponencial.
 //
 //	retry_count=1 → aguarda 30s antes da segunda tentativa
 //	retry_count=2 → aguarda 2m antes da terceira tentativa
+//	retry_count=3 → aguarda 5m antes de marcar como failed definitivamente
 var retryBackoffDurations = [MaxRetryCount]time.Duration{
 	30 * time.Second,
 	2 * time.Minute,
+	5 * time.Minute,
 }
 
 // CanRetry verifica se o evento ainda pode ser retentado.

@@ -1,3 +1,9 @@
+// NOTA: InvoiceItemAddedEvent faz parte de uma futura pipeline de eventos de
+// granularidade fina (evento por item adicionado à fatura).
+// Atualmente NÃO está conectado ao outbox nem ao Budget Consumer.
+// O Budget Consumer usa PurchaseEventPayload (via outbox/RabbitMQ), não este evento.
+// O comentário abaixo descreve a intenção de design para quando este evento for integrado.
+// Não remover — é parte do vocabulário de domínio previsto para evolução futura.
 package events
 
 import (
@@ -10,7 +16,7 @@ import (
 
 // InvoiceItemAddedEvent é emitido quando um novo item é adicionado a uma fatura.
 //
-// Este evento é processado por:
+// Quando integrado ao outbox, será processado por:
 // - Budget Consumer: atualiza spent_amount da categoria correspondente
 //
 // Payload inclui todos os campos necessários para atualização de budget:

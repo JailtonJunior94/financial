@@ -69,6 +69,51 @@ func (r *invoiceRepository) Insert(ctx context.Context, invoice *entities.Invoic
 	return err
 }
 
+// UpsertInvoice insere uma nova fatura ou retorna a já existente de forma atômica.
+// O ON CONFLICT DO UPDATE com auto-atribuição (updated_at = invoices.updated_at) garante
+// que a cláusula RETURNING sempre devolva a linha — seja a recém-inserida ou a existente —
+// eliminando o race condition de criações concorrentes para o mesmo (user_id, card_id, reference_month).
+func (r *invoiceRepository) UpsertInvoice(ctx context.Context, invoice *entities.Invoice) (*entities.Invoice, error) {
+	ctx, span := r.o11y.Tracer().Start(ctx, "invoice_repository.upsert_invoice")
+	defer span.End()
+
+	query := `
+		INSERT INTO invoices (
+			id, user_id, card_id, reference_month, due_date,
+			total_amount, created_at, updated_at, deleted_at
+		) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
+		ON CONFLICT (user_id, card_id, reference_month)
+		DO UPDATE SET updated_at = invoices.updated_at
+		RETURNING id, user_id, card_id, reference_month, due_date,
+		          total_amount, created_at, updated_at, deleted_at
+	`
+
+	row := r.db.QueryRowContext(ctx, query,
+		invoice.ID.Value,
+		invoice.UserID.Value,
+		invoice.CardID.Value,
+		invoice.ReferenceMonth.ToTime(),
+		invoice.DueDate,
+		invoice.TotalAmount.Float(),
+		invoice.CreatedAt,
+		invoice.UpdatedAt.Ptr(),
+		invoice.DeletedAt.Ptr(),
+	)
+
+	result, err := r.scanInvoice(row)
+	if err != nil {
+		return nil, fmt.Errorf("upsert invoice: %w", err)
+	}
+
+	items, err := r.findItemsByInvoiceID(ctx, result.ID)
+	if err != nil {
+		return nil, fmt.Errorf("upsert invoice: load items: %w", err)
+	}
+	result.Items = items
+
+	return result, nil
+}
+
 func (r *invoiceRepository) InsertItems(ctx context.Context, items []*entities.InvoiceItem) error {
 	ctx, span := r.o11y.Tracer().Start(ctx, "invoice_repository.insert_items")
 	defer span.End()
