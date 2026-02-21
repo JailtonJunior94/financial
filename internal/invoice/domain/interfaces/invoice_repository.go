@@ -6,7 +6,7 @@ import (
 	"github.com/JailtonJunior94/devkit-go/pkg/vos"
 
 	"github.com/jailtonjunior94/financial/internal/invoice/domain/entities"
-	invoiceVos "github.com/jailtonjunior94/financial/internal/invoice/domain/vos"
+	pkgVos "github.com/jailtonjunior94/financial/pkg/domain/vos"
 	"github.com/jailtonjunior94/financial/pkg/pagination"
 )
 
@@ -20,7 +20,7 @@ type ListInvoicesByCardParams struct {
 // ListInvoicesByMonthParams representa os parâmetros para paginação de faturas por mês.
 type ListInvoicesByMonthParams struct {
 	UserID         vos.UUID
-	ReferenceMonth invoiceVos.ReferenceMonth
+	ReferenceMonth pkgVos.ReferenceMonth
 	Limit          int
 	Cursor         pagination.Cursor
 }
@@ -41,14 +41,14 @@ type InvoiceRepository interface {
 		ctx context.Context,
 		userID vos.UUID,
 		cardID vos.UUID,
-		referenceMonth invoiceVos.ReferenceMonth,
+		referenceMonth pkgVos.ReferenceMonth,
 	) (*entities.Invoice, error)
 
 	// FindByUserAndMonth busca todas as faturas de um usuário em um mês
 	FindByUserAndMonth(
 		ctx context.Context,
 		userID vos.UUID,
-		referenceMonth invoiceVos.ReferenceMonth,
+		referenceMonth pkgVos.ReferenceMonth,
 	) ([]*entities.Invoice, error)
 
 	// FindByCard busca todas as faturas de um cartão

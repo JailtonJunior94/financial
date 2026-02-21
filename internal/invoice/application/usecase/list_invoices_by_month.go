@@ -10,7 +10,7 @@ import (
 	"github.com/jailtonjunior94/financial/internal/invoice/application/dtos"
 	"github.com/jailtonjunior94/financial/internal/invoice/domain/entities"
 	"github.com/jailtonjunior94/financial/internal/invoice/domain/interfaces"
-	invoiceVos "github.com/jailtonjunior94/financial/internal/invoice/domain/vos"
+	pkgVos "github.com/jailtonjunior94/financial/pkg/domain/vos"
 )
 
 type (
@@ -45,7 +45,7 @@ func (u *listInvoicesByMonthUseCase) Execute(ctx context.Context, userID string,
 	}
 
 	// Parse referenceMonth
-	refMonth, err := invoiceVos.NewReferenceMonth(referenceMonth)
+	refMonth, err := pkgVos.NewReferenceMonth(referenceMonth)
 	if err != nil {
 		return nil, fmt.Errorf("invalid reference month: %w", err)
 	}

@@ -8,7 +8,7 @@ import (
 	"time"
 
 	"github.com/JailtonJunior94/devkit-go/pkg/vos"
-	budgetVos "github.com/jailtonjunior94/financial/internal/budget/domain/vos"
+	pkgVos "github.com/jailtonjunior94/financial/pkg/domain/vos"
 
 	"github.com/stretchr/testify/assert"
 )
@@ -20,7 +20,7 @@ func TestNewBudget(t *testing.T) {
 	type args struct {
 		userID         vos.UUID
 		amount         vos.Money
-		referenceMonth budgetVos.ReferenceMonth
+		referenceMonth pkgVos.ReferenceMonth
 	}
 
 	scenarios := []struct {
@@ -33,7 +33,7 @@ func TestNewBudget(t *testing.T) {
 			args: args{
 				userID:         userID,
 				amount:         amount,
-				referenceMonth: budgetVos.NewReferenceMonthFromDate(time.Now().UTC()),
+				referenceMonth: pkgVos.NewReferenceMonthFromDate(time.Now().UTC()),
 			},
 			expected: func(budget *Budget) {
 				assert.NotNil(t, budget)
@@ -58,7 +58,7 @@ func TestNewBudget(t *testing.T) {
 func TestAddItems(t *testing.T) {
 	userID, _ := vos.NewUUID()
 	amount, _ := vos.NewMoneyFromFloat(14_400.00, vos.CurrencyBRL)
-	referenceMonth := budgetVos.NewReferenceMonthFromDate(time.Now().UTC())
+	referenceMonth := pkgVos.NewReferenceMonthFromDate(time.Now().UTC())
 	budget := NewBudget(userID, amount, referenceMonth)
 
 	categoryOne, _ := vos.NewUUID()

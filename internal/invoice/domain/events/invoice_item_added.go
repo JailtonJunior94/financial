@@ -5,7 +5,7 @@ import (
 
 	sharedVos "github.com/JailtonJunior94/devkit-go/pkg/vos"
 
-	invoiceVos "github.com/jailtonjunior94/financial/internal/invoice/domain/vos"
+	pkgVos "github.com/jailtonjunior94/financial/pkg/domain/vos"
 )
 
 // InvoiceItemAddedEvent é emitido quando um novo item é adicionado a uma fatura.
@@ -27,7 +27,7 @@ type InvoiceItemAddedEvent struct {
 	userID         sharedVos.UUID
 	categoryID     sharedVos.UUID
 	amount         sharedVos.Money
-	referenceMonth invoiceVos.ReferenceMonth
+	referenceMonth pkgVos.ReferenceMonth
 	occurredAt     time.Time
 }
 
@@ -38,7 +38,7 @@ func NewInvoiceItemAddedEvent(
 	userID sharedVos.UUID,
 	categoryID sharedVos.UUID,
 	amount sharedVos.Money,
-	referenceMonth invoiceVos.ReferenceMonth,
+	referenceMonth pkgVos.ReferenceMonth,
 ) (*InvoiceItemAddedEvent, error) {
 	eventID, err := sharedVos.NewUUID()
 	if err != nil {

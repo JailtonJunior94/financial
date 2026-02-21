@@ -8,7 +8,7 @@ import (
 	"time"
 
 	"github.com/JailtonJunior94/devkit-go/pkg/vos"
-	budgetVos "github.com/jailtonjunior94/financial/internal/budget/domain/vos"
+	pkgVos "github.com/jailtonjunior94/financial/pkg/domain/vos"
 
 	"github.com/stretchr/testify/assert"
 )
@@ -24,7 +24,7 @@ func TestNewBudgetItem(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	referenceMonth := budgetVos.NewReferenceMonthFromDate(time.Date(2024, 1, 1, 0, 0, 0, 0, time.UTC))
+	referenceMonth := pkgVos.NewReferenceMonthFromDate(time.Date(2024, 1, 1, 0, 0, 0, 0, time.UTC))
 	budget := NewBudget(userID, amount, referenceMonth)
 
 	categoryID, err := vos.NewUUID()
@@ -86,7 +86,7 @@ func TestUpdateItemSpentAmount(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	referenceMonth := budgetVos.NewReferenceMonthFromDate(time.Date(2024, 1, 1, 0, 0, 0, 0, time.UTC))
+	referenceMonth := pkgVos.NewReferenceMonthFromDate(time.Date(2024, 1, 1, 0, 0, 0, 0, time.UTC))
 	budget := NewBudget(userID, amount, referenceMonth)
 
 	categoryID, err := vos.NewUUID()

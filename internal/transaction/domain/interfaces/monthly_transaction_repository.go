@@ -4,7 +4,7 @@ import (
 	"context"
 
 	"github.com/jailtonjunior94/financial/internal/transaction/domain/entities"
-	transactionVos "github.com/jailtonjunior94/financial/internal/transaction/domain/vos"
+	pkgVos "github.com/jailtonjunior94/financial/pkg/domain/vos"
 
 	"github.com/JailtonJunior94/devkit-go/pkg/database"
 	"github.com/JailtonJunior94/devkit-go/pkg/vos"
@@ -17,7 +17,7 @@ type MonthlyTransactionRepository interface {
 		ctx context.Context,
 		executor database.DBTX,
 		userID vos.UUID,
-		referenceMonth transactionVos.ReferenceMonth,
+		referenceMonth pkgVos.ReferenceMonth,
 	) (*entities.MonthlyTransaction, error)
 
 	// Save persiste uma nova transação mensal

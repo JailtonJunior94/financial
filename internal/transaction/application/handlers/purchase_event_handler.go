@@ -9,7 +9,7 @@ import (
 
 	invoiceevents "github.com/jailtonjunior94/financial/internal/invoice/domain/events"
 	"github.com/jailtonjunior94/financial/internal/transaction/application/usecase"
-	transactionVos "github.com/jailtonjunior94/financial/internal/transaction/domain/vos"
+	pkgVos "github.com/jailtonjunior94/financial/pkg/domain/vos"
 )
 
 // PurchaseEventHandler lida com eventos de purchase e sincroniza MonthlyTransaction.
@@ -61,7 +61,7 @@ func (h *PurchaseEventHandler) syncAffectedMonths(ctx context.Context, userID, c
 
 	// Sincronizar cada mês afetado
 	for _, month := range affectedMonths {
-		referenceMonth, err := transactionVos.NewReferenceMonthFromString(month)
+		referenceMonth, err := pkgVos.NewReferenceMonth(month)
 		if err != nil {
 			return fmt.Errorf("invalid reference_month %s: %w", month, err)
 		}

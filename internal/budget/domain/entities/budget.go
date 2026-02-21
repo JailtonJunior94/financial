@@ -8,7 +8,7 @@ import (
 	"github.com/JailtonJunior94/devkit-go/pkg/vos"
 
 	"github.com/jailtonjunior94/financial/internal/budget/domain"
-	budgetVos "github.com/jailtonjunior94/financial/internal/budget/domain/vos"
+	pkgVos "github.com/jailtonjunior94/financial/pkg/domain/vos"
 )
 
 // Constantes de porcentagem usadas em validações e cálculos.
@@ -25,14 +25,14 @@ var (
 type Budget struct {
 	entity.Base
 	UserID         vos.UUID
-	ReferenceMonth budgetVos.ReferenceMonth
+	ReferenceMonth pkgVos.ReferenceMonth
 	TotalAmount    vos.Money
 	SpentAmount    vos.Money
 	PercentageUsed vos.Percentage
 	Items          []*BudgetItem
 }
 
-func NewBudget(userID vos.UUID, totalAmount vos.Money, referenceMonth budgetVos.ReferenceMonth) *Budget {
+func NewBudget(userID vos.UUID, totalAmount vos.Money, referenceMonth pkgVos.ReferenceMonth) *Budget {
 	zeroMoney, _ := vos.NewMoney(0, totalAmount.Currency())
 
 	return &Budget{

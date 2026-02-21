@@ -8,7 +8,7 @@ import (
 
 	invoiceInterfaces "github.com/jailtonjunior94/financial/internal/invoice/domain/interfaces"
 	"github.com/jailtonjunior94/financial/internal/transaction/application/usecase"
-	transactionVos "github.com/jailtonjunior94/financial/internal/transaction/domain/vos"
+	pkgVos "github.com/jailtonjunior94/financial/pkg/domain/vos"
 )
 
 // MonthlySyncAdapter implementa a interface MonthlySyncService do módulo de invoice.
@@ -38,7 +38,7 @@ func (a *MonthlySyncAdapter) SyncMonth(
 	}
 
 	// Parse referenceMonth
-	refMonth, err := transactionVos.NewReferenceMonthFromString(referenceMonth)
+	refMonth, err := pkgVos.NewReferenceMonth(referenceMonth)
 	if err != nil {
 		return fmt.Errorf("invalid reference month: %w", err)
 	}

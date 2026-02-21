@@ -11,13 +11,13 @@ import (
 
 	"github.com/jailtonjunior94/financial/internal/budget/domain/entities"
 	"github.com/jailtonjunior94/financial/internal/budget/domain/interfaces"
-	budgetVos "github.com/jailtonjunior94/financial/internal/budget/domain/vos"
 	"github.com/jailtonjunior94/financial/internal/budget/infrastructure/repositories"
+	pkgVos "github.com/jailtonjunior94/financial/pkg/domain/vos"
 )
 
 type (
 	SyncBudgetSpentAmountUseCase interface {
-		Execute(ctx context.Context, userID vos.UUID, referenceMonth budgetVos.ReferenceMonth, categoryID vos.UUID) error
+		Execute(ctx context.Context, userID vos.UUID, referenceMonth pkgVos.ReferenceMonth, categoryID vos.UUID) error
 	}
 
 	syncBudgetSpentAmountUseCase struct {
@@ -42,7 +42,7 @@ func NewSyncBudgetSpentAmountUseCase(
 func (u *syncBudgetSpentAmountUseCase) Execute(
 	ctx context.Context,
 	userID vos.UUID,
-	referenceMonth budgetVos.ReferenceMonth,
+	referenceMonth pkgVos.ReferenceMonth,
 	categoryID vos.UUID,
 ) error {
 	ctx, span := u.o11y.Tracer().Start(ctx, "sync_budget_spent_amount_usecase.execute")

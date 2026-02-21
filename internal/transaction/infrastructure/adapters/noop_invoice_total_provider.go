@@ -6,7 +6,7 @@ import (
 	sharedVos "github.com/JailtonJunior94/devkit-go/pkg/vos"
 
 	"github.com/jailtonjunior94/financial/internal/transaction/domain/interfaces"
-	transactionVos "github.com/jailtonjunior94/financial/internal/transaction/domain/vos"
+	pkgVos "github.com/jailtonjunior94/financial/pkg/domain/vos"
 )
 
 // NoOpInvoiceTotalProvider é um stub que retorna sempre zero.
@@ -22,7 +22,7 @@ func NewNoOpInvoiceTotalProvider() interfaces.InvoiceTotalProvider {
 func (n *NoOpInvoiceTotalProvider) GetClosedInvoiceTotal(
 	ctx context.Context,
 	userID sharedVos.UUID,
-	referenceMonth transactionVos.ReferenceMonth,
+	referenceMonth pkgVos.ReferenceMonth,
 ) (sharedVos.Money, error) {
 	zero, _ := sharedVos.NewMoney(0, sharedVos.CurrencyBRL)
 	return zero, nil

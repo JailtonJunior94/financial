@@ -6,6 +6,7 @@ import (
 	sharedVos "github.com/JailtonJunior94/devkit-go/pkg/vos"
 
 	transactionVos "github.com/jailtonjunior94/financial/internal/transaction/domain/vos"
+	pkgVos "github.com/jailtonjunior94/financial/pkg/domain/vos"
 )
 
 // TransactionCreatedEvent é emitido quando um novo item de transação é criado.
@@ -29,7 +30,7 @@ type TransactionCreatedEvent struct {
 	amount          sharedVos.Money
 	direction       transactionVos.TransactionDirection
 	transactionType transactionVos.TransactionType
-	referenceMonth  transactionVos.ReferenceMonth
+	referenceMonth  pkgVos.ReferenceMonth
 	occurredAt      time.Time
 }
 
@@ -41,7 +42,7 @@ func NewTransactionCreatedEvent(
 	amount sharedVos.Money,
 	direction transactionVos.TransactionDirection,
 	transactionType transactionVos.TransactionType,
-	referenceMonth transactionVos.ReferenceMonth,
+	referenceMonth pkgVos.ReferenceMonth,
 ) (*TransactionCreatedEvent, error) {
 	eventID, err := sharedVos.NewUUID()
 	if err != nil {

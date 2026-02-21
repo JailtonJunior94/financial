@@ -10,7 +10,7 @@ import (
 	"github.com/jailtonjunior94/financial/internal/invoice/application/dtos"
 	"github.com/jailtonjunior94/financial/internal/invoice/domain/entities"
 	"github.com/jailtonjunior94/financial/internal/invoice/domain/interfaces"
-	invoiceVos "github.com/jailtonjunior94/financial/internal/invoice/domain/vos"
+	pkgVos "github.com/jailtonjunior94/financial/pkg/domain/vos"
 	"github.com/jailtonjunior94/financial/pkg/pagination"
 )
 
@@ -66,7 +66,7 @@ func (u *listInvoicesByMonthPaginatedUseCase) Execute(
 	}
 
 	// Parse referenceMonth
-	refMonth, err := invoiceVos.NewReferenceMonth(input.ReferenceMonth)
+	refMonth, err := pkgVos.NewReferenceMonth(input.ReferenceMonth)
 	if err != nil {
 		return nil, fmt.Errorf("invalid reference month: %w", err)
 	}

@@ -7,8 +7,8 @@ import (
 
 	"github.com/jailtonjunior94/financial/internal/budget/application/dtos"
 	"github.com/jailtonjunior94/financial/internal/budget/domain/entities"
-	budgetVos "github.com/jailtonjunior94/financial/internal/budget/domain/vos"
 	"github.com/jailtonjunior94/financial/pkg/money"
+	pkgVos "github.com/jailtonjunior94/financial/pkg/domain/vos"
 )
 
 func CreateBudget(userID string, input *dtos.BudgetCreateInput) (*entities.Budget, error) {
@@ -44,7 +44,7 @@ func CreateBudget(userID string, input *dtos.BudgetCreateInput) (*entities.Budge
 	}
 
 	// Parse reference month
-	referenceMonth, err := budgetVos.NewReferenceMonth(input.ReferenceMonth)
+	referenceMonth, err := pkgVos.NewReferenceMonth(input.ReferenceMonth)
 	if err != nil {
 		return nil, fmt.Errorf("create_budget: %w", err)
 	}

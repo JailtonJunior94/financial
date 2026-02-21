@@ -4,8 +4,8 @@ import (
 	"context"
 
 	"github.com/jailtonjunior94/financial/internal/transaction/domain/entities"
-	transactionVos "github.com/jailtonjunior94/financial/internal/transaction/domain/vos"
 	"github.com/jailtonjunior94/financial/pkg/pagination"
+	pkgVos "github.com/jailtonjunior94/financial/pkg/domain/vos"
 
 	"github.com/JailtonJunior94/devkit-go/pkg/database"
 	sharedVos "github.com/JailtonJunior94/devkit-go/pkg/vos"
@@ -25,7 +25,7 @@ type TransactionRepository interface {
 		ctx context.Context,
 		executor database.DBTX,
 		userID sharedVos.UUID,
-		referenceMonth transactionVos.ReferenceMonth,
+		referenceMonth pkgVos.ReferenceMonth,
 	) (*entities.MonthlyTransaction, error)
 
 	// FindMonthlyByID busca o aggregate por ID com todos os items.

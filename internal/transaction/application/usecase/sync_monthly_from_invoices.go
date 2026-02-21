@@ -6,7 +6,7 @@ import (
 
 	appstrategies "github.com/jailtonjunior94/financial/internal/transaction/application/strategies"
 	"github.com/jailtonjunior94/financial/internal/transaction/domain/interfaces"
-	transactionVos "github.com/jailtonjunior94/financial/internal/transaction/domain/vos"
+	pkgVos "github.com/jailtonjunior94/financial/pkg/domain/vos"
 
 	"github.com/JailtonJunior94/devkit-go/pkg/database"
 	"github.com/JailtonJunior94/devkit-go/pkg/database/uow"
@@ -16,7 +16,7 @@ import (
 
 type (
 	SyncMonthlyFromInvoicesUseCase interface {
-		Execute(ctx context.Context, userID sharedVos.UUID, referenceMonth transactionVos.ReferenceMonth, categoryID sharedVos.UUID) error
+		Execute(ctx context.Context, userID sharedVos.UUID, referenceMonth pkgVos.ReferenceMonth, categoryID sharedVos.UUID) error
 	}
 
 	syncMonthlyFromInvoicesUseCase struct {
@@ -47,7 +47,7 @@ func NewSyncMonthlyFromInvoicesUseCase(
 func (u *syncMonthlyFromInvoicesUseCase) Execute(
 	ctx context.Context,
 	userID sharedVos.UUID,
-	referenceMonth transactionVos.ReferenceMonth,
+	referenceMonth pkgVos.ReferenceMonth,
 	categoryID sharedVos.UUID,
 ) error {
 	ctx, span := u.o11y.Tracer().Start(ctx, "sync_monthly_from_invoices_usecase.execute")

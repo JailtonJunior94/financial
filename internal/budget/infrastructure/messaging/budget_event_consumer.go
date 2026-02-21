@@ -13,7 +13,7 @@ import (
 	invoiceevents "github.com/jailtonjunior94/financial/internal/invoice/domain/events"
 
 	"github.com/jailtonjunior94/financial/internal/budget/application/usecase"
-	budgetVos "github.com/jailtonjunior94/financial/internal/budget/domain/vos"
+	pkgVos "github.com/jailtonjunior94/financial/pkg/domain/vos"
 	"github.com/jailtonjunior94/financial/pkg/messaging"
 	"github.com/jailtonjunior94/financial/pkg/outbox"
 )
@@ -88,7 +88,7 @@ func (c *BudgetEventConsumer) Handle(ctx context.Context, msg *messaging.Message
 	var syncErrors []error
 
 	for _, month := range payload.AffectedMonths {
-		referenceMonth, err := budgetVos.NewReferenceMonth(month)
+		referenceMonth, err := pkgVos.NewReferenceMonth(month)
 		if err != nil {
 			c.o11y.Logger().Error(ctx, "invalid reference month in budget event",
 				observability.Error(err),
