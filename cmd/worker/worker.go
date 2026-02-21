@@ -84,7 +84,7 @@ func Run() error {
 	if err != nil {
 		return fmt.Errorf("worker: failed to create unit of work: %v", err)
 	}
-	outboxDispatcher := outbox.NewDispatcher(uow, rabbitClient, outbox.DefaultDispatcherConfig(cfg.RabbitMQConfig.Exchange), o11y)
+	outboxDispatcher := outbox.NewDispatcher(dbManager.DB(), uow, rabbitClient, outbox.DefaultDispatcherConfig(cfg.RabbitMQConfig.Exchange), o11y)
 	outboxCleanup := outbox.NewCleaner(uow, outbox.DefaultCleanupConfig(), o11y)
 
 	jobsToRegister := []pkgjobs.Job{

@@ -9,6 +9,7 @@ import (
 	"github.com/JailtonJunior94/devkit-go/pkg/database/uow"
 	"github.com/JailtonJunior94/devkit-go/pkg/messaging/rabbitmq"
 	"github.com/JailtonJunior94/devkit-go/pkg/observability"
+	"github.com/google/uuid"
 )
 
 // DispatcherConfig configura o comportamento do dispatcher.
@@ -44,6 +45,8 @@ type Dispatcher interface {
 }
 
 type dispatcher struct {
+	// db é usado na Phase 1 (leitura de IDs sem lock, fora de transação).
+	db        database.DBTX
 	uow       uow.UnitOfWork
 	publisher *rabbitmq.Publisher
 	config    *DispatcherConfig
@@ -51,13 +54,17 @@ type dispatcher struct {
 }
 
 // NewDispatcher cria uma nova instância do dispatcher.
+// db deve ser o *sql.DB para leituras sem transação (Phase 1).
+// uow é utilizado para abrir transações individuais por evento (Phase 2).
 func NewDispatcher(
+	db database.DBTX,
 	uow uow.UnitOfWork,
 	rabbitClient *rabbitmq.Client,
 	config *DispatcherConfig,
 	o11y observability.Observability,
 ) Dispatcher {
 	return &dispatcher{
+		db:        db,
 		uow:       uow,
 		o11y:      o11y,
 		config:    config,
@@ -65,51 +72,78 @@ func NewDispatcher(
 	}
 }
 
-// Dispatch processa batch de eventos pendentes.
+// Dispatch processa eventos pendentes em duas fases independentes:
+//
+//   - Phase 1: busca IDs de candidatos sem lock (leitura leve, fora de transação).
+//     Minimiza janela de lock e evita long-running transactions no batch inteiro.
+//
+//   - Phase 2: para cada ID, abre uma transação individual, tenta adquirir lock
+//     exclusivo via FOR UPDATE SKIP LOCKED e processa o evento.
+//     Se outro worker já adquiriu o lock, o evento é ignorado silenciosamente.
+//
+// O isolamento por transação garante que a falha de um evento não afeta os demais.
 func (d *dispatcher) Dispatch(ctx context.Context) (int, error) {
 	ctx, span := d.o11y.Tracer().Start(ctx, "outbox.dispatcher.dispatch")
 	defer span.End()
 
-	processed := 0
-
-	err := d.uow.Do(ctx, func(ctx context.Context, tx database.DBTX) error {
-		outboxRepository := NewRepository(tx, d.o11y)
-
-		events, err := outboxRepository.FindPendingBatch(ctx, d.config.BatchSize)
-		if err != nil {
-			return fmt.Errorf("find pending batch: %w", err)
-		}
-
-		if len(events) == 0 {
-			d.o11y.Logger().Info(ctx, "no pending events to dispatch")
-			return nil
-		}
-
-		// Processar cada evento
-		for _, event := range events {
-			if err := d.processEvent(ctx, outboxRepository, event); err != nil {
-				d.o11y.Logger().Error(ctx, "failed to process event",
-					observability.Error(err),
-					observability.String("event_id", event.ID.String()),
-				)
-				continue
-			}
-			processed++
-		}
-
-		return nil
-	})
-
+	// Phase 1: busca IDs sem lock
+	ids, err := d.fetchPendingIDs(ctx)
 	if err != nil {
-		d.o11y.Logger().Error(ctx, "dispatch failed", observability.Error(err))
-		return processed, fmt.Errorf("dispatch: %w", err)
+		d.o11y.Logger().Error(ctx, "dispatch: failed to fetch pending ids", observability.Error(err))
+		return 0, fmt.Errorf("dispatch: fetch pending ids: %w", err)
+	}
+
+	if len(ids) == 0 {
+		d.o11y.Logger().Info(ctx, "no pending events to dispatch")
+		return 0, nil
+	}
+
+	// Phase 2: transação individual por evento
+	processed := 0
+	for _, id := range ids {
+		if err := d.dispatchOne(ctx, id); err != nil {
+			d.o11y.Logger().Error(ctx, "failed to dispatch event",
+				observability.Error(err),
+				observability.String("event_id", id.String()),
+			)
+			continue
+		}
+		processed++
 	}
 
 	d.o11y.Logger().Info(ctx, "dispatch completed",
 		observability.Int("processed", processed),
+		observability.Int("total", len(ids)),
 	)
 
 	return processed, nil
+}
+
+// fetchPendingIDs retorna IDs de eventos pendentes elegíveis (Phase 1).
+// Executado fora de transação para minimizar lock contention.
+func (d *dispatcher) fetchPendingIDs(ctx context.Context) ([]uuid.UUID, error) {
+	repo := NewRepository(d.db, d.o11y)
+	return repo.FindPendingIDs(ctx, d.config.BatchSize)
+}
+
+// dispatchOne processa um único evento em sua própria transação (Phase 2).
+// Usa FindAndLockByID (FOR UPDATE SKIP LOCKED) para garantir exclusividade entre workers.
+// Retorna nil silenciosamente se o evento já foi adquirido por outro worker.
+func (d *dispatcher) dispatchOne(ctx context.Context, id uuid.UUID) error {
+	return d.uow.Do(ctx, func(ctx context.Context, tx database.DBTX) error {
+		repo := NewRepository(tx, d.o11y)
+
+		event, err := repo.FindAndLockByID(ctx, id)
+		if err == ErrEventNotFound {
+			// Evento já processado por outro worker ou status mudou — ignorar
+			return nil
+		}
+		if err != nil {
+			return fmt.Errorf("lock event: %w", err)
+		}
+
+		return d.processEvent(ctx, repo, event)
+	})
 }
 
 // processEvent processa um único evento.

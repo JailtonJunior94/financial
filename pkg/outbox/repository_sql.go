@@ -56,6 +56,89 @@ func (r *sqlRepository) Save(ctx context.Context, event *OutboxEvent) error {
 	return nil
 }
 
+// FindPendingIDs retorna apenas os IDs de eventos pendentes elegíveis para dispatch.
+// Usado pelo dispatcher como Phase 1 (leitura leve, sem lock de longa duração).
+// O lock real acontece em FindAndLockByID, por evento, em transações individuais.
+func (r *sqlRepository) FindPendingIDs(ctx context.Context, limit int) ([]uuid.UUID, error) {
+	query := `
+		SELECT id
+		FROM outbox_events
+		WHERE status = $1
+		  AND (next_retry_at IS NULL OR next_retry_at <= NOW())
+		ORDER BY created_at ASC, id ASC
+		LIMIT $2
+	`
+
+	rows, err := r.db.QueryContext(ctx, query, StatusPending, limit)
+	if err != nil {
+		return nil, fmt.Errorf("failed to query pending event ids: %w", err)
+	}
+	defer func() {
+		if closeErr := rows.Close(); closeErr != nil {
+			r.o11y.Logger().Error(ctx, "failed to close rows in FindPendingIDs",
+				observability.Error(closeErr),
+			)
+		}
+	}()
+
+	ids := make([]uuid.UUID, 0, limit)
+	for rows.Next() {
+		var id uuid.UUID
+		if err := rows.Scan(&id); err != nil {
+			return nil, fmt.Errorf("failed to scan event id: %w", err)
+		}
+		ids = append(ids, id)
+	}
+
+	if err := rows.Err(); err != nil {
+		return nil, fmt.Errorf("error iterating event ids: %w", err)
+	}
+
+	return ids, nil
+}
+
+// FindAndLockByID tenta adquirir lock exclusivo de um evento pendente pelo ID.
+// Retorna ErrEventNotFound se o evento não existir, já foi processado por outro
+// worker (SKIP LOCKED) ou mudou de status desde a leitura em FindPendingIDs.
+// Deve ser chamado DENTRO de uma transação (uow.Do) para que o lock seja mantido
+// durante o publish e o UpdateStatus subsequentes.
+func (r *sqlRepository) FindAndLockByID(ctx context.Context, id uuid.UUID) (*OutboxEvent, error) {
+	query := `
+		SELECT
+			id, aggregate_id, aggregate_type, event_type,
+			payload, status, retry_count, published_at, failed_at, next_retry_at, created_at
+		FROM outbox_events
+		WHERE id = $1
+		  AND status = $2
+		FOR UPDATE SKIP LOCKED
+	`
+
+	event := &OutboxEvent{}
+	err := r.db.QueryRowContext(ctx, query, id, StatusPending).Scan(
+		&event.ID,
+		&event.AggregateID,
+		&event.AggregateType,
+		&event.EventType,
+		&event.Payload,
+		&event.Status,
+		&event.RetryCount,
+		&event.PublishedAt,
+		&event.FailedAt,
+		&event.NextRetryAt,
+		&event.CreatedAt,
+	)
+
+	if err == sql.ErrNoRows {
+		return nil, ErrEventNotFound
+	}
+
+	if err != nil {
+		return nil, fmt.Errorf("failed to lock outbox event: %w", err)
+	}
+
+	return event, nil
+}
+
 // FindPendingBatch busca eventos pendentes usando SELECT FOR UPDATE SKIP LOCKED.
 // Esta query evita lock contention em ambientes concorrentes.
 // Ordenação determinística garante que eventos criados no mesmo momento sejam processados em ordem previsível.
@@ -169,6 +252,31 @@ func (r *sqlRepository) DeleteOldPublished(ctx context.Context, olderThan time.D
 	result, err := r.db.ExecContext(ctx, query, StatusPublished, cutoffDate)
 	if err != nil {
 		return 0, fmt.Errorf("failed to delete old published events: %w", err)
+	}
+
+	rowsAffected, err := result.RowsAffected()
+	if err != nil {
+		return 0, fmt.Errorf("failed to get rows affected: %w", err)
+	}
+
+	return rowsAffected, nil
+}
+
+// DeleteOldFailed remove eventos falhos mais antigos que `olderThan`.
+// Mantém retenção maior que published para análise post-mortem.
+func (r *sqlRepository) DeleteOldFailed(ctx context.Context, olderThan time.Duration) (int64, error) {
+	cutoffDate := time.Now().Add(-olderThan)
+
+	query := `
+		DELETE FROM outbox_events
+		WHERE status = $1
+		  AND failed_at IS NOT NULL
+		  AND failed_at < $2
+	`
+
+	result, err := r.db.ExecContext(ctx, query, StatusFailed, cutoffDate)
+	if err != nil {
+		return 0, fmt.Errorf("failed to delete old failed events: %w", err)
 	}
 
 	rowsAffected, err := result.RowsAffected()
