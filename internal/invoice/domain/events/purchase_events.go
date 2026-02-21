@@ -13,10 +13,15 @@ const (
 	// PurchaseDeletedEventName é o nome do evento de exclusão de purchase.
 	// Routing key final: "invoice.purchase.deleted"
 	PurchaseDeletedEventName = "purchase.deleted"
+
+	// PurchaseEventSchemaVersion é a versão do schema do payload deste evento.
+	// Incrementar quando o contrato mudar de forma incompatível.
+	PurchaseEventSchemaVersion = 1
 )
 
 // PurchaseEventPayload representa o payload compartilhado dos eventos de purchase.
 type PurchaseEventPayload struct {
+	Version        int       `json:"version"`
 	UserID         string    `json:"user_id"`
 	CategoryID     string    `json:"category_id"`
 	AffectedMonths []string  `json:"affected_months"` // Meses impactados (YYYY-MM)
@@ -35,6 +40,7 @@ func NewPurchaseCreated(userID, categoryID string, affectedMonths []string) *Pur
 	return &PurchaseCreated{
 		eventType: PurchaseCreatedEventName,
 		payload: PurchaseEventPayload{
+			Version:        PurchaseEventSchemaVersion,
 			UserID:         userID,
 			CategoryID:     categoryID,
 			AffectedMonths: affectedMonths,
@@ -65,6 +71,7 @@ func NewPurchaseUpdated(userID, categoryID string, affectedMonths []string) *Pur
 	return &PurchaseUpdated{
 		eventType: PurchaseUpdatedEventName,
 		payload: PurchaseEventPayload{
+			Version:        PurchaseEventSchemaVersion,
 			UserID:         userID,
 			CategoryID:     categoryID,
 			AffectedMonths: affectedMonths,
@@ -95,6 +102,7 @@ func NewPurchaseDeleted(userID, categoryID string, affectedMonths []string) *Pur
 	return &PurchaseDeleted{
 		eventType: PurchaseDeletedEventName,
 		payload: PurchaseEventPayload{
+			Version:        PurchaseEventSchemaVersion,
 			UserID:         userID,
 			CategoryID:     categoryID,
 			AffectedMonths: affectedMonths,

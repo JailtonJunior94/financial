@@ -20,6 +20,7 @@ import (
 
 // purchaseEventPayload espelha o payload publicado pelo módulo de invoice.
 type purchaseEventPayload struct {
+	Version        int      `json:"version"`
 	UserID         string   `json:"user_id"`
 	CategoryID     string   `json:"category_id"`
 	AffectedMonths []string `json:"affected_months"`

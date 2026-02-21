@@ -19,6 +19,7 @@ import (
 
 // PurchaseEventPayload representa o payload dos eventos de purchase do outbox.
 type PurchaseEventPayload struct {
+	Version        int      `json:"version"`
 	UserID         string   `json:"user_id"`
 	CategoryID     string   `json:"category_id"`
 	AffectedMonths []string `json:"affected_months"`

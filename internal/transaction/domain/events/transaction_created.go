@@ -87,9 +87,14 @@ func (e *TransactionCreatedEvent) OccurredAt() time.Time {
 	return e.occurredAt
 }
 
+// TransactionCreatedSchemaVersion é a versão do schema do payload deste evento.
+// Incrementar quando o contrato mudar de forma incompatível.
+const TransactionCreatedSchemaVersion = 1
+
 // Payload retorna os dados do evento como map para serialização JSON.
 func (e *TransactionCreatedEvent) Payload() map[string]any {
 	return map[string]any{
+		"version":         TransactionCreatedSchemaVersion,
 		"transaction_id":  e.transactionID.String(),
 		"user_id":         e.userID.String(),
 		"category_id":     e.categoryID.String(),
