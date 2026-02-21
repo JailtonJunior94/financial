@@ -21,6 +21,7 @@ type OutboxEvent struct {
 	RetryCount    int          `db:"retry_count"`
 	PublishedAt   *time.Time   `db:"published_at"`
 	FailedAt      *time.Time   `db:"failed_at"`
+	NextRetryAt   *time.Time   `db:"next_retry_at"`
 	CreatedAt     time.Time    `db:"created_at"`
 }
 
@@ -85,18 +86,37 @@ func (j *JSONBPayload) Scan(value any) error {
 // MaxRetryCount define o limite máximo de tentativas conforme constraint do DB.
 const MaxRetryCount = 3
 
+// retryBackoffDurations define o tempo de espera antes de cada tentativa.
+// Index = retry_count após o incremento (1-based).
+//
+//	retry_count=1 → aguarda 30s antes da segunda tentativa
+//	retry_count=2 → aguarda 2m antes da terceira tentativa
+var retryBackoffDurations = [MaxRetryCount]time.Duration{
+	30 * time.Second,
+	2 * time.Minute,
+}
+
 // CanRetry verifica se o evento ainda pode ser retentado.
 func (e *OutboxEvent) CanRetry() bool {
 	return e.RetryCount < MaxRetryCount
 }
 
-// IncrementRetry incrementa o contador de tentativas.
-// Retorna error se exceder o limite.
+// IncrementRetry incrementa o contador de tentativas e agenda o próximo retry
+// com backoff exponencial. Retorna error se exceder o limite.
 func (e *OutboxEvent) IncrementRetry() error {
 	if !e.CanRetry() {
 		return fmt.Errorf("max retry count reached: %d", MaxRetryCount)
 	}
 	e.RetryCount++
+
+	// Calcular next_retry_at com base no novo retry_count.
+	// O índice é (RetryCount-1) para manter o array 0-based.
+	idx := e.RetryCount - 1
+	if idx < len(retryBackoffDurations) {
+		nextRetry := time.Now().Add(retryBackoffDurations[idx])
+		e.NextRetryAt = &nextRetry
+	}
+
 	return nil
 }
 
@@ -137,6 +157,7 @@ func NewOutboxEvent(
 		Payload:       payload,
 		Status:        StatusPending,
 		RetryCount:    0,
+		NextRetryAt:   nil, // novos eventos são processados imediatamente
 		CreatedAt:     time.Now(),
 	}
 }

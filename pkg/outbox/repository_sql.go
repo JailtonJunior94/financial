@@ -33,8 +33,8 @@ func (r *sqlRepository) Save(ctx context.Context, event *OutboxEvent) error {
 	query := `
 		INSERT INTO outbox_events (
 			id, aggregate_id, aggregate_type, event_type,
-			payload, status, retry_count, created_at
-		) VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
+			payload, status, retry_count, next_retry_at, created_at
+		) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
 	`
 
 	_, err := r.db.ExecContext(ctx, query,
@@ -45,6 +45,7 @@ func (r *sqlRepository) Save(ctx context.Context, event *OutboxEvent) error {
 		event.Payload,
 		event.Status,
 		event.RetryCount,
+		event.NextRetryAt,
 		event.CreatedAt,
 	)
 
@@ -58,13 +59,18 @@ func (r *sqlRepository) Save(ctx context.Context, event *OutboxEvent) error {
 // FindPendingBatch busca eventos pendentes usando SELECT FOR UPDATE SKIP LOCKED.
 // Esta query evita lock contention em ambientes concorrentes.
 // Ordenação determinística garante que eventos criados no mesmo momento sejam processados em ordem previsível.
+//
+// O filtro next_retry_at implementa backoff exponencial: eventos que falharam
+// recentemente só são retornados quando o tempo de espera tiver decorrido.
+// Eventos novos (next_retry_at IS NULL) são sempre elegíveis para dispatch imediato.
 func (r *sqlRepository) FindPendingBatch(ctx context.Context, limit int) ([]*OutboxEvent, error) {
 	query := `
 		SELECT
 			id, aggregate_id, aggregate_type, event_type,
-			payload, status, retry_count, published_at, failed_at, created_at
+			payload, status, retry_count, published_at, failed_at, next_retry_at, created_at
 		FROM outbox_events
 		WHERE status = $1
+		  AND (next_retry_at IS NULL OR next_retry_at <= NOW())
 		ORDER BY created_at ASC, id ASC
 		LIMIT $2
 		FOR UPDATE SKIP LOCKED
@@ -95,6 +101,7 @@ func (r *sqlRepository) FindPendingBatch(ctx context.Context, limit int) ([]*Out
 			&event.RetryCount,
 			&event.PublishedAt,
 			&event.FailedAt,
+			&event.NextRetryAt,
 			&event.CreatedAt,
 		)
 		if err != nil {
@@ -117,8 +124,9 @@ func (r *sqlRepository) UpdateStatus(ctx context.Context, event *OutboxEvent) er
 		SET status = $1,
 		    retry_count = $2,
 		    published_at = $3,
-		    failed_at = $4
-		WHERE id = $5
+		    failed_at = $4,
+		    next_retry_at = $5
+		WHERE id = $6
 	`
 
 	result, err := r.db.ExecContext(ctx, query,
@@ -126,6 +134,7 @@ func (r *sqlRepository) UpdateStatus(ctx context.Context, event *OutboxEvent) er
 		event.RetryCount,
 		event.PublishedAt,
 		event.FailedAt,
+		event.NextRetryAt,
 		event.ID,
 	)
 
@@ -173,9 +182,9 @@ func (r *sqlRepository) DeleteOldPublished(ctx context.Context, olderThan time.D
 // FindByID busca um evento por ID.
 func (r *sqlRepository) FindByID(ctx context.Context, id uuid.UUID) (*OutboxEvent, error) {
 	query := `
-		SELECT 
+		SELECT
 			id, aggregate_id, aggregate_type, event_type,
-			payload, status, retry_count, published_at, failed_at, created_at
+			payload, status, retry_count, published_at, failed_at, next_retry_at, created_at
 		FROM outbox_events
 		WHERE id = $1
 	`
@@ -191,6 +200,7 @@ func (r *sqlRepository) FindByID(ctx context.Context, id uuid.UUID) (*OutboxEven
 		&event.RetryCount,
 		&event.PublishedAt,
 		&event.FailedAt,
+		&event.NextRetryAt,
 		&event.CreatedAt,
 	)
 
