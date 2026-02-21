@@ -63,9 +63,11 @@ type (
 	}
 
 	RabbitMQConfig struct {
-		URL      string `mapstructure:"RABBITMQ_URL"`
-		Queue    string `mapstructure:"RABBITMQ_QUEUE"`
-		Exchange string `mapstructure:"RABBITMQ_EXCHANGE"`
+		URL         string `mapstructure:"RABBITMQ_URL"`
+		Queue       string `mapstructure:"RABBITMQ_QUEUE"`
+		Exchange    string `mapstructure:"RABBITMQ_EXCHANGE"`
+		DLQExchange string `mapstructure:"RABBITMQ_DLQ_EXCHANGE"`
+		DLQQueue    string `mapstructure:"RABBITMQ_DLQ_QUEUE"`
 	}
 
 	OutboxConfig struct {

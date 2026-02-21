@@ -106,6 +106,7 @@ func NewApplication() (*application, error) {
 
 	client, err := rabbitmq.New(
 		o11y,
+		rabbitmq.WithAutoReconnect(true),
 		rabbitmq.WithCloudConnection(cfg.RabbitMQConfig.URL),
 		rabbitmq.WithServiceName(cfg.ConsumerConfig.ServiceName),
 		rabbitmq.WithServiceVersion(cfg.O11yConfig.ServiceVersion),
@@ -114,7 +115,7 @@ func NewApplication() (*application, error) {
 		return nil, fmt.Errorf("failed to create rabbitmq client: %w", err)
 	}
 
-	// ✅ Declarar exchange
+	// ✅ Declarar exchange principal
 	if err := client.DeclareExchange(
 		context.Background(),
 		cfg.RabbitMQConfig.Exchange,
@@ -126,21 +127,72 @@ func NewApplication() (*application, error) {
 		return nil, fmt.Errorf("failed to declare exchange: %w", err)
 	}
 
-	// ✅ Declarar queue
+	// ✅ Configurar Dead Letter Queue quando habilitado
+	// mainQueueArgs receberá x-dead-letter-exchange se DLQExchange estiver configurado.
+	// ATENÇÃO: alterar args de uma queue existente requer deletá-la e recriar.
+	var mainQueueArgs map[string]interface{}
+	if cfg.RabbitMQConfig.DLQExchange != "" {
+		if err := client.DeclareExchange(
+			context.Background(),
+			cfg.RabbitMQConfig.DLQExchange,
+			"fanout",
+			true,  // durable
+			false, // auto-delete
+			nil,
+		); err != nil {
+			return nil, fmt.Errorf("failed to declare dlq exchange: %w", err)
+		}
+
+		_, err = client.DeclareQueue(
+			context.Background(),
+			cfg.RabbitMQConfig.DLQQueue,
+			true,  // durable
+			false, // auto-delete
+			false, // exclusive
+			nil,
+		)
+		if err != nil {
+			return nil, fmt.Errorf("failed to declare dlq queue: %w", err)
+		}
+
+		// fanout exchange: routing key vazia
+		if err = client.BindQueue(
+			context.Background(),
+			cfg.RabbitMQConfig.DLQQueue,
+			"",
+			cfg.RabbitMQConfig.DLQExchange,
+			nil,
+		); err != nil {
+			return nil, fmt.Errorf("failed to bind dlq queue: %w", err)
+		}
+
+		mainQueueArgs = map[string]interface{}{
+			"x-dead-letter-exchange": cfg.RabbitMQConfig.DLQExchange,
+		}
+
+		o11y.Logger().Info(
+			context.Background(),
+			"dead letter queue configured",
+			observability.String("dlq_exchange", cfg.RabbitMQConfig.DLQExchange),
+			observability.String("dlq_queue", cfg.RabbitMQConfig.DLQQueue),
+		)
+	}
+
+	// ✅ Declarar queue principal
 	_, err = client.DeclareQueue(
 		context.Background(),
 		cfg.RabbitMQConfig.Queue,
 		true,  // durable
 		false, // auto-delete
 		false, // exclusive
-		nil,
+		mainQueueArgs,
 	)
 	if err != nil {
 		return nil, fmt.Errorf("failed to declare queue: %w", err)
 	}
 
 	// ✅ Bind queue ao exchange com routing key pattern
-	// Pattern "invoice.#" captura todos os eventos de invoice (invoice.invoice.purchase.*)
+	// Pattern "invoice.#" captura todos os eventos de invoice
 	err = client.BindQueue(
 		context.Background(),
 		cfg.RabbitMQConfig.Queue,
@@ -158,6 +210,7 @@ func NewApplication() (*application, error) {
 		observability.String("exchange", cfg.RabbitMQConfig.Exchange),
 		observability.String("queue", cfg.RabbitMQConfig.Queue),
 		observability.String("routing_pattern", "invoice.#"),
+		observability.Bool("dlq_enabled", cfg.RabbitMQConfig.DLQExchange != ""),
 	)
 
 	consumer := rabbitmq.NewConsumer(
