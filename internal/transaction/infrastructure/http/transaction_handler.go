@@ -8,6 +8,7 @@ import (
 	"github.com/JailtonJunior94/devkit-go/pkg/observability"
 	"github.com/JailtonJunior94/devkit-go/pkg/responses"
 	"github.com/go-chi/chi/v5"
+	"go.opentelemetry.io/otel/trace"
 
 	"github.com/jailtonjunior94/financial/internal/transaction/application/dtos"
 	"github.com/jailtonjunior94/financial/internal/transaction/application/usecase"
@@ -73,28 +74,75 @@ func (h *TransactionHandler) Register(w http.ResponseWriter, r *http.Request) {
 	ctx, span := h.o11y.Tracer().Start(r.Context(), "transaction_handler.register")
 	defer span.End()
 
+	correlationID := trace.SpanFromContext(ctx).SpanContext().TraceID().String()
+
 	user, err := middlewares.GetUserFromContext(ctx)
 	if err != nil {
 		h.errorHandler.HandleError(w, r, err)
 		return
 	}
 
+	h.o11y.Logger().Info(ctx, "request_received",
+		observability.String("operation", "RegisterTransaction"),
+		observability.String("layer", "handler"),
+		observability.String("entity", "transaction"),
+		observability.String("correlation_id", correlationID),
+		observability.String("user_id", user.ID),
+	)
+
 	var input *dtos.RegisterTransactionInput
 	if err = json.NewDecoder(r.Body).Decode(&input); err != nil {
+		h.o11y.Logger().Error(ctx, "validation_failed",
+			observability.String("operation", "RegisterTransaction"),
+			observability.String("layer", "handler"),
+			observability.String("entity", "transaction"),
+			observability.String("correlation_id", correlationID),
+			observability.String("user_id", user.ID),
+			observability.String("error_type", "validation"),
+			observability.String("error_code", "DECODE_BODY_FAILED"),
+			observability.Error(err),
+		)
 		h.errorHandler.HandleError(w, r, err)
 		return
 	}
 
 	if validationErrs := input.Validate(); validationErrs.HasErrors() {
+		h.o11y.Logger().Warn(ctx, "validation_failed",
+			observability.String("operation", "RegisterTransaction"),
+			observability.String("layer", "handler"),
+			observability.String("entity", "transaction"),
+			observability.String("correlation_id", correlationID),
+			observability.String("user_id", user.ID),
+			observability.String("error_type", "validation"),
+			observability.String("error_code", "INPUT_VALIDATION_FAILED"),
+		)
 		h.errorHandler.HandleError(w, r, validationErrs)
 		return
 	}
 
 	output, err := h.registerTransactionUseCase.Execute(ctx, user.ID, input)
 	if err != nil {
+		h.o11y.Logger().Error(ctx, "request_failed",
+			observability.String("operation", "RegisterTransaction"),
+			observability.String("layer", "handler"),
+			observability.String("entity", "transaction"),
+			observability.String("correlation_id", correlationID),
+			observability.String("user_id", user.ID),
+			observability.String("error_type", "business"),
+			observability.String("error_code", "REGISTER_TRANSACTION_FAILED"),
+			observability.Error(err),
+		)
 		h.errorHandler.HandleError(w, r, err)
 		return
 	}
+
+	h.o11y.Logger().Info(ctx, "request_completed",
+		observability.String("operation", "RegisterTransaction"),
+		observability.String("layer", "handler"),
+		observability.String("entity", "transaction"),
+		observability.String("correlation_id", correlationID),
+		observability.String("user_id", user.ID),
+	)
 
 	responses.JSON(w, http.StatusCreated, output)
 }
@@ -118,15 +166,34 @@ func (h *TransactionHandler) List(w http.ResponseWriter, r *http.Request) {
 	ctx, span := h.o11y.Tracer().Start(r.Context(), "transaction_handler.list")
 	defer span.End()
 
+	correlationID := trace.SpanFromContext(ctx).SpanContext().TraceID().String()
+
 	user, err := middlewares.GetUserFromContext(ctx)
 	if err != nil {
 		h.errorHandler.HandleError(w, r, err)
 		return
 	}
 
-	// Parse cursor parameters (default: limit=20, max=100)
+	h.o11y.Logger().Info(ctx, "request_received",
+		observability.String("operation", "ListTransactions"),
+		observability.String("layer", "handler"),
+		observability.String("entity", "transaction"),
+		observability.String("correlation_id", correlationID),
+		observability.String("user_id", user.ID),
+	)
+
 	params, err := pagination.ParseCursorParams(r, 20, 100)
 	if err != nil {
+		h.o11y.Logger().Error(ctx, "request_failed",
+			observability.String("operation", "ListTransactions"),
+			observability.String("layer", "handler"),
+			observability.String("entity", "transaction"),
+			observability.String("correlation_id", correlationID),
+			observability.String("user_id", user.ID),
+			observability.String("error_type", "validation"),
+			observability.String("error_code", "PAGINATION_PARAMS_INVALID"),
+			observability.Error(err),
+		)
 		h.errorHandler.HandleError(w, r, err)
 		return
 	}
@@ -137,11 +204,28 @@ func (h *TransactionHandler) List(w http.ResponseWriter, r *http.Request) {
 		Cursor: params.Cursor,
 	})
 	if err != nil {
+		h.o11y.Logger().Error(ctx, "request_failed",
+			observability.String("operation", "ListTransactions"),
+			observability.String("layer", "handler"),
+			observability.String("entity", "transaction"),
+			observability.String("correlation_id", correlationID),
+			observability.String("user_id", user.ID),
+			observability.String("error_type", "business"),
+			observability.String("error_code", "LIST_TRANSACTIONS_FAILED"),
+			observability.Error(err),
+		)
 		h.errorHandler.HandleError(w, r, err)
 		return
 	}
 
-	// Build paginated response
+	h.o11y.Logger().Info(ctx, "request_completed",
+		observability.String("operation", "ListTransactions"),
+		observability.String("layer", "handler"),
+		observability.String("entity", "transaction"),
+		observability.String("correlation_id", correlationID),
+		observability.String("user_id", user.ID),
+	)
+
 	response := pagination.NewPaginatedResponse(output.MonthlyTransactions, params.Limit, output.NextCursor)
 	responses.JSON(w, http.StatusOK, response)
 }
@@ -164,6 +248,8 @@ func (h *TransactionHandler) Get(w http.ResponseWriter, r *http.Request) {
 	ctx, span := h.o11y.Tracer().Start(r.Context(), "transaction_handler.get")
 	defer span.End()
 
+	correlationID := trace.SpanFromContext(ctx).SpanContext().TraceID().String()
+
 	user, err := middlewares.GetUserFromContext(ctx)
 	if err != nil {
 		h.errorHandler.HandleError(w, r, err)
@@ -176,11 +262,40 @@ func (h *TransactionHandler) Get(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	h.o11y.Logger().Info(ctx, "request_received",
+		observability.String("operation", "GetTransaction"),
+		observability.String("layer", "handler"),
+		observability.String("entity", "transaction"),
+		observability.String("correlation_id", correlationID),
+		observability.String("user_id", user.ID),
+		observability.String("monthly_id", monthlyID),
+	)
+
 	output, err := h.getMonthlyUseCase.Execute(ctx, user.ID, monthlyID)
 	if err != nil {
+		h.o11y.Logger().Error(ctx, "request_failed",
+			observability.String("operation", "GetTransaction"),
+			observability.String("layer", "handler"),
+			observability.String("entity", "transaction"),
+			observability.String("correlation_id", correlationID),
+			observability.String("user_id", user.ID),
+			observability.String("monthly_id", monthlyID),
+			observability.String("error_type", "business"),
+			observability.String("error_code", "GET_TRANSACTION_FAILED"),
+			observability.Error(err),
+		)
 		h.errorHandler.HandleError(w, r, err)
 		return
 	}
+
+	h.o11y.Logger().Info(ctx, "request_completed",
+		observability.String("operation", "GetTransaction"),
+		observability.String("layer", "handler"),
+		observability.String("entity", "transaction"),
+		observability.String("correlation_id", correlationID),
+		observability.String("user_id", user.ID),
+		observability.String("monthly_id", monthlyID),
+	)
 
 	responses.JSON(w, http.StatusOK, output)
 }
@@ -211,13 +326,14 @@ func (h *TransactionHandler) UpdateItem(w http.ResponseWriter, r *http.Request) 
 	ctx, span := h.o11y.Tracer().Start(r.Context(), "transaction_handler.update_item")
 	defer span.End()
 
+	correlationID := trace.SpanFromContext(ctx).SpanContext().TraceID().String()
+
 	user, err := middlewares.GetUserFromContext(ctx)
 	if err != nil {
 		h.errorHandler.HandleError(w, r, err)
 		return
 	}
 
-	// Change 7: Extract both transactionId and itemId from path
 	transactionID := chi.URLParam(r, "transactionId")
 	itemID := chi.URLParam(r, "itemId")
 
@@ -226,13 +342,42 @@ func (h *TransactionHandler) UpdateItem(w http.ResponseWriter, r *http.Request) 
 		return
 	}
 
+	h.o11y.Logger().Info(ctx, "request_received",
+		observability.String("operation", "UpdateTransactionItem"),
+		observability.String("layer", "handler"),
+		observability.String("entity", "transaction"),
+		observability.String("correlation_id", correlationID),
+		observability.String("user_id", user.ID),
+		observability.String("transaction_id", transactionID),
+		observability.String("item_id", itemID),
+	)
+
 	var input *dtos.UpdateTransactionItemInput
 	if err = json.NewDecoder(r.Body).Decode(&input); err != nil {
+		h.o11y.Logger().Error(ctx, "validation_failed",
+			observability.String("operation", "UpdateTransactionItem"),
+			observability.String("layer", "handler"),
+			observability.String("entity", "transaction"),
+			observability.String("correlation_id", correlationID),
+			observability.String("user_id", user.ID),
+			observability.String("error_type", "validation"),
+			observability.String("error_code", "DECODE_BODY_FAILED"),
+			observability.Error(err),
+		)
 		h.errorHandler.HandleError(w, r, err)
 		return
 	}
 
 	if validationErrs := input.Validate(); validationErrs.HasErrors() {
+		h.o11y.Logger().Warn(ctx, "validation_failed",
+			observability.String("operation", "UpdateTransactionItem"),
+			observability.String("layer", "handler"),
+			observability.String("entity", "transaction"),
+			observability.String("correlation_id", correlationID),
+			observability.String("user_id", user.ID),
+			observability.String("error_type", "validation"),
+			observability.String("error_code", "INPUT_VALIDATION_FAILED"),
+		)
 		h.errorHandler.HandleError(w, r, validationErrs)
 		return
 	}
@@ -240,9 +385,29 @@ func (h *TransactionHandler) UpdateItem(w http.ResponseWriter, r *http.Request) 
 	// Note: Current use case uses itemId only. The domain aggregate ensures item belongs to transaction.
 	output, err := h.updateTransactionItemUseCase.Execute(ctx, user.ID, itemID, input)
 	if err != nil {
+		h.o11y.Logger().Error(ctx, "request_failed",
+			observability.String("operation", "UpdateTransactionItem"),
+			observability.String("layer", "handler"),
+			observability.String("entity", "transaction"),
+			observability.String("correlation_id", correlationID),
+			observability.String("user_id", user.ID),
+			observability.String("item_id", itemID),
+			observability.String("error_type", "business"),
+			observability.String("error_code", "UPDATE_TRANSACTION_ITEM_FAILED"),
+			observability.Error(err),
+		)
 		h.errorHandler.HandleError(w, r, err)
 		return
 	}
+
+	h.o11y.Logger().Info(ctx, "request_completed",
+		observability.String("operation", "UpdateTransactionItem"),
+		observability.String("layer", "handler"),
+		observability.String("entity", "transaction"),
+		observability.String("correlation_id", correlationID),
+		observability.String("user_id", user.ID),
+		observability.String("item_id", itemID),
+	)
 
 	responses.JSON(w, http.StatusOK, output)
 }
@@ -266,13 +431,14 @@ func (h *TransactionHandler) DeleteItem(w http.ResponseWriter, r *http.Request) 
 	ctx, span := h.o11y.Tracer().Start(r.Context(), "transaction_handler.delete_item")
 	defer span.End()
 
+	correlationID := trace.SpanFromContext(ctx).SpanContext().TraceID().String()
+
 	user, err := middlewares.GetUserFromContext(ctx)
 	if err != nil {
 		h.errorHandler.HandleError(w, r, err)
 		return
 	}
 
-	// Change 7: Extract both transactionId and itemId from path
 	transactionID := chi.URLParam(r, "transactionId")
 	itemID := chi.URLParam(r, "itemId")
 
@@ -281,13 +447,42 @@ func (h *TransactionHandler) DeleteItem(w http.ResponseWriter, r *http.Request) 
 		return
 	}
 
+	h.o11y.Logger().Info(ctx, "request_received",
+		observability.String("operation", "DeleteTransactionItem"),
+		observability.String("layer", "handler"),
+		observability.String("entity", "transaction"),
+		observability.String("correlation_id", correlationID),
+		observability.String("user_id", user.ID),
+		observability.String("transaction_id", transactionID),
+		observability.String("item_id", itemID),
+	)
+
 	// Note: Current use case uses itemId only. The domain aggregate ensures item belongs to transaction.
 	_, err = h.deleteTransactionItemUseCase.Execute(ctx, user.ID, itemID)
 	if err != nil {
+		h.o11y.Logger().Error(ctx, "request_failed",
+			observability.String("operation", "DeleteTransactionItem"),
+			observability.String("layer", "handler"),
+			observability.String("entity", "transaction"),
+			observability.String("correlation_id", correlationID),
+			observability.String("user_id", user.ID),
+			observability.String("item_id", itemID),
+			observability.String("error_type", "business"),
+			observability.String("error_code", "DELETE_TRANSACTION_ITEM_FAILED"),
+			observability.Error(err),
+		)
 		h.errorHandler.HandleError(w, r, err)
 		return
 	}
 
-	// Phase 2 Fix: DELETE should return 204 No Content with empty body
+	h.o11y.Logger().Info(ctx, "request_completed",
+		observability.String("operation", "DeleteTransactionItem"),
+		observability.String("layer", "handler"),
+		observability.String("entity", "transaction"),
+		observability.String("correlation_id", correlationID),
+		observability.String("user_id", user.ID),
+		observability.String("item_id", itemID),
+	)
+
 	responses.JSON(w, http.StatusNoContent, nil)
 }

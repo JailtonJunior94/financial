@@ -9,6 +9,7 @@ import (
 	"github.com/JailtonJunior94/devkit-go/pkg/responses"
 	"github.com/go-chi/chi/v5"
 	"github.com/google/uuid"
+	"go.opentelemetry.io/otel/trace"
 
 	"github.com/jailtonjunior94/financial/internal/invoice/application/dtos"
 	"github.com/jailtonjunior94/financial/internal/invoice/application/usecase"
@@ -79,30 +80,77 @@ func (h *InvoiceHandler) CreatePurchase(w http.ResponseWriter, r *http.Request) 
 	ctx, span := h.o11y.Tracer().Start(r.Context(), "invoice_handler.create_purchase")
 	defer span.End()
 
+	correlationID := trace.SpanFromContext(ctx).SpanContext().TraceID().String()
+
 	user, err := middlewares.GetUserFromContext(ctx)
 	if err != nil {
 		h.errorHandler.HandleError(w, r, err)
 		return
 	}
 
+	h.o11y.Logger().Info(ctx, "request_received",
+		observability.String("operation", "CreatePurchase"),
+		observability.String("layer", "handler"),
+		observability.String("entity", "invoice_item"),
+		observability.String("correlation_id", correlationID),
+		observability.String("user_id", user.ID),
+	)
+
 	var input *dtos.PurchaseCreateInput
 	if err = json.NewDecoder(r.Body).Decode(&input); err != nil {
+		h.o11y.Logger().Error(ctx, "validation_failed",
+			observability.String("operation", "CreatePurchase"),
+			observability.String("layer", "handler"),
+			observability.String("entity", "invoice_item"),
+			observability.String("correlation_id", correlationID),
+			observability.String("user_id", user.ID),
+			observability.String("error_type", "validation"),
+			observability.String("error_code", "DECODE_BODY_FAILED"),
+			observability.Error(err),
+		)
 		h.errorHandler.HandleError(w, r, err)
 		return
 	}
 
 	if validationErrs := input.Validate(); validationErrs.HasErrors() {
+		h.o11y.Logger().Warn(ctx, "validation_failed",
+			observability.String("operation", "CreatePurchase"),
+			observability.String("layer", "handler"),
+			observability.String("entity", "invoice_item"),
+			observability.String("correlation_id", correlationID),
+			observability.String("user_id", user.ID),
+			observability.String("error_type", "validation"),
+			observability.String("error_code", "INPUT_VALIDATION_FAILED"),
+		)
 		h.errorHandler.HandleError(w, r, validationErrs)
 		return
 	}
 
 	output, err := h.createPurchaseUseCase.Execute(ctx, user.ID, input)
 	if err != nil {
+		h.o11y.Logger().Error(ctx, "request_failed",
+			observability.String("operation", "CreatePurchase"),
+			observability.String("layer", "handler"),
+			observability.String("entity", "invoice_item"),
+			observability.String("correlation_id", correlationID),
+			observability.String("user_id", user.ID),
+			observability.String("error_type", "business"),
+			observability.String("error_code", "CREATE_PURCHASE_FAILED"),
+			observability.Error(err),
+		)
 		h.errorHandler.HandleError(w, r, err)
 		return
 	}
 
-	// Phase 2 Fix: Return created items with 201 Created
+	h.o11y.Logger().Info(ctx, "request_completed",
+		observability.String("operation", "CreatePurchase"),
+		observability.String("layer", "handler"),
+		observability.String("entity", "invoice_item"),
+		observability.String("correlation_id", correlationID),
+		observability.String("user_id", user.ID),
+		observability.Int("installments_created", len(output.Items)),
+	)
+
 	responses.JSON(w, http.StatusCreated, output)
 }
 
@@ -128,31 +176,81 @@ func (h *InvoiceHandler) UpdatePurchase(w http.ResponseWriter, r *http.Request) 
 	ctx, span := h.o11y.Tracer().Start(r.Context(), "invoice_handler.update_purchase")
 	defer span.End()
 
+	correlationID := trace.SpanFromContext(ctx).SpanContext().TraceID().String()
+
 	userID, err := middlewares.GetUserFromContext(ctx)
 	if err != nil {
 		h.errorHandler.HandleError(w, r, err)
 		return
 	}
 
+	itemID := chi.URLParam(r, "id")
+
+	h.o11y.Logger().Info(ctx, "request_received",
+		observability.String("operation", "UpdatePurchase"),
+		observability.String("layer", "handler"),
+		observability.String("entity", "invoice_item"),
+		observability.String("correlation_id", correlationID),
+		observability.String("user_id", userID.ID),
+		observability.String("item_id", itemID),
+	)
+
 	var input *dtos.PurchaseUpdateInput
 	if err = json.NewDecoder(r.Body).Decode(&input); err != nil {
+		h.o11y.Logger().Error(ctx, "validation_failed",
+			observability.String("operation", "UpdatePurchase"),
+			observability.String("layer", "handler"),
+			observability.String("entity", "invoice_item"),
+			observability.String("correlation_id", correlationID),
+			observability.String("user_id", userID.ID),
+			observability.String("error_type", "validation"),
+			observability.String("error_code", "DECODE_BODY_FAILED"),
+			observability.Error(err),
+		)
 		h.errorHandler.HandleError(w, r, err)
 		return
 	}
 
 	if validationErrs := input.Validate(); validationErrs.HasErrors() {
+		h.o11y.Logger().Warn(ctx, "validation_failed",
+			observability.String("operation", "UpdatePurchase"),
+			observability.String("layer", "handler"),
+			observability.String("entity", "invoice_item"),
+			observability.String("correlation_id", correlationID),
+			observability.String("user_id", userID.ID),
+			observability.String("error_type", "validation"),
+			observability.String("error_code", "INPUT_VALIDATION_FAILED"),
+		)
 		h.errorHandler.HandleError(w, r, validationErrs)
 		return
 	}
 
-	itemID := chi.URLParam(r, "id")
 	output, err := h.updatePurchaseUseCase.Execute(ctx, userID.ID, itemID, input)
 	if err != nil {
+		h.o11y.Logger().Error(ctx, "request_failed",
+			observability.String("operation", "UpdatePurchase"),
+			observability.String("layer", "handler"),
+			observability.String("entity", "invoice_item"),
+			observability.String("correlation_id", correlationID),
+			observability.String("user_id", userID.ID),
+			observability.String("item_id", itemID),
+			observability.String("error_type", "business"),
+			observability.String("error_code", "UPDATE_PURCHASE_FAILED"),
+			observability.Error(err),
+		)
 		h.errorHandler.HandleError(w, r, err)
 		return
 	}
 
-	// Phase 2 Fix: Return updated items instead of message wrapper
+	h.o11y.Logger().Info(ctx, "request_completed",
+		observability.String("operation", "UpdatePurchase"),
+		observability.String("layer", "handler"),
+		observability.String("entity", "invoice_item"),
+		observability.String("correlation_id", correlationID),
+		observability.String("user_id", userID.ID),
+		observability.String("item_id", itemID),
+	)
+
 	responses.JSON(w, http.StatusOK, output)
 }
 
@@ -176,6 +274,8 @@ func (h *InvoiceHandler) DeletePurchase(w http.ResponseWriter, r *http.Request) 
 	ctx, span := h.o11y.Tracer().Start(r.Context(), "invoice_handler.delete_purchase")
 	defer span.End()
 
+	correlationID := trace.SpanFromContext(ctx).SpanContext().TraceID().String()
+
 	userID, err := middlewares.GetUserFromContext(ctx)
 	if err != nil {
 		h.errorHandler.HandleError(w, r, err)
@@ -186,16 +286,55 @@ func (h *InvoiceHandler) DeletePurchase(w http.ResponseWriter, r *http.Request) 
 	categoryID := r.URL.Query().Get("category_id")
 	if categoryID != "" {
 		if _, err := uuid.Parse(categoryID); err != nil {
+			h.o11y.Logger().Warn(ctx, "validation_failed",
+				observability.String("operation", "DeletePurchase"),
+				observability.String("layer", "handler"),
+				observability.String("entity", "invoice_item"),
+				observability.String("correlation_id", correlationID),
+				observability.String("user_id", userID.ID),
+				observability.String("error_type", "validation"),
+				observability.String("error_code", "INVALID_CATEGORY_ID"),
+			)
 			h.errorHandler.HandleError(w, r, fmt.Errorf("invalid category_id: must be a valid UUID"))
 			return
 		}
 	}
 
 	itemID := chi.URLParam(r, "id")
+
+	h.o11y.Logger().Info(ctx, "request_received",
+		observability.String("operation", "DeletePurchase"),
+		observability.String("layer", "handler"),
+		observability.String("entity", "invoice_item"),
+		observability.String("correlation_id", correlationID),
+		observability.String("user_id", userID.ID),
+		observability.String("item_id", itemID),
+	)
+
 	if err := h.deletePurchaseUseCase.Execute(ctx, userID.ID, itemID, categoryID); err != nil {
+		h.o11y.Logger().Error(ctx, "request_failed",
+			observability.String("operation", "DeletePurchase"),
+			observability.String("layer", "handler"),
+			observability.String("entity", "invoice_item"),
+			observability.String("correlation_id", correlationID),
+			observability.String("user_id", userID.ID),
+			observability.String("item_id", itemID),
+			observability.String("error_type", "business"),
+			observability.String("error_code", "DELETE_PURCHASE_FAILED"),
+			observability.Error(err),
+		)
 		h.errorHandler.HandleError(w, r, err)
 		return
 	}
+
+	h.o11y.Logger().Info(ctx, "request_completed",
+		observability.String("operation", "DeletePurchase"),
+		observability.String("layer", "handler"),
+		observability.String("entity", "invoice_item"),
+		observability.String("correlation_id", correlationID),
+		observability.String("user_id", userID.ID),
+		observability.String("item_id", itemID),
+	)
 
 	responses.JSON(w, http.StatusNoContent, nil)
 }
@@ -255,7 +394,6 @@ func (h *InvoiceHandler) GetInvoice(w http.ResponseWriter, r *http.Request) {
 //	@Failure		401		{object}	httperrors.ProblemDetail							"Não autenticado"
 //	@Failure		500		{object}	httperrors.ProblemDetail							"Erro interno"
 //	@Router			/api/v1/invoices [get]
-// ListInvoices unifica listagem por month e por cardId via query params (Change 6).
 func (h *InvoiceHandler) ListInvoices(w http.ResponseWriter, r *http.Request) {
 	ctx, span := h.o11y.Tracer().Start(r.Context(), "invoice_handler.list_invoices")
 	defer span.End()
@@ -266,7 +404,6 @@ func (h *InvoiceHandler) ListInvoices(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Get query parameters
 	month := r.URL.Query().Get("month")
 	cardID := r.URL.Query().Get("cardId")
 
@@ -276,16 +413,13 @@ func (h *InvoiceHandler) ListInvoices(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Parse cursor parameters
 	params, err := pagination.ParseCursorParams(r, 20, 100)
 	if err != nil {
 		h.errorHandler.HandleError(w, r, err)
 		return
 	}
 
-	// Route to appropriate use case based on query params
 	if month != "" {
-		// List by month
 		output, err := h.listInvoicesByMonthPaginatedUseCase.Execute(ctx, usecase.ListInvoicesByMonthPaginatedInput{
 			UserID:         user.ID,
 			ReferenceMonth: month,
@@ -303,7 +437,6 @@ func (h *InvoiceHandler) ListInvoices(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if cardID != "" {
-		// List by card
 		output, err := h.listInvoicesByCardPaginatedUseCase.Execute(ctx, usecase.ListInvoicesByCardPaginatedInput{
 			CardID: cardID,
 			Limit:  params.Limit,

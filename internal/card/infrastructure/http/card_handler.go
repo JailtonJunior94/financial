@@ -12,6 +12,7 @@ import (
 
 	"github.com/JailtonJunior94/devkit-go/pkg/observability"
 	"github.com/JailtonJunior94/devkit-go/pkg/responses"
+	"go.opentelemetry.io/otel/trace"
 
 	"github.com/go-chi/chi/v5"
 )
@@ -19,7 +20,6 @@ import (
 type CardHandler struct {
 	o11y                     observability.Observability
 	errorHandler             httperrors.ErrorHandler
-	findCardUseCase          usecase.FindCardUseCase
 	findCardPaginatedUseCase usecase.FindCardPaginatedUseCase
 	createCardUseCase        usecase.CreateCardUseCase
 	findCardByUseCase        usecase.FindCardByUseCase
@@ -30,7 +30,6 @@ type CardHandler struct {
 func NewCardHandler(
 	o11y observability.Observability,
 	errorHandler httperrors.ErrorHandler,
-	findCardUseCase usecase.FindCardUseCase,
 	findCardPaginatedUseCase usecase.FindCardPaginatedUseCase,
 	createCardUseCase usecase.CreateCardUseCase,
 	findCardByUseCase usecase.FindCardByUseCase,
@@ -40,7 +39,6 @@ func NewCardHandler(
 	return &CardHandler{
 		o11y:                     o11y,
 		errorHandler:             errorHandler,
-		findCardUseCase:          findCardUseCase,
 		findCardPaginatedUseCase: findCardPaginatedUseCase,
 		createCardUseCase:        createCardUseCase,
 		updateCardUseCase:        updateCardUseCase,
@@ -70,28 +68,85 @@ func (h *CardHandler) Create(w http.ResponseWriter, r *http.Request) {
 	ctx, span := h.o11y.Tracer().Start(r.Context(), "card_handler.create")
 	defer span.End()
 
+	correlationID := trace.SpanFromContext(ctx).SpanContext().TraceID().String()
+
 	user, err := middlewares.GetUserFromContext(ctx)
 	if err != nil {
+		h.o11y.Logger().Error(ctx, "request_failed",
+			observability.String("operation", "CreateCard"),
+			observability.String("layer", "handler"),
+			observability.String("entity", "card"),
+			observability.String("correlation_id", correlationID),
+			observability.String("error_type", "infra"),
+			observability.String("error_code", "AUTH_CONTEXT_MISSING"),
+			observability.Error(err),
+		)
 		h.errorHandler.HandleError(w, r, err)
 		return
 	}
 
+	h.o11y.Logger().Info(ctx, "request_received",
+		observability.String("operation", "CreateCard"),
+		observability.String("layer", "handler"),
+		observability.String("entity", "card"),
+		observability.String("correlation_id", correlationID),
+		observability.String("user_id", user.ID),
+	)
+
 	var input *dtos.CardInput
 	if err = json.NewDecoder(r.Body).Decode(&input); err != nil {
+		h.o11y.Logger().Error(ctx, "validation_failed",
+			observability.String("operation", "CreateCard"),
+			observability.String("layer", "handler"),
+			observability.String("entity", "card"),
+			observability.String("correlation_id", correlationID),
+			observability.String("user_id", user.ID),
+			observability.String("error_type", "validation"),
+			observability.String("error_code", "DECODE_BODY_FAILED"),
+			observability.Error(err),
+		)
 		h.errorHandler.HandleError(w, r, err)
 		return
 	}
 
 	if validationErrs := input.Validate(); validationErrs.HasErrors() {
+		h.o11y.Logger().Warn(ctx, "validation_failed",
+			observability.String("operation", "CreateCard"),
+			observability.String("layer", "handler"),
+			observability.String("entity", "card"),
+			observability.String("correlation_id", correlationID),
+			observability.String("user_id", user.ID),
+			observability.String("error_type", "validation"),
+			observability.String("error_code", "INPUT_VALIDATION_FAILED"),
+		)
 		h.errorHandler.HandleError(w, r, validationErrs)
 		return
 	}
 
 	output, err := h.createCardUseCase.Execute(ctx, user.ID, input)
 	if err != nil {
+		h.o11y.Logger().Error(ctx, "request_failed",
+			observability.String("operation", "CreateCard"),
+			observability.String("layer", "handler"),
+			observability.String("entity", "card"),
+			observability.String("correlation_id", correlationID),
+			observability.String("user_id", user.ID),
+			observability.String("error_type", "business"),
+			observability.String("error_code", "CREATE_CARD_FAILED"),
+			observability.Error(err),
+		)
 		h.errorHandler.HandleError(w, r, err)
 		return
 	}
+
+	h.o11y.Logger().Info(ctx, "request_completed",
+		observability.String("operation", "CreateCard"),
+		observability.String("layer", "handler"),
+		observability.String("entity", "card"),
+		observability.String("correlation_id", correlationID),
+		observability.String("user_id", user.ID),
+		observability.String("card_id", output.ID),
+	)
 
 	responses.JSON(w, http.StatusCreated, output)
 }
@@ -114,15 +169,34 @@ func (h *CardHandler) Find(w http.ResponseWriter, r *http.Request) {
 	ctx, span := h.o11y.Tracer().Start(r.Context(), "card_handler.find")
 	defer span.End()
 
+	correlationID := trace.SpanFromContext(ctx).SpanContext().TraceID().String()
+
 	user, err := middlewares.GetUserFromContext(ctx)
 	if err != nil {
 		h.errorHandler.HandleError(w, r, err)
 		return
 	}
 
-	// Parse cursor parameters (default: limit=20, max=100)
+	h.o11y.Logger().Info(ctx, "request_received",
+		observability.String("operation", "FindCards"),
+		observability.String("layer", "handler"),
+		observability.String("entity", "card"),
+		observability.String("correlation_id", correlationID),
+		observability.String("user_id", user.ID),
+	)
+
 	params, err := pagination.ParseCursorParams(r, 20, 100)
 	if err != nil {
+		h.o11y.Logger().Error(ctx, "request_failed",
+			observability.String("operation", "FindCards"),
+			observability.String("layer", "handler"),
+			observability.String("entity", "card"),
+			observability.String("correlation_id", correlationID),
+			observability.String("user_id", user.ID),
+			observability.String("error_type", "validation"),
+			observability.String("error_code", "PAGINATION_PARAMS_INVALID"),
+			observability.Error(err),
+		)
 		h.errorHandler.HandleError(w, r, err)
 		return
 	}
@@ -133,11 +207,28 @@ func (h *CardHandler) Find(w http.ResponseWriter, r *http.Request) {
 		Cursor: params.Cursor,
 	})
 	if err != nil {
+		h.o11y.Logger().Error(ctx, "request_failed",
+			observability.String("operation", "FindCards"),
+			observability.String("layer", "handler"),
+			observability.String("entity", "card"),
+			observability.String("correlation_id", correlationID),
+			observability.String("user_id", user.ID),
+			observability.String("error_type", "business"),
+			observability.String("error_code", "FIND_CARDS_FAILED"),
+			observability.Error(err),
+		)
 		h.errorHandler.HandleError(w, r, err)
 		return
 	}
 
-	// Build paginated response
+	h.o11y.Logger().Info(ctx, "request_completed",
+		observability.String("operation", "FindCards"),
+		observability.String("layer", "handler"),
+		observability.String("entity", "card"),
+		observability.String("correlation_id", correlationID),
+		observability.String("user_id", user.ID),
+	)
+
 	response := pagination.NewPaginatedResponse(output.Cards, params.Limit, output.NextCursor)
 	responses.JSON(w, http.StatusOK, response)
 }
@@ -159,17 +250,50 @@ func (h *CardHandler) FindBy(w http.ResponseWriter, r *http.Request) {
 	ctx, span := h.o11y.Tracer().Start(r.Context(), "card_handler.find_by")
 	defer span.End()
 
+	correlationID := trace.SpanFromContext(ctx).SpanContext().TraceID().String()
+
 	user, err := middlewares.GetUserFromContext(ctx)
 	if err != nil {
 		h.errorHandler.HandleError(w, r, err)
 		return
 	}
 
-	output, err := h.findCardByUseCase.Execute(ctx, user.ID, chi.URLParam(r, "id"))
+	cardID := chi.URLParam(r, "id")
+
+	h.o11y.Logger().Info(ctx, "request_received",
+		observability.String("operation", "FindCardBy"),
+		observability.String("layer", "handler"),
+		observability.String("entity", "card"),
+		observability.String("correlation_id", correlationID),
+		observability.String("user_id", user.ID),
+		observability.String("card_id", cardID),
+	)
+
+	output, err := h.findCardByUseCase.Execute(ctx, user.ID, cardID)
 	if err != nil {
+		h.o11y.Logger().Error(ctx, "request_failed",
+			observability.String("operation", "FindCardBy"),
+			observability.String("layer", "handler"),
+			observability.String("entity", "card"),
+			observability.String("correlation_id", correlationID),
+			observability.String("user_id", user.ID),
+			observability.String("card_id", cardID),
+			observability.String("error_type", "business"),
+			observability.String("error_code", "FIND_CARD_FAILED"),
+			observability.Error(err),
+		)
 		h.errorHandler.HandleError(w, r, err)
 		return
 	}
+
+	h.o11y.Logger().Info(ctx, "request_completed",
+		observability.String("operation", "FindCardBy"),
+		observability.String("layer", "handler"),
+		observability.String("entity", "card"),
+		observability.String("correlation_id", correlationID),
+		observability.String("user_id", user.ID),
+		observability.String("card_id", cardID),
+	)
 
 	responses.JSON(w, http.StatusOK, output)
 }
@@ -194,28 +318,80 @@ func (h *CardHandler) Update(w http.ResponseWriter, r *http.Request) {
 	ctx, span := h.o11y.Tracer().Start(r.Context(), "card_handler.update")
 	defer span.End()
 
+	correlationID := trace.SpanFromContext(ctx).SpanContext().TraceID().String()
+
 	user, err := middlewares.GetUserFromContext(ctx)
 	if err != nil {
 		h.errorHandler.HandleError(w, r, err)
 		return
 	}
 
+	cardID := chi.URLParam(r, "id")
+
+	h.o11y.Logger().Info(ctx, "request_received",
+		observability.String("operation", "UpdateCard"),
+		observability.String("layer", "handler"),
+		observability.String("entity", "card"),
+		observability.String("correlation_id", correlationID),
+		observability.String("user_id", user.ID),
+		observability.String("card_id", cardID),
+	)
+
 	var input *dtos.CardInput
 	if err = json.NewDecoder(r.Body).Decode(&input); err != nil {
+		h.o11y.Logger().Error(ctx, "validation_failed",
+			observability.String("operation", "UpdateCard"),
+			observability.String("layer", "handler"),
+			observability.String("entity", "card"),
+			observability.String("correlation_id", correlationID),
+			observability.String("user_id", user.ID),
+			observability.String("error_type", "validation"),
+			observability.String("error_code", "DECODE_BODY_FAILED"),
+			observability.Error(err),
+		)
 		h.errorHandler.HandleError(w, r, err)
 		return
 	}
 
 	if validationErrs := input.Validate(); validationErrs.HasErrors() {
+		h.o11y.Logger().Warn(ctx, "validation_failed",
+			observability.String("operation", "UpdateCard"),
+			observability.String("layer", "handler"),
+			observability.String("entity", "card"),
+			observability.String("correlation_id", correlationID),
+			observability.String("user_id", user.ID),
+			observability.String("error_type", "validation"),
+			observability.String("error_code", "INPUT_VALIDATION_FAILED"),
+		)
 		h.errorHandler.HandleError(w, r, validationErrs)
 		return
 	}
 
-	output, err := h.updateCardUseCase.Execute(ctx, user.ID, chi.URLParam(r, "id"), input)
+	output, err := h.updateCardUseCase.Execute(ctx, user.ID, cardID, input)
 	if err != nil {
+		h.o11y.Logger().Error(ctx, "request_failed",
+			observability.String("operation", "UpdateCard"),
+			observability.String("layer", "handler"),
+			observability.String("entity", "card"),
+			observability.String("correlation_id", correlationID),
+			observability.String("user_id", user.ID),
+			observability.String("card_id", cardID),
+			observability.String("error_type", "business"),
+			observability.String("error_code", "UPDATE_CARD_FAILED"),
+			observability.Error(err),
+		)
 		h.errorHandler.HandleError(w, r, err)
 		return
 	}
+
+	h.o11y.Logger().Info(ctx, "request_completed",
+		observability.String("operation", "UpdateCard"),
+		observability.String("layer", "handler"),
+		observability.String("entity", "card"),
+		observability.String("correlation_id", correlationID),
+		observability.String("user_id", user.ID),
+		observability.String("card_id", cardID),
+	)
 
 	responses.JSON(w, http.StatusOK, output)
 }
@@ -237,16 +413,49 @@ func (h *CardHandler) Delete(w http.ResponseWriter, r *http.Request) {
 	ctx, span := h.o11y.Tracer().Start(r.Context(), "card_handler.delete")
 	defer span.End()
 
+	correlationID := trace.SpanFromContext(ctx).SpanContext().TraceID().String()
+
 	user, err := middlewares.GetUserFromContext(ctx)
 	if err != nil {
 		h.errorHandler.HandleError(w, r, err)
 		return
 	}
 
-	if err := h.removeCardUseCase.Execute(ctx, user.ID, chi.URLParam(r, "id")); err != nil {
+	cardID := chi.URLParam(r, "id")
+
+	h.o11y.Logger().Info(ctx, "request_received",
+		observability.String("operation", "DeleteCard"),
+		observability.String("layer", "handler"),
+		observability.String("entity", "card"),
+		observability.String("correlation_id", correlationID),
+		observability.String("user_id", user.ID),
+		observability.String("card_id", cardID),
+	)
+
+	if err := h.removeCardUseCase.Execute(ctx, user.ID, cardID); err != nil {
+		h.o11y.Logger().Error(ctx, "request_failed",
+			observability.String("operation", "DeleteCard"),
+			observability.String("layer", "handler"),
+			observability.String("entity", "card"),
+			observability.String("correlation_id", correlationID),
+			observability.String("user_id", user.ID),
+			observability.String("card_id", cardID),
+			observability.String("error_type", "business"),
+			observability.String("error_code", "DELETE_CARD_FAILED"),
+			observability.Error(err),
+		)
 		h.errorHandler.HandleError(w, r, err)
 		return
 	}
+
+	h.o11y.Logger().Info(ctx, "request_completed",
+		observability.String("operation", "DeleteCard"),
+		observability.String("layer", "handler"),
+		observability.String("entity", "card"),
+		observability.String("correlation_id", correlationID),
+		observability.String("user_id", user.ID),
+		observability.String("card_id", cardID),
+	)
 
 	responses.JSON(w, http.StatusNoContent, nil)
 }

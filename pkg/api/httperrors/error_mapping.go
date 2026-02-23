@@ -109,10 +109,6 @@ func buildDomainErrorMappings() map[error]ErrorMapping {
 			Status:  http.StatusBadRequest,
 			Message: "Name is required",
 		},
-		customerrors.ErrNameCannotBeEmpty: {
-			Status:  http.StatusBadRequest,
-			Message: "Name cannot be empty",
-		},
 		customerrors.ErrUserIDIsRequired: {
 			Status:  http.StatusBadRequest,
 			Message: "User ID is required",

@@ -11,6 +11,7 @@ import (
 	"github.com/jailtonjunior94/financial/internal/budget/domain/entities"
 	"github.com/jailtonjunior94/financial/internal/budget/domain/interfaces"
 	pkgVos "github.com/jailtonjunior94/financial/pkg/domain/vos"
+	"github.com/jailtonjunior94/financial/pkg/observability/metrics"
 
 	"github.com/JailtonJunior94/devkit-go/pkg/database"
 	"github.com/JailtonJunior94/devkit-go/pkg/observability"
@@ -23,16 +24,19 @@ import (
 type budgetRepository struct {
 	db   database.DBTX
 	o11y observability.Observability
+	fm   *metrics.FinancialMetrics
 }
 
-func NewBudgetRepository(db database.DBTX, o11y observability.Observability) interfaces.BudgetRepository {
+func NewBudgetRepository(db database.DBTX, o11y observability.Observability, fm *metrics.FinancialMetrics) interfaces.BudgetRepository {
 	return &budgetRepository{
 		db:   db,
 		o11y: o11y,
+		fm:   fm,
 	}
 }
 
 func (r *budgetRepository) Insert(ctx context.Context, budget *entities.Budget) error {
+	start := time.Now()
 	ctx, span := r.o11y.Tracer().Start(ctx, "budget_repository.insert")
 	defer span.End()
 
@@ -65,16 +69,21 @@ func (r *budgetRepository) Insert(ctx context.Context, budget *entities.Budget) 
 		budget.DeletedAt.Ptr(),
 	)
 	if err != nil {
+		span.RecordError(err)
+		r.fm.RecordRepositoryFailure(ctx, "insert", "budget", "infra", time.Since(start))
 		return err
 	}
+	r.fm.RecordRepositoryQuery(ctx, "insert", "budget", time.Since(start))
 	return nil
 }
 
 func (r *budgetRepository) InsertItems(ctx context.Context, items []*entities.BudgetItem) error {
+	start := time.Now()
 	ctx, span := r.o11y.Tracer().Start(ctx, "budget_repository.insert_items")
 	defer span.End()
 
 	if len(items) == 0 {
+		r.fm.RecordRepositoryQuery(ctx, "insert_items", "budget", time.Since(start))
 		return nil
 	}
 
@@ -120,13 +129,17 @@ func (r *budgetRepository) InsertItems(ctx context.Context, items []*entities.Bu
 
 	_, err := r.db.ExecContext(ctx, query, valueArgs...)
 	if err != nil {
+		span.RecordError(err)
+		r.fm.RecordRepositoryFailure(ctx, "insert_items", "budget", "infra", time.Since(start))
 		return err
 	}
 
+	r.fm.RecordRepositoryQuery(ctx, "insert_items", "budget", time.Since(start))
 	return nil
 }
 
 func (r *budgetRepository) FindByID(ctx context.Context, userID vos.UUID, id vos.UUID) (*entities.Budget, error) {
+	start := time.Now()
 	ctx, span := r.o11y.Tracer().Start(ctx, "budget_repository.find_by_id")
 	defer span.End()
 
@@ -163,24 +176,30 @@ func (r *budgetRepository) FindByID(ctx context.Context, userID vos.UUID, id vos
 	)
 	if err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
+			r.fm.RecordRepositoryQuery(ctx, "find_by_id", "budget", time.Since(start))
 			return nil, nil
 		}
+		span.RecordError(err)
+		r.fm.RecordRepositoryFailure(ctx, "find_by_id", "budget", "infra", time.Since(start))
 		return nil, err
 	}
 
 	// Parse NUMERIC values from strings - using string conversion directly for precision
 	budget.TotalAmount, err = vos.NewMoneyFromString(amountGoal, constants.DefaultCurrency)
 	if err != nil {
+		r.fm.RecordRepositoryFailure(ctx, "find_by_id", "budget", "infra", time.Since(start))
 		return nil, fmt.Errorf("failed to create Money from amount_goal: %w", err)
 	}
 
 	budget.SpentAmount, err = vos.NewMoneyFromString(amountUsed, constants.DefaultCurrency)
 	if err != nil {
+		r.fm.RecordRepositoryFailure(ctx, "find_by_id", "budget", "infra", time.Since(start))
 		return nil, fmt.Errorf("failed to create Money from amount_used: %w", err)
 	}
 
 	budget.PercentageUsed, err = money.NewPercentageFromString(percentageUsed)
 	if err != nil {
+		r.fm.RecordRepositoryFailure(ctx, "find_by_id", "budget", "infra", time.Since(start))
 		return nil, fmt.Errorf("failed to create Percentage from percentage_used: %w", err)
 	}
 
@@ -191,14 +210,17 @@ func (r *budgetRepository) FindByID(ctx context.Context, userID vos.UUID, id vos
 	// Load budget items
 	items, err := r.findItemsByBudgetID(ctx, id)
 	if err != nil {
+		r.fm.RecordRepositoryFailure(ctx, "find_by_id", "budget", "infra", time.Since(start))
 		return nil, err
 	}
 	budget.Items = items
 
+	r.fm.RecordRepositoryQuery(ctx, "find_by_id", "budget", time.Since(start))
 	return &budget, nil
 }
 
 func (r *budgetRepository) FindByUserIDAndReferenceMonth(ctx context.Context, userID vos.UUID, referenceMonth pkgVos.ReferenceMonth) (*entities.Budget, error) {
+	start := time.Now()
 	ctx, span := r.o11y.Tracer().Start(ctx, "budget_repository.find_by_user_and_month")
 	defer span.End()
 
@@ -238,24 +260,30 @@ func (r *budgetRepository) FindByUserIDAndReferenceMonth(ctx context.Context, us
 	)
 	if err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
+			r.fm.RecordRepositoryQuery(ctx, "find_by_user_and_month", "budget", time.Since(start))
 			return nil, nil
 		}
+		span.RecordError(err)
+		r.fm.RecordRepositoryFailure(ctx, "find_by_user_and_month", "budget", "infra", time.Since(start))
 		return nil, err
 	}
 
 	// Parse NUMERIC values from strings - using string conversion directly for precision
 	budget.TotalAmount, err = vos.NewMoneyFromString(amountGoal, constants.DefaultCurrency)
 	if err != nil {
+		r.fm.RecordRepositoryFailure(ctx, "find_by_user_and_month", "budget", "infra", time.Since(start))
 		return nil, fmt.Errorf("failed to create Money from amount_goal: %w", err)
 	}
 
 	budget.SpentAmount, err = vos.NewMoneyFromString(amountUsed, constants.DefaultCurrency)
 	if err != nil {
+		r.fm.RecordRepositoryFailure(ctx, "find_by_user_and_month", "budget", "infra", time.Since(start))
 		return nil, fmt.Errorf("failed to create Money from amount_used: %w", err)
 	}
 
 	budget.PercentageUsed, err = money.NewPercentageFromString(percentageUsed)
 	if err != nil {
+		r.fm.RecordRepositoryFailure(ctx, "find_by_user_and_month", "budget", "infra", time.Since(start))
 		return nil, fmt.Errorf("failed to create Percentage from percentage_used: %w", err)
 	}
 
@@ -266,15 +294,18 @@ func (r *budgetRepository) FindByUserIDAndReferenceMonth(ctx context.Context, us
 	// Load budget items
 	items, err := r.findItemsByBudgetID(ctx, budget.ID)
 	if err != nil {
+		r.fm.RecordRepositoryFailure(ctx, "find_by_user_and_month", "budget", "infra", time.Since(start))
 		return nil, err
 	}
 	budget.Items = items
 
+	r.fm.RecordRepositoryQuery(ctx, "find_by_user_and_month", "budget", time.Since(start))
 	return &budget, nil
 }
 
 // ListPaginated lista budgets de um usuário com paginação cursor-based.
 func (r *budgetRepository) ListPaginated(ctx context.Context, params interfaces.ListBudgetsParams) ([]*entities.Budget, error) {
+	start := time.Now()
 	ctx, span := r.o11y.Tracer().Start(ctx, "budget_repository.list_paginated")
 	defer span.End()
 
@@ -315,6 +346,8 @@ func (r *budgetRepository) ListPaginated(ctx context.Context, params interfaces.
 
 	rows, err := r.db.QueryContext(ctx, query, args...)
 	if err != nil {
+		span.RecordError(err)
+		r.fm.RecordRepositoryFailure(ctx, "list_paginated", "budget", "infra", time.Since(start))
 		return nil, err
 	}
 	defer func() { _ = rows.Close() }()
@@ -338,22 +371,26 @@ func (r *budgetRepository) ListPaginated(ctx context.Context, params interfaces.
 			&deletedAt,
 		)
 		if err != nil {
+			r.fm.RecordRepositoryFailure(ctx, "list_paginated", "budget", "infra", time.Since(start))
 			return nil, err
 		}
 
 		// Parse NUMERIC values from strings — consistent with FindByID/FindByUserAndMonth
 		budget.TotalAmount, err = vos.NewMoneyFromString(amountGoal, constants.DefaultCurrency)
 		if err != nil {
+			r.fm.RecordRepositoryFailure(ctx, "list_paginated", "budget", "infra", time.Since(start))
 			return nil, fmt.Errorf("failed to create Money from amount_goal: %w", err)
 		}
 
 		budget.SpentAmount, err = vos.NewMoneyFromString(amountUsed, constants.DefaultCurrency)
 		if err != nil {
+			r.fm.RecordRepositoryFailure(ctx, "list_paginated", "budget", "infra", time.Since(start))
 			return nil, fmt.Errorf("failed to create Money from amount_used: %w", err)
 		}
 
 		budget.PercentageUsed, err = money.NewPercentageFromString(percentageUsed)
 		if err != nil {
+			r.fm.RecordRepositoryFailure(ctx, "list_paginated", "budget", "infra", time.Since(start))
 			return nil, fmt.Errorf("failed to create Percentage from percentage_used: %w", err)
 		}
 
@@ -365,6 +402,7 @@ func (r *budgetRepository) ListPaginated(ctx context.Context, params interfaces.
 	}
 
 	if err := rows.Err(); err != nil {
+		r.fm.RecordRepositoryFailure(ctx, "list_paginated", "budget", "infra", time.Since(start))
 		return nil, err
 	}
 
@@ -376,6 +414,7 @@ func (r *budgetRepository) ListPaginated(ctx context.Context, params interfaces.
 
 	itemsByBudget, err := r.findItemsByBudgetIDs(ctx, ids)
 	if err != nil {
+		r.fm.RecordRepositoryFailure(ctx, "list_paginated", "budget", "infra", time.Since(start))
 		return nil, err
 	}
 
@@ -386,10 +425,12 @@ func (r *budgetRepository) ListPaginated(ctx context.Context, params interfaces.
 		}
 	}
 
+	r.fm.RecordRepositoryQuery(ctx, "list_paginated", "budget", time.Since(start))
 	return budgets, nil
 }
 
 func (r *budgetRepository) Update(ctx context.Context, budget *entities.Budget) error {
+	start := time.Now()
 	ctx, span := r.o11y.Tracer().Start(ctx, "budget_repository.update")
 	defer span.End()
 
@@ -410,12 +451,16 @@ func (r *budgetRepository) Update(ctx context.Context, budget *entities.Budget) 
 		time.Now().UTC(),
 	)
 	if err != nil {
+		span.RecordError(err)
+		r.fm.RecordRepositoryFailure(ctx, "update", "budget", "infra", time.Since(start))
 		return err
 	}
+	r.fm.RecordRepositoryQuery(ctx, "update", "budget", time.Since(start))
 	return nil
 }
 
 func (r *budgetRepository) Delete(ctx context.Context, id vos.UUID) error {
+	start := time.Now()
 	ctx, span := r.o11y.Tracer().Start(ctx, "budget_repository.delete")
 	defer span.End()
 
@@ -423,10 +468,17 @@ func (r *budgetRepository) Delete(ctx context.Context, id vos.UUID) error {
 	query := `update budgets set deleted_at = $2, updated_at = $2 where id = $1`
 
 	_, err := r.db.ExecContext(ctx, query, id.Value, now)
-	return err
+	if err != nil {
+		span.RecordError(err)
+		r.fm.RecordRepositoryFailure(ctx, "delete", "budget", "infra", time.Since(start))
+		return err
+	}
+	r.fm.RecordRepositoryQuery(ctx, "delete", "budget", time.Since(start))
+	return nil
 }
 
 func (r *budgetRepository) UpdateItem(ctx context.Context, item *entities.BudgetItem) error {
+	start := time.Now()
 	ctx, span := r.o11y.Tracer().Start(ctx, "budget_repository.update_item")
 	defer span.End()
 
@@ -443,8 +495,11 @@ func (r *budgetRepository) UpdateItem(ctx context.Context, item *entities.Budget
 		time.Now().UTC(),
 	)
 	if err != nil {
+		span.RecordError(err)
+		r.fm.RecordRepositoryFailure(ctx, "update_item", "budget", "infra", time.Since(start))
 		return err
 	}
+	r.fm.RecordRepositoryQuery(ctx, "update_item", "budget", time.Since(start))
 	return nil
 }
 

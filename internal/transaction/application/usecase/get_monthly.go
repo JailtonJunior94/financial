@@ -10,6 +10,7 @@ import (
 
 	"github.com/jailtonjunior94/financial/internal/transaction/application/dtos"
 	"github.com/jailtonjunior94/financial/internal/transaction/domain/interfaces"
+	"github.com/jailtonjunior94/financial/pkg/observability/metrics"
 )
 
 type (
@@ -21,6 +22,7 @@ type (
 	getMonthlyUseCase struct {
 		o11y       observability.Observability
 		repository interfaces.TransactionRepository
+		fm         *metrics.FinancialMetrics
 	}
 )
 
@@ -28,10 +30,12 @@ type (
 func NewGetMonthlyUseCase(
 	o11y observability.Observability,
 	repository interfaces.TransactionRepository,
+	fm *metrics.FinancialMetrics,
 ) GetMonthlyUseCase {
 	return &getMonthlyUseCase{
 		o11y:       o11y,
 		repository: repository,
+		fm:         fm,
 	}
 }
 

@@ -9,6 +9,7 @@ import (
 	"github.com/jailtonjunior94/financial/pkg/api/httperrors"
 	"github.com/jailtonjunior94/financial/pkg/api/middlewares"
 	"github.com/jailtonjunior94/financial/pkg/auth"
+	"github.com/jailtonjunior94/financial/pkg/observability/metrics"
 
 	"github.com/JailtonJunior94/devkit-go/pkg/observability"
 )
@@ -21,8 +22,9 @@ func NewCategoryModule(db *sql.DB, o11y observability.Observability, tokenValida
 	errorHandler := httperrors.NewErrorHandler(o11y)
 	authMiddleware := middlewares.NewAuthorization(tokenValidator, o11y, errorHandler)
 
-	categoryRepository := repositories.NewCategoryRepository(db, o11y)
-	findCategoryUsecase := usecase.NewFindCategoryUseCase(o11y, categoryRepository)
+	financialMetrics := metrics.NewFinancialMetrics(o11y)
+
+	categoryRepository := repositories.NewCategoryRepository(db, o11y, financialMetrics)
 	findCategoryPaginatedUsecase := usecase.NewFindCategoryPaginatedUseCase(o11y, categoryRepository)
 	findCategoryByUsecase := usecase.NewFindCategoryByUseCase(o11y, categoryRepository)
 	createCategoryUsecase := usecase.NewCreateCategoryUseCase(o11y, categoryRepository)
@@ -32,7 +34,6 @@ func NewCategoryModule(db *sql.DB, o11y observability.Observability, tokenValida
 	categoryHandler := http.NewCategoryHandler(
 		o11y,
 		errorHandler,
-		findCategoryUsecase,
 		findCategoryPaginatedUsecase,
 		createCategoryUsecase,
 		findCategoryByUsecase,

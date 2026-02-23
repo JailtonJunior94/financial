@@ -12,6 +12,7 @@ import (
 
 	"github.com/JailtonJunior94/devkit-go/pkg/observability"
 	"github.com/JailtonJunior94/devkit-go/pkg/responses"
+	"go.opentelemetry.io/otel/trace"
 
 	"github.com/go-chi/chi/v5"
 )
@@ -19,7 +20,6 @@ import (
 type CategoryHandler struct {
 	o11y                         observability.Observability
 	errorHandler                 httperrors.ErrorHandler
-	findCategoryUseCase          usecase.FindCategoryUseCase
 	findCategoryPaginatedUseCase usecase.FindCategoryPaginatedUseCase
 	createCategoryUseCase        usecase.CreateCategoryUseCase
 	findCategoryByUseCase        usecase.FindCategoryByUseCase
@@ -30,7 +30,6 @@ type CategoryHandler struct {
 func NewCategoryHandler(
 	o11y observability.Observability,
 	errorHandler httperrors.ErrorHandler,
-	findCategoryUseCase usecase.FindCategoryUseCase,
 	findCategoryPaginatedUseCase usecase.FindCategoryPaginatedUseCase,
 	createCategoryUseCase usecase.CreateCategoryUseCase,
 	findCategoryByUseCase usecase.FindCategoryByUseCase,
@@ -40,7 +39,6 @@ func NewCategoryHandler(
 	return &CategoryHandler{
 		o11y:                         o11y,
 		errorHandler:                 errorHandler,
-		findCategoryUseCase:          findCategoryUseCase,
 		findCategoryPaginatedUseCase: findCategoryPaginatedUseCase,
 		createCategoryUseCase:        createCategoryUseCase,
 		updateCategoryUseCase:        updateCategoryUseCase,
@@ -71,28 +69,76 @@ func (h *CategoryHandler) Create(w http.ResponseWriter, r *http.Request) {
 	ctx, span := h.o11y.Tracer().Start(r.Context(), "category_handler.create")
 	defer span.End()
 
+	correlationID := trace.SpanFromContext(ctx).SpanContext().TraceID().String()
+
 	user, err := middlewares.GetUserFromContext(ctx)
 	if err != nil {
 		h.errorHandler.HandleError(w, r, err)
 		return
 	}
 
+	h.o11y.Logger().Info(ctx, "request_received",
+		observability.String("operation", "CreateCategory"),
+		observability.String("layer", "handler"),
+		observability.String("entity", "category"),
+		observability.String("correlation_id", correlationID),
+		observability.String("user_id", user.ID),
+	)
+
 	var input *dtos.CategoryInput
 	if err = json.NewDecoder(r.Body).Decode(&input); err != nil {
+		h.o11y.Logger().Error(ctx, "validation_failed",
+			observability.String("operation", "CreateCategory"),
+			observability.String("layer", "handler"),
+			observability.String("entity", "category"),
+			observability.String("correlation_id", correlationID),
+			observability.String("user_id", user.ID),
+			observability.String("error_type", "validation"),
+			observability.String("error_code", "DECODE_BODY_FAILED"),
+			observability.Error(err),
+		)
 		h.errorHandler.HandleError(w, r, err)
 		return
 	}
 
 	if validationErrs := input.Validate(); validationErrs.HasErrors() {
+		h.o11y.Logger().Warn(ctx, "validation_failed",
+			observability.String("operation", "CreateCategory"),
+			observability.String("layer", "handler"),
+			observability.String("entity", "category"),
+			observability.String("correlation_id", correlationID),
+			observability.String("user_id", user.ID),
+			observability.String("error_type", "validation"),
+			observability.String("error_code", "INPUT_VALIDATION_FAILED"),
+		)
 		h.errorHandler.HandleError(w, r, validationErrs)
 		return
 	}
 
 	output, err := h.createCategoryUseCase.Execute(ctx, user.ID, input)
 	if err != nil {
+		h.o11y.Logger().Error(ctx, "request_failed",
+			observability.String("operation", "CreateCategory"),
+			observability.String("layer", "handler"),
+			observability.String("entity", "category"),
+			observability.String("correlation_id", correlationID),
+			observability.String("user_id", user.ID),
+			observability.String("error_type", "business"),
+			observability.String("error_code", "CREATE_CATEGORY_FAILED"),
+			observability.Error(err),
+		)
 		h.errorHandler.HandleError(w, r, err)
 		return
 	}
+
+	h.o11y.Logger().Info(ctx, "request_completed",
+		observability.String("operation", "CreateCategory"),
+		observability.String("layer", "handler"),
+		observability.String("entity", "category"),
+		observability.String("correlation_id", correlationID),
+		observability.String("user_id", user.ID),
+		observability.String("category_id", output.ID),
+	)
 
 	responses.JSON(w, http.StatusCreated, output)
 }
@@ -115,15 +161,34 @@ func (h *CategoryHandler) Find(w http.ResponseWriter, r *http.Request) {
 	ctx, span := h.o11y.Tracer().Start(r.Context(), "category_handler.find")
 	defer span.End()
 
+	correlationID := trace.SpanFromContext(ctx).SpanContext().TraceID().String()
+
 	user, err := middlewares.GetUserFromContext(ctx)
 	if err != nil {
 		h.errorHandler.HandleError(w, r, err)
 		return
 	}
 
-	// Parse cursor parameters (default: limit=20, max=100)
+	h.o11y.Logger().Info(ctx, "request_received",
+		observability.String("operation", "FindCategories"),
+		observability.String("layer", "handler"),
+		observability.String("entity", "category"),
+		observability.String("correlation_id", correlationID),
+		observability.String("user_id", user.ID),
+	)
+
 	params, err := pagination.ParseCursorParams(r, 20, 100)
 	if err != nil {
+		h.o11y.Logger().Error(ctx, "request_failed",
+			observability.String("operation", "FindCategories"),
+			observability.String("layer", "handler"),
+			observability.String("entity", "category"),
+			observability.String("correlation_id", correlationID),
+			observability.String("user_id", user.ID),
+			observability.String("error_type", "validation"),
+			observability.String("error_code", "PAGINATION_PARAMS_INVALID"),
+			observability.Error(err),
+		)
 		h.errorHandler.HandleError(w, r, err)
 		return
 	}
@@ -134,11 +199,28 @@ func (h *CategoryHandler) Find(w http.ResponseWriter, r *http.Request) {
 		Cursor: params.Cursor,
 	})
 	if err != nil {
+		h.o11y.Logger().Error(ctx, "request_failed",
+			observability.String("operation", "FindCategories"),
+			observability.String("layer", "handler"),
+			observability.String("entity", "category"),
+			observability.String("correlation_id", correlationID),
+			observability.String("user_id", user.ID),
+			observability.String("error_type", "business"),
+			observability.String("error_code", "FIND_CATEGORIES_FAILED"),
+			observability.Error(err),
+		)
 		h.errorHandler.HandleError(w, r, err)
 		return
 	}
 
-	// Build paginated response
+	h.o11y.Logger().Info(ctx, "request_completed",
+		observability.String("operation", "FindCategories"),
+		observability.String("layer", "handler"),
+		observability.String("entity", "category"),
+		observability.String("correlation_id", correlationID),
+		observability.String("user_id", user.ID),
+	)
+
 	response := pagination.NewPaginatedResponse(output.Categories, params.Limit, output.NextCursor)
 	responses.JSON(w, http.StatusOK, response)
 }
@@ -160,17 +242,50 @@ func (h *CategoryHandler) FindBy(w http.ResponseWriter, r *http.Request) {
 	ctx, span := h.o11y.Tracer().Start(r.Context(), "category_handler.find_by")
 	defer span.End()
 
+	correlationID := trace.SpanFromContext(ctx).SpanContext().TraceID().String()
+
 	user, err := middlewares.GetUserFromContext(ctx)
 	if err != nil {
 		h.errorHandler.HandleError(w, r, err)
 		return
 	}
 
-	output, err := h.findCategoryByUseCase.Execute(ctx, user.ID, chi.URLParam(r, "id"))
+	categoryID := chi.URLParam(r, "id")
+
+	h.o11y.Logger().Info(ctx, "request_received",
+		observability.String("operation", "FindCategoryBy"),
+		observability.String("layer", "handler"),
+		observability.String("entity", "category"),
+		observability.String("correlation_id", correlationID),
+		observability.String("user_id", user.ID),
+		observability.String("category_id", categoryID),
+	)
+
+	output, err := h.findCategoryByUseCase.Execute(ctx, user.ID, categoryID)
 	if err != nil {
+		h.o11y.Logger().Error(ctx, "request_failed",
+			observability.String("operation", "FindCategoryBy"),
+			observability.String("layer", "handler"),
+			observability.String("entity", "category"),
+			observability.String("correlation_id", correlationID),
+			observability.String("user_id", user.ID),
+			observability.String("category_id", categoryID),
+			observability.String("error_type", "business"),
+			observability.String("error_code", "FIND_CATEGORY_FAILED"),
+			observability.Error(err),
+		)
 		h.errorHandler.HandleError(w, r, err)
 		return
 	}
+
+	h.o11y.Logger().Info(ctx, "request_completed",
+		observability.String("operation", "FindCategoryBy"),
+		observability.String("layer", "handler"),
+		observability.String("entity", "category"),
+		observability.String("correlation_id", correlationID),
+		observability.String("user_id", user.ID),
+		observability.String("category_id", categoryID),
+	)
 
 	responses.JSON(w, http.StatusOK, output)
 }
@@ -196,28 +311,80 @@ func (h *CategoryHandler) Update(w http.ResponseWriter, r *http.Request) {
 	ctx, span := h.o11y.Tracer().Start(r.Context(), "category_handler.update")
 	defer span.End()
 
+	correlationID := trace.SpanFromContext(ctx).SpanContext().TraceID().String()
+
 	user, err := middlewares.GetUserFromContext(ctx)
 	if err != nil {
 		h.errorHandler.HandleError(w, r, err)
 		return
 	}
 
+	categoryID := chi.URLParam(r, "id")
+
+	h.o11y.Logger().Info(ctx, "request_received",
+		observability.String("operation", "UpdateCategory"),
+		observability.String("layer", "handler"),
+		observability.String("entity", "category"),
+		observability.String("correlation_id", correlationID),
+		observability.String("user_id", user.ID),
+		observability.String("category_id", categoryID),
+	)
+
 	var input *dtos.CategoryInput
 	if err = json.NewDecoder(r.Body).Decode(&input); err != nil {
+		h.o11y.Logger().Error(ctx, "validation_failed",
+			observability.String("operation", "UpdateCategory"),
+			observability.String("layer", "handler"),
+			observability.String("entity", "category"),
+			observability.String("correlation_id", correlationID),
+			observability.String("user_id", user.ID),
+			observability.String("error_type", "validation"),
+			observability.String("error_code", "DECODE_BODY_FAILED"),
+			observability.Error(err),
+		)
 		h.errorHandler.HandleError(w, r, err)
 		return
 	}
 
 	if validationErrs := input.Validate(); validationErrs.HasErrors() {
+		h.o11y.Logger().Warn(ctx, "validation_failed",
+			observability.String("operation", "UpdateCategory"),
+			observability.String("layer", "handler"),
+			observability.String("entity", "category"),
+			observability.String("correlation_id", correlationID),
+			observability.String("user_id", user.ID),
+			observability.String("error_type", "validation"),
+			observability.String("error_code", "INPUT_VALIDATION_FAILED"),
+		)
 		h.errorHandler.HandleError(w, r, validationErrs)
 		return
 	}
 
-	output, err := h.updateCategoryUseCase.Execute(ctx, user.ID, chi.URLParam(r, "id"), input)
+	output, err := h.updateCategoryUseCase.Execute(ctx, user.ID, categoryID, input)
 	if err != nil {
+		h.o11y.Logger().Error(ctx, "request_failed",
+			observability.String("operation", "UpdateCategory"),
+			observability.String("layer", "handler"),
+			observability.String("entity", "category"),
+			observability.String("correlation_id", correlationID),
+			observability.String("user_id", user.ID),
+			observability.String("category_id", categoryID),
+			observability.String("error_type", "business"),
+			observability.String("error_code", "UPDATE_CATEGORY_FAILED"),
+			observability.Error(err),
+		)
 		h.errorHandler.HandleError(w, r, err)
 		return
 	}
+
+	h.o11y.Logger().Info(ctx, "request_completed",
+		observability.String("operation", "UpdateCategory"),
+		observability.String("layer", "handler"),
+		observability.String("entity", "category"),
+		observability.String("correlation_id", correlationID),
+		observability.String("user_id", user.ID),
+		observability.String("category_id", categoryID),
+	)
 
 	responses.JSON(w, http.StatusOK, output)
 }
@@ -239,16 +406,49 @@ func (h *CategoryHandler) Delete(w http.ResponseWriter, r *http.Request) {
 	ctx, span := h.o11y.Tracer().Start(r.Context(), "category_handler.delete")
 	defer span.End()
 
+	correlationID := trace.SpanFromContext(ctx).SpanContext().TraceID().String()
+
 	user, err := middlewares.GetUserFromContext(ctx)
 	if err != nil {
 		h.errorHandler.HandleError(w, r, err)
 		return
 	}
 
-	if err := h.removeCategoryUseCase.Execute(ctx, user.ID, chi.URLParam(r, "id")); err != nil {
+	categoryID := chi.URLParam(r, "id")
+
+	h.o11y.Logger().Info(ctx, "request_received",
+		observability.String("operation", "DeleteCategory"),
+		observability.String("layer", "handler"),
+		observability.String("entity", "category"),
+		observability.String("correlation_id", correlationID),
+		observability.String("user_id", user.ID),
+		observability.String("category_id", categoryID),
+	)
+
+	if err := h.removeCategoryUseCase.Execute(ctx, user.ID, categoryID); err != nil {
+		h.o11y.Logger().Error(ctx, "request_failed",
+			observability.String("operation", "DeleteCategory"),
+			observability.String("layer", "handler"),
+			observability.String("entity", "category"),
+			observability.String("correlation_id", correlationID),
+			observability.String("user_id", user.ID),
+			observability.String("category_id", categoryID),
+			observability.String("error_type", "business"),
+			observability.String("error_code", "DELETE_CATEGORY_FAILED"),
+			observability.Error(err),
+		)
 		h.errorHandler.HandleError(w, r, err)
 		return
 	}
+
+	h.o11y.Logger().Info(ctx, "request_completed",
+		observability.String("operation", "DeleteCategory"),
+		observability.String("layer", "handler"),
+		observability.String("entity", "category"),
+		observability.String("correlation_id", correlationID),
+		observability.String("user_id", user.ID),
+		observability.String("category_id", categoryID),
+	)
 
 	responses.JSON(w, http.StatusNoContent, nil)
 }

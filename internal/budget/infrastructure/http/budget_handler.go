@@ -13,6 +13,7 @@ import (
 
 	"github.com/JailtonJunior94/devkit-go/pkg/observability"
 	"github.com/JailtonJunior94/devkit-go/pkg/responses"
+	"go.opentelemetry.io/otel/trace"
 )
 
 type BudgetHandler struct {
@@ -71,28 +72,76 @@ func (h *BudgetHandler) Create(w http.ResponseWriter, r *http.Request) {
 	ctx, span := h.o11y.Tracer().Start(r.Context(), "budget_handler.create")
 	defer span.End()
 
+	correlationID := trace.SpanFromContext(ctx).SpanContext().TraceID().String()
+
 	user, err := middlewares.GetUserFromContext(ctx)
 	if err != nil {
 		h.errorHandler.HandleError(w, r, err)
 		return
 	}
 
+	h.o11y.Logger().Info(ctx, "request_received",
+		observability.String("operation", "CreateBudget"),
+		observability.String("layer", "handler"),
+		observability.String("entity", "budget"),
+		observability.String("correlation_id", correlationID),
+		observability.String("user_id", user.ID),
+	)
+
 	var input *dtos.BudgetCreateInput
 	if err = json.NewDecoder(r.Body).Decode(&input); err != nil {
+		h.o11y.Logger().Error(ctx, "validation_failed",
+			observability.String("operation", "CreateBudget"),
+			observability.String("layer", "handler"),
+			observability.String("entity", "budget"),
+			observability.String("correlation_id", correlationID),
+			observability.String("user_id", user.ID),
+			observability.String("error_type", "validation"),
+			observability.String("error_code", "DECODE_BODY_FAILED"),
+			observability.Error(err),
+		)
 		h.errorHandler.HandleError(w, r, err)
 		return
 	}
 
 	if validationErrs := input.Validate(); validationErrs.HasErrors() {
+		h.o11y.Logger().Warn(ctx, "validation_failed",
+			observability.String("operation", "CreateBudget"),
+			observability.String("layer", "handler"),
+			observability.String("entity", "budget"),
+			observability.String("correlation_id", correlationID),
+			observability.String("user_id", user.ID),
+			observability.String("error_type", "validation"),
+			observability.String("error_code", "INPUT_VALIDATION_FAILED"),
+		)
 		h.errorHandler.HandleError(w, r, validationErrs)
 		return
 	}
 
 	output, err := h.createBudgetUseCase.Execute(ctx, user.ID, input)
 	if err != nil {
+		h.o11y.Logger().Error(ctx, "request_failed",
+			observability.String("operation", "CreateBudget"),
+			observability.String("layer", "handler"),
+			observability.String("entity", "budget"),
+			observability.String("correlation_id", correlationID),
+			observability.String("user_id", user.ID),
+			observability.String("error_type", "business"),
+			observability.String("error_code", "CREATE_BUDGET_FAILED"),
+			observability.Error(err),
+		)
 		h.errorHandler.HandleError(w, r, err)
 		return
 	}
+
+	h.o11y.Logger().Info(ctx, "request_completed",
+		observability.String("operation", "CreateBudget"),
+		observability.String("layer", "handler"),
+		observability.String("entity", "budget"),
+		observability.String("correlation_id", correlationID),
+		observability.String("user_id", user.ID),
+		observability.String("budget_id", output.ID),
+	)
 
 	responses.JSON(w, http.StatusCreated, output)
 }
@@ -115,15 +164,34 @@ func (h *BudgetHandler) List(w http.ResponseWriter, r *http.Request) {
 	ctx, span := h.o11y.Tracer().Start(r.Context(), "budget_handler.list")
 	defer span.End()
 
+	correlationID := trace.SpanFromContext(ctx).SpanContext().TraceID().String()
+
 	user, err := middlewares.GetUserFromContext(ctx)
 	if err != nil {
 		h.errorHandler.HandleError(w, r, err)
 		return
 	}
 
-	// Parse cursor parameters (default: limit=20, max=100)
+	h.o11y.Logger().Info(ctx, "request_received",
+		observability.String("operation", "ListBudgets"),
+		observability.String("layer", "handler"),
+		observability.String("entity", "budget"),
+		observability.String("correlation_id", correlationID),
+		observability.String("user_id", user.ID),
+	)
+
 	params, err := pagination.ParseCursorParams(r, 20, 100)
 	if err != nil {
+		h.o11y.Logger().Error(ctx, "request_failed",
+			observability.String("operation", "ListBudgets"),
+			observability.String("layer", "handler"),
+			observability.String("entity", "budget"),
+			observability.String("correlation_id", correlationID),
+			observability.String("user_id", user.ID),
+			observability.String("error_type", "validation"),
+			observability.String("error_code", "PAGINATION_PARAMS_INVALID"),
+			observability.Error(err),
+		)
 		h.errorHandler.HandleError(w, r, err)
 		return
 	}
@@ -134,11 +202,28 @@ func (h *BudgetHandler) List(w http.ResponseWriter, r *http.Request) {
 		Cursor: params.Cursor,
 	})
 	if err != nil {
+		h.o11y.Logger().Error(ctx, "request_failed",
+			observability.String("operation", "ListBudgets"),
+			observability.String("layer", "handler"),
+			observability.String("entity", "budget"),
+			observability.String("correlation_id", correlationID),
+			observability.String("user_id", user.ID),
+			observability.String("error_type", "business"),
+			observability.String("error_code", "LIST_BUDGETS_FAILED"),
+			observability.Error(err),
+		)
 		h.errorHandler.HandleError(w, r, err)
 		return
 	}
 
-	// Build paginated response
+	h.o11y.Logger().Info(ctx, "request_completed",
+		observability.String("operation", "ListBudgets"),
+		observability.String("layer", "handler"),
+		observability.String("entity", "budget"),
+		observability.String("correlation_id", correlationID),
+		observability.String("user_id", user.ID),
+	)
+
 	response := pagination.NewPaginatedResponse(output.Budgets, params.Limit, output.NextCursor)
 	responses.JSON(w, http.StatusOK, response)
 }
@@ -161,6 +246,8 @@ func (h *BudgetHandler) Find(w http.ResponseWriter, r *http.Request) {
 	ctx, span := h.o11y.Tracer().Start(r.Context(), "budget_handler.find")
 	defer span.End()
 
+	correlationID := trace.SpanFromContext(ctx).SpanContext().TraceID().String()
+
 	user, err := middlewares.GetUserFromContext(ctx)
 	if err != nil {
 		h.errorHandler.HandleError(w, r, err)
@@ -169,15 +256,53 @@ func (h *BudgetHandler) Find(w http.ResponseWriter, r *http.Request) {
 
 	budgetID := r.PathValue("id")
 	if budgetID == "" {
+		h.o11y.Logger().Warn(ctx, "validation_failed",
+			observability.String("operation", "FindBudget"),
+			observability.String("layer", "handler"),
+			observability.String("entity", "budget"),
+			observability.String("correlation_id", correlationID),
+			observability.String("user_id", user.ID),
+			observability.String("error_type", "validation"),
+			observability.String("error_code", "BUDGET_ID_REQUIRED"),
+		)
 		h.errorHandler.HandleError(w, r, fmt.Errorf("budget_id is required"))
 		return
 	}
 
+	h.o11y.Logger().Info(ctx, "request_received",
+		observability.String("operation", "FindBudget"),
+		observability.String("layer", "handler"),
+		observability.String("entity", "budget"),
+		observability.String("correlation_id", correlationID),
+		observability.String("user_id", user.ID),
+		observability.String("budget_id", budgetID),
+	)
+
 	output, err := h.findBudgetUseCase.Execute(ctx, user.ID, budgetID)
 	if err != nil {
+		h.o11y.Logger().Error(ctx, "request_failed",
+			observability.String("operation", "FindBudget"),
+			observability.String("layer", "handler"),
+			observability.String("entity", "budget"),
+			observability.String("correlation_id", correlationID),
+			observability.String("user_id", user.ID),
+			observability.String("budget_id", budgetID),
+			observability.String("error_type", "business"),
+			observability.String("error_code", "FIND_BUDGET_FAILED"),
+			observability.Error(err),
+		)
 		h.errorHandler.HandleError(w, r, err)
 		return
 	}
+
+	h.o11y.Logger().Info(ctx, "request_completed",
+		observability.String("operation", "FindBudget"),
+		observability.String("layer", "handler"),
+		observability.String("entity", "budget"),
+		observability.String("correlation_id", correlationID),
+		observability.String("user_id", user.ID),
+		observability.String("budget_id", budgetID),
+	)
 
 	responses.JSON(w, http.StatusOK, output)
 }
@@ -203,6 +328,8 @@ func (h *BudgetHandler) Update(w http.ResponseWriter, r *http.Request) {
 	ctx, span := h.o11y.Tracer().Start(r.Context(), "budget_handler.update")
 	defer span.End()
 
+	correlationID := trace.SpanFromContext(ctx).SpanContext().TraceID().String()
+
 	user, err := middlewares.GetUserFromContext(ctx)
 	if err != nil {
 		h.errorHandler.HandleError(w, r, err)
@@ -215,22 +342,70 @@ func (h *BudgetHandler) Update(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	h.o11y.Logger().Info(ctx, "request_received",
+		observability.String("operation", "UpdateBudget"),
+		observability.String("layer", "handler"),
+		observability.String("entity", "budget"),
+		observability.String("correlation_id", correlationID),
+		observability.String("user_id", user.ID),
+		observability.String("budget_id", budgetID),
+	)
+
 	var input *dtos.BudgetUpdateInput
 	if err := json.NewDecoder(r.Body).Decode(&input); err != nil {
+		h.o11y.Logger().Error(ctx, "validation_failed",
+			observability.String("operation", "UpdateBudget"),
+			observability.String("layer", "handler"),
+			observability.String("entity", "budget"),
+			observability.String("correlation_id", correlationID),
+			observability.String("user_id", user.ID),
+			observability.String("error_type", "validation"),
+			observability.String("error_code", "DECODE_BODY_FAILED"),
+			observability.Error(err),
+		)
 		h.errorHandler.HandleError(w, r, err)
 		return
 	}
 
 	if validationErrs := input.Validate(); validationErrs.HasErrors() {
+		h.o11y.Logger().Warn(ctx, "validation_failed",
+			observability.String("operation", "UpdateBudget"),
+			observability.String("layer", "handler"),
+			observability.String("entity", "budget"),
+			observability.String("correlation_id", correlationID),
+			observability.String("user_id", user.ID),
+			observability.String("error_type", "validation"),
+			observability.String("error_code", "INPUT_VALIDATION_FAILED"),
+		)
 		h.errorHandler.HandleError(w, r, validationErrs)
 		return
 	}
 
 	output, err := h.updateBudgetUseCase.Execute(ctx, user.ID, budgetID, input)
 	if err != nil {
+		h.o11y.Logger().Error(ctx, "request_failed",
+			observability.String("operation", "UpdateBudget"),
+			observability.String("layer", "handler"),
+			observability.String("entity", "budget"),
+			observability.String("correlation_id", correlationID),
+			observability.String("user_id", user.ID),
+			observability.String("budget_id", budgetID),
+			observability.String("error_type", "business"),
+			observability.String("error_code", "UPDATE_BUDGET_FAILED"),
+			observability.Error(err),
+		)
 		h.errorHandler.HandleError(w, r, err)
 		return
 	}
+
+	h.o11y.Logger().Info(ctx, "request_completed",
+		observability.String("operation", "UpdateBudget"),
+		observability.String("layer", "handler"),
+		observability.String("entity", "budget"),
+		observability.String("correlation_id", correlationID),
+		observability.String("user_id", user.ID),
+		observability.String("budget_id", budgetID),
+	)
 
 	responses.JSON(w, http.StatusOK, output)
 }
@@ -253,6 +428,8 @@ func (h *BudgetHandler) Delete(w http.ResponseWriter, r *http.Request) {
 	ctx, span := h.o11y.Tracer().Start(r.Context(), "budget_handler.delete")
 	defer span.End()
 
+	correlationID := trace.SpanFromContext(ctx).SpanContext().TraceID().String()
+
 	user, err := middlewares.GetUserFromContext(ctx)
 	if err != nil {
 		h.errorHandler.HandleError(w, r, err)
@@ -265,11 +442,40 @@ func (h *BudgetHandler) Delete(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	h.o11y.Logger().Info(ctx, "request_received",
+		observability.String("operation", "DeleteBudget"),
+		observability.String("layer", "handler"),
+		observability.String("entity", "budget"),
+		observability.String("correlation_id", correlationID),
+		observability.String("user_id", user.ID),
+		observability.String("budget_id", budgetID),
+	)
+
 	err = h.deleteBudgetUseCase.Execute(ctx, user.ID, budgetID)
 	if err != nil {
+		h.o11y.Logger().Error(ctx, "request_failed",
+			observability.String("operation", "DeleteBudget"),
+			observability.String("layer", "handler"),
+			observability.String("entity", "budget"),
+			observability.String("correlation_id", correlationID),
+			observability.String("user_id", user.ID),
+			observability.String("budget_id", budgetID),
+			observability.String("error_type", "business"),
+			observability.String("error_code", "DELETE_BUDGET_FAILED"),
+			observability.Error(err),
+		)
 		h.errorHandler.HandleError(w, r, err)
 		return
 	}
+
+	h.o11y.Logger().Info(ctx, "request_completed",
+		observability.String("operation", "DeleteBudget"),
+		observability.String("layer", "handler"),
+		observability.String("entity", "budget"),
+		observability.String("correlation_id", correlationID),
+		observability.String("user_id", user.ID),
+		observability.String("budget_id", budgetID),
+	)
 
 	responses.JSON(w, http.StatusNoContent, nil)
 }

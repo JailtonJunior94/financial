@@ -6,9 +6,11 @@ import (
 	"errors"
 	"fmt"
 	"strings"
+	"time"
 
 	"github.com/jailtonjunior94/financial/internal/payment_method/domain/entities"
 	"github.com/jailtonjunior94/financial/internal/payment_method/domain/interfaces"
+	"github.com/jailtonjunior94/financial/pkg/observability/metrics"
 
 	"github.com/JailtonJunior94/devkit-go/pkg/database"
 	"github.com/JailtonJunior94/devkit-go/pkg/observability"
@@ -18,16 +20,19 @@ import (
 type paymentMethodRepository struct {
 	db   database.DBTX
 	o11y observability.Observability
+	fm   *metrics.FinancialMetrics
 }
 
-func NewPaymentMethodRepository(db database.DBTX, o11y observability.Observability) interfaces.PaymentMethodRepository {
+func NewPaymentMethodRepository(db database.DBTX, o11y observability.Observability, fm *metrics.FinancialMetrics) interfaces.PaymentMethodRepository {
 	return &paymentMethodRepository{
 		db:   db,
 		o11y: o11y,
+		fm:   fm,
 	}
 }
 
 func (r *paymentMethodRepository) List(ctx context.Context) ([]*entities.PaymentMethod, error) {
+	start := time.Now()
 	ctx, span := r.o11y.Tracer().Start(ctx, "payment_method_repository.list")
 	defer span.End()
 
@@ -49,13 +54,12 @@ func (r *paymentMethodRepository) List(ctx context.Context) ([]*entities.Payment
 	rows, err := r.db.QueryContext(ctx, query)
 	if err != nil {
 		span.RecordError(err)
-
+		r.fm.RecordRepositoryFailure(ctx, "list", "payment_method", "infra", time.Since(start))
 		return nil, err
 	}
 	defer func() {
 		if closeErr := rows.Close(); closeErr != nil {
 			span.RecordError(closeErr)
-
 		}
 	}()
 
@@ -73,15 +77,17 @@ func (r *paymentMethodRepository) List(ctx context.Context) ([]*entities.Payment
 		)
 		if err != nil {
 			span.RecordError(err)
-
+			r.fm.RecordRepositoryFailure(ctx, "list", "payment_method", "infra", time.Since(start))
 			return nil, err
 		}
 		paymentMethods = append(paymentMethods, &pm)
 	}
+	r.fm.RecordRepositoryQuery(ctx, "list", "payment_method", time.Since(start))
 	return paymentMethods, nil
 }
 
 func (r *paymentMethodRepository) FindByID(ctx context.Context, id vos.UUID) (*entities.PaymentMethod, error) {
+	start := time.Now()
 	ctx, span := r.o11y.Tracer().Start(ctx, "payment_method_repository.find_by_id")
 	defer span.End()
 
@@ -112,17 +118,20 @@ func (r *paymentMethodRepository) FindByID(ctx context.Context, id vos.UUID) (*e
 
 	if err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
+			r.fm.RecordRepositoryQuery(ctx, "find_by_id", "payment_method", time.Since(start))
 			return nil, nil
 		}
 		span.RecordError(err)
-
+		r.fm.RecordRepositoryFailure(ctx, "find_by_id", "payment_method", "infra", time.Since(start))
 		return nil, err
 	}
 
+	r.fm.RecordRepositoryQuery(ctx, "find_by_id", "payment_method", time.Since(start))
 	return &pm, nil
 }
 
 func (r *paymentMethodRepository) FindByCode(ctx context.Context, code string) (*entities.PaymentMethod, error) {
+	start := time.Now()
 	ctx, span := r.o11y.Tracer().Start(ctx, "payment_method_repository.find_by_code")
 	defer span.End()
 
@@ -155,17 +164,20 @@ func (r *paymentMethodRepository) FindByCode(ctx context.Context, code string) (
 
 	if err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
+			r.fm.RecordRepositoryQuery(ctx, "find_by_code", "payment_method", time.Since(start))
 			return nil, nil
 		}
 		span.RecordError(err)
-
+		r.fm.RecordRepositoryFailure(ctx, "find_by_code", "payment_method", "infra", time.Since(start))
 		return nil, err
 	}
 
+	r.fm.RecordRepositoryQuery(ctx, "find_by_code", "payment_method", time.Since(start))
 	return &pm, nil
 }
 
 func (r *paymentMethodRepository) Save(ctx context.Context, paymentMethod *entities.PaymentMethod) error {
+	start := time.Now()
 	ctx, span := r.o11y.Tracer().Start(ctx, "payment_method_repository.save")
 	defer span.End()
 
@@ -188,7 +200,7 @@ func (r *paymentMethodRepository) Save(ctx context.Context, paymentMethod *entit
 			"error preparing insert payment method",
 			observability.Field{Key: "error", Value: err},
 		)
-
+		r.fm.RecordRepositoryFailure(ctx, "save", "payment_method", "infra", time.Since(start))
 		return err
 	}
 	defer func() {
@@ -212,13 +224,15 @@ func (r *paymentMethodRepository) Save(ctx context.Context, paymentMethod *entit
 			"error inserting payment method",
 			observability.Field{Key: "error", Value: err},
 		)
-
+		r.fm.RecordRepositoryFailure(ctx, "save", "payment_method", "infra", time.Since(start))
 		return err
 	}
+	r.fm.RecordRepositoryQuery(ctx, "save", "payment_method", time.Since(start))
 	return nil
 }
 
 func (r *paymentMethodRepository) Update(ctx context.Context, paymentMethod *entities.PaymentMethod) error {
+	start := time.Now()
 	ctx, span := r.o11y.Tracer().Start(ctx, "payment_method_repository.update")
 	defer span.End()
 
@@ -238,7 +252,7 @@ func (r *paymentMethodRepository) Update(ctx context.Context, paymentMethod *ent
 			"error preparing update payment method",
 			observability.Field{Key: "error", Value: err},
 		)
-
+		r.fm.RecordRepositoryFailure(ctx, "update", "payment_method", "infra", time.Since(start))
 		return err
 	}
 	defer func() {
@@ -260,10 +274,11 @@ func (r *paymentMethodRepository) Update(ctx context.Context, paymentMethod *ent
 			"error updating payment method",
 			observability.Field{Key: "error", Value: err},
 		)
-
+		r.fm.RecordRepositoryFailure(ctx, "update", "payment_method", "infra", time.Since(start))
 		return err
 	}
 
+	r.fm.RecordRepositoryQuery(ctx, "update", "payment_method", time.Since(start))
 	return nil
 }
 
@@ -272,6 +287,7 @@ func (r *paymentMethodRepository) ListPaginated(
 	ctx context.Context,
 	params interfaces.ListPaymentMethodsParams,
 ) ([]*entities.PaymentMethod, error) {
+	start := time.Now()
 	ctx, span := r.o11y.Tracer().Start(ctx, "payment_method_repository.list_paginated")
 	defer span.End()
 
@@ -314,6 +330,7 @@ func (r *paymentMethodRepository) ListPaginated(
 	rows, err := r.db.QueryContext(ctx, query, args...)
 	if err != nil {
 		span.RecordError(err)
+		r.fm.RecordRepositoryFailure(ctx, "list_paginated", "payment_method", "infra", time.Since(start))
 		return nil, err
 	}
 	defer func() { _ = rows.Close() }()
@@ -332,11 +349,17 @@ func (r *paymentMethodRepository) ListPaginated(
 		)
 		if err != nil {
 			span.RecordError(err)
+			r.fm.RecordRepositoryFailure(ctx, "list_paginated", "payment_method", "infra", time.Since(start))
 			return nil, err
 		}
 
 		paymentMethods = append(paymentMethods, &pm)
 	}
 
-	return paymentMethods, rows.Err()
+	if rowsErr := rows.Err(); rowsErr != nil {
+		r.fm.RecordRepositoryFailure(ctx, "list_paginated", "payment_method", "infra", time.Since(start))
+		return nil, rowsErr
+	}
+	r.fm.RecordRepositoryQuery(ctx, "list_paginated", "payment_method", time.Since(start))
+	return paymentMethods, nil
 }

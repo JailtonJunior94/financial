@@ -9,6 +9,7 @@ import (
 	"github.com/jailtonjunior94/financial/internal/budget/domain"
 	"github.com/jailtonjunior94/financial/internal/budget/infrastructure/repositories"
 	"github.com/jailtonjunior94/financial/pkg/money"
+	"github.com/jailtonjunior94/financial/pkg/observability/metrics"
 
 	"github.com/JailtonJunior94/devkit-go/pkg/database"
 	"github.com/JailtonJunior94/devkit-go/pkg/database/uow"
@@ -22,18 +23,21 @@ type (
 	}
 
 	updateBudgetUseCase struct {
-		uow  uow.UnitOfWork
-		o11y observability.Observability
+		uow     uow.UnitOfWork
+		o11y    observability.Observability
+		metrics *metrics.FinancialMetrics
 	}
 )
 
 func NewUpdateBudgetUseCase(
 	uow uow.UnitOfWork,
 	o11y observability.Observability,
+	fm *metrics.FinancialMetrics,
 ) UpdateBudgetUseCase {
 	return &updateBudgetUseCase{
-		uow:  uow,
-		o11y: o11y,
+		uow:     uow,
+		o11y:    o11y,
+		metrics: fm,
 	}
 }
 
@@ -56,7 +60,7 @@ func (u *updateBudgetUseCase) Execute(ctx context.Context, userID string, budget
 	var updatedBudget *dtos.BudgetOutput
 
 	err = u.uow.Do(ctx, func(ctx context.Context, tx database.DBTX) error {
-		budgetRepository := repositories.NewBudgetRepository(tx, u.o11y)
+		budgetRepository := repositories.NewBudgetRepository(tx, u.o11y, u.metrics)
 
 		// Find budget (scoped by userID to prevent IDOR)
 		budget, err := budgetRepository.FindByID(ctx, uid, id)

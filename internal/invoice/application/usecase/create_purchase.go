@@ -18,6 +18,7 @@ import (
 	"github.com/jailtonjunior94/financial/internal/invoice/domain/factories"
 	"github.com/jailtonjunior94/financial/internal/invoice/domain/interfaces"
 	"github.com/jailtonjunior94/financial/internal/invoice/infrastructure/repositories"
+	"github.com/jailtonjunior94/financial/pkg/observability/metrics"
 	"github.com/jailtonjunior94/financial/pkg/outbox"
 )
 
@@ -32,6 +33,7 @@ type (
 		outboxService     outbox.Service
 		o11y              observability.Observability
 		invoiceCalculator *factories.InvoiceCalculator
+		fm                *metrics.FinancialMetrics
 	}
 )
 
@@ -40,6 +42,7 @@ func NewCreatePurchaseUseCase(
 	cardProvider interfaces.CardProvider,
 	outboxService outbox.Service,
 	o11y observability.Observability,
+	fm *metrics.FinancialMetrics,
 ) CreatePurchaseUseCase {
 	return &createPurchaseUseCase{
 		uow:               uow,
@@ -47,6 +50,7 @@ func NewCreatePurchaseUseCase(
 		outboxService:     outboxService,
 		o11y:              o11y,
 		invoiceCalculator: factories.NewInvoiceCalculator(),
+		fm:                fm,
 	}
 }
 
@@ -108,7 +112,7 @@ func (u *createPurchaseUseCase) Execute(ctx context.Context, userID string, inpu
 	// Criar os itens de fatura para cada parcela
 	err = u.uow.Do(ctx, func(ctx context.Context, tx database.DBTX) error {
 		// Criar repositório com transação
-		invoiceRepository := repositories.NewInvoiceRepository(tx, u.o11y)
+		invoiceRepository := repositories.NewInvoiceRepository(tx, u.o11y, u.fm)
 
 		// Para cada parcela, buscar ou criar a fatura de forma atômica
 		for i := 0; i < input.InstallmentTotal; i++ {

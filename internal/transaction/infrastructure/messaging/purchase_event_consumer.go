@@ -14,6 +14,7 @@ import (
 	"github.com/jailtonjunior94/financial/internal/transaction/application/usecase"
 	pkgVos "github.com/jailtonjunior94/financial/pkg/domain/vos"
 	"github.com/jailtonjunior94/financial/pkg/messaging"
+	"github.com/jailtonjunior94/financial/pkg/observability/metrics"
 	"github.com/jailtonjunior94/financial/pkg/outbox"
 )
 
@@ -23,6 +24,7 @@ type PurchaseEventConsumer struct {
 	syncUseCase         usecase.SyncMonthlyFromInvoicesUseCase
 	processedEventsRepo outbox.ProcessedEventsRepository
 	o11y                observability.Observability
+	fm                  *metrics.FinancialMetrics
 }
 
 // NewPurchaseEventConsumer cria um novo consumer de eventos de purchase.
@@ -30,11 +32,13 @@ func NewPurchaseEventConsumer(
 	syncUseCase usecase.SyncMonthlyFromInvoicesUseCase,
 	db *sql.DB,
 	o11y observability.Observability,
+	fm *metrics.FinancialMetrics,
 ) *PurchaseEventConsumer {
 	return &PurchaseEventConsumer{
 		syncUseCase:         syncUseCase,
 		processedEventsRepo: outbox.NewProcessedEventsRepository(db),
 		o11y:                o11y,
+		fm:                  fm,
 	}
 }
 

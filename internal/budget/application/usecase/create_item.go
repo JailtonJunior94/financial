@@ -3,16 +3,19 @@ package usecase
 import (
 	"context"
 	"fmt"
+	"time"
 
 	"github.com/jailtonjunior94/financial/internal/budget/application/dtos"
 	"github.com/jailtonjunior94/financial/internal/budget/domain"
 	"github.com/jailtonjunior94/financial/internal/budget/domain/entities"
 	"github.com/jailtonjunior94/financial/internal/budget/infrastructure/repositories"
+	"github.com/jailtonjunior94/financial/pkg/observability/metrics"
 
 	"github.com/JailtonJunior94/devkit-go/pkg/database"
 	"github.com/JailtonJunior94/devkit-go/pkg/database/uow"
 	"github.com/JailtonJunior94/devkit-go/pkg/observability"
 	"github.com/JailtonJunior94/devkit-go/pkg/vos"
+	"go.opentelemetry.io/otel/trace"
 )
 
 type (
@@ -21,24 +24,45 @@ type (
 	}
 
 	createBudgetItemUseCase struct {
-		uow  uow.UnitOfWork
-		o11y observability.Observability
+		uow     uow.UnitOfWork
+		o11y    observability.Observability
+		metrics *metrics.FinancialMetrics
 	}
 )
 
 func NewCreateBudgetItemUseCase(
 	uow uow.UnitOfWork,
 	o11y observability.Observability,
+	fm *metrics.FinancialMetrics,
 ) CreateBudgetItemUseCase {
 	return &createBudgetItemUseCase{
-		uow:  uow,
-		o11y: o11y,
+		uow:     uow,
+		o11y:    o11y,
+		metrics: fm,
 	}
 }
 
 func (u *createBudgetItemUseCase) Execute(ctx context.Context, userID string, budgetID string, input *dtos.BudgetItemInput) error {
 	ctx, span := u.o11y.Tracer().Start(ctx, "create_budget_item_usecase.execute")
 	defer span.End()
+
+	start := time.Now()
+	correlationID := trace.SpanFromContext(ctx).SpanContext().TraceID().String()
+
+	u.o11y.Logger().Info(ctx, "execution_started",
+		observability.String("operation", "CreateBudgetItem"),
+		observability.String("layer", "usecase"),
+		observability.String("entity", "budget_item"),
+		observability.String("correlation_id", correlationID),
+		observability.String("user_id", userID),
+	)
+
+	span.AddEvent("execution_started",
+		observability.String("operation", "CreateBudgetItem"),
+		observability.String("layer", "usecase"),
+		observability.String("entity", "budget_item"),
+		observability.String("user_id", userID),
+	)
 
 	// Parse userID
 	uid, err := vos.NewUUIDFromString(userID)
@@ -69,7 +93,7 @@ func (u *createBudgetItemUseCase) Execute(ctx context.Context, userID string, bu
 	}
 
 	err = u.uow.Do(ctx, func(ctx context.Context, tx database.DBTX) error {
-		budgetRepository := repositories.NewBudgetRepository(tx, u.o11y)
+		budgetRepository := repositories.NewBudgetRepository(tx, u.o11y, u.metrics)
 
 		// 1. Find the budget by ID (scoped by userID to prevent IDOR)
 		budget, err := budgetRepository.FindByID(ctx, uid, id)
@@ -109,8 +133,28 @@ func (u *createBudgetItemUseCase) Execute(ctx context.Context, userID string, bu
 
 	if err != nil {
 		span.RecordError(err)
+		u.metrics.RecordUsecaseFailure(ctx, "CreateBudgetItem", "budget_item", "infra", time.Since(start))
+		u.o11y.Logger().Error(ctx, "execution_failed",
+			observability.String("operation", "CreateBudgetItem"),
+			observability.String("layer", "usecase"),
+			observability.String("entity", "budget_item"),
+			observability.String("correlation_id", correlationID),
+			observability.String("user_id", userID),
+			observability.String("error_type", "infra"),
+			observability.String("error_code", "CREATE_BUDGET_ITEM_FAILED"),
+			observability.Error(err),
+		)
 		return err
 	}
+
+	u.metrics.RecordUsecaseOperation(ctx, "CreateBudgetItem", "budget_item", time.Since(start))
+	u.o11y.Logger().Info(ctx, "execution_completed",
+		observability.String("operation", "CreateBudgetItem"),
+		observability.String("layer", "usecase"),
+		observability.String("entity", "budget_item"),
+		observability.String("correlation_id", correlationID),
+		observability.String("user_id", userID),
+	)
 
 	return nil
 }

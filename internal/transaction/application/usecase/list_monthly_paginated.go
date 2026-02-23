@@ -10,6 +10,7 @@ import (
 
 	"github.com/jailtonjunior94/financial/internal/transaction/application/dtos"
 	"github.com/jailtonjunior94/financial/internal/transaction/domain/interfaces"
+	"github.com/jailtonjunior94/financial/pkg/observability/metrics"
 	"github.com/jailtonjunior94/financial/pkg/pagination"
 )
 
@@ -35,6 +36,7 @@ type (
 	listMonthlyPaginatedUseCase struct {
 		o11y       observability.Observability
 		repository interfaces.TransactionRepository
+		fm         *metrics.FinancialMetrics
 	}
 )
 
@@ -42,10 +44,12 @@ type (
 func NewListMonthlyPaginatedUseCase(
 	o11y observability.Observability,
 	repository interfaces.TransactionRepository,
+	fm *metrics.FinancialMetrics,
 ) ListMonthlyPaginatedUseCase {
 	return &listMonthlyPaginatedUseCase{
 		o11y:       o11y,
 		repository: repository,
+		fm:         fm,
 	}
 }
 

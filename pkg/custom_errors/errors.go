@@ -21,7 +21,6 @@ var (
 	ErrCannotBeEmpty         = errors.New("name cannot be empty")
 	ErrInvalidEmail          = errors.New("invalid email format")
 	ErrEmailAlreadyExists    = errors.New("email already exists")
-	ErrNameCannotBeEmpty     = errors.New("name cannot be empty")
 	ErrTooLong               = errors.New("name cannot be more than 255 characters")
 	ErrNameTooLong           = errors.New("name cannot be more than 100 characters")
 	ErrPasswordIsRequired    = errors.New("password is required")

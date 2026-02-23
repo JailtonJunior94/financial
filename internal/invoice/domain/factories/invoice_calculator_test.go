@@ -180,6 +180,50 @@ func TestCalculateInvoiceMonth(t *testing.T) {
 			justificativa: "29/Fev/2000 ≥ 25 → Abr/2000",
 		},
 
+		// ── Casos extras da tabela exaustiva formal (Seção 5) ─────────────────
+		{
+			name:         "fev/bissexto dia 28 — ≥25 mas não último dia",
+			purchaseDate: date(2024, 2, 28),
+			wantDueDate:  "2024-04",
+			justificativa: "28/Fev/2024 ≥ 25 ∈ [25/Fev, 24/Mar] → Abr",
+		},
+		{
+			name:         "abril dia 30 — último dia de mês com 30 dias",
+			purchaseDate: date(2024, 4, 30),
+			wantDueDate:  "2024-06",
+			justificativa: "30/Abr ∈ [25/Abr, 24/Mai] → Jun",
+		},
+		{
+			name:         "dezembro dia 01 — primeiro dia do mês, virada de ano",
+			purchaseDate: date(2024, 12, 1),
+			wantDueDate:  "2025-01",
+			justificativa: "01/Dez ≤ 24 ∈ [25/Nov, 24/Dez] → Jan/2025",
+		},
+		{
+			name:         "novembro 2023 dia 25 — abertura cruzando virada de ano",
+			purchaseDate: date(2023, 11, 25),
+			wantDueDate:  "2024-01",
+			justificativa: "25/Nov/2023 ≥ 25 ∈ [25/Nov, 24/Dez] → Jan/2024",
+		},
+		{
+			name:         "dezembro 2023 dia 25 — abertura dupla virada de ano",
+			purchaseDate: date(2023, 12, 25),
+			wantDueDate:  "2024-02",
+			justificativa: "25/Dez/2023 ≥ 25 ∈ [25/Dez/2023, 24/Jan/2024] → Fev/2024",
+		},
+		{
+			name:         "novembro dia 01 — abertura do ciclo de dezembro",
+			purchaseDate: date(2024, 11, 1),
+			wantDueDate:  "2024-12",
+			justificativa: "01/Nov ≤ 24 ∈ [25/Out, 24/Nov] → Dez",
+		},
+		{
+			name:         "compra futura — maio 2026",
+			purchaseDate: date(2026, 5, 10),
+			wantDueDate:  "2026-06",
+			justificativa: "10/Mai/2026 ≤ 24 → Jun/2026",
+		},
+
 		// ── Exemplos do enunciado original ────────────────────────────────────
 		{
 			name:         "enunciado: compra 21/01 → fatura 01/02",
@@ -339,6 +383,116 @@ func TestDueDateAlwaysAfterPurchaseDate(t *testing.T) {
 	}
 }
 
+// TestOpeningDayConstant garante que OpeningDay = ClosingDay + 1.
+func TestOpeningDayConstant(t *testing.T) {
+	if factories.OpeningDay != factories.ClosingDay+1 {
+		t.Errorf("OpeningDay = %d, want ClosingDay+1 = %d",
+			factories.OpeningDay, factories.ClosingDay+1)
+	}
+	if factories.OpeningDay != 25 {
+		t.Errorf("OpeningDay = %d, want 25 (D_aber contratual)", factories.OpeningDay)
+	}
+}
+
+// TestClosingDateFor valida que ClosingDateFor retorna o dia 24 do mês anterior
+// ao vencimento, conforme definição formal: closing_date(v) = 24/month(abs_due-1).
+func TestClosingDateFor(t *testing.T) {
+	t.Parallel()
+
+	cases := []struct {
+		referenceMonth string
+		wantClosing    string
+		justificativa  string
+	}{
+		{"2024-02", "2024-01-24", "Fev/2024 → fechamento 24/Jan/2024"},
+		{"2024-03", "2024-02-24", "Mar/2024 → fechamento 24/Fev/2024 (fev. bissexto)"},
+		{"2024-04", "2024-03-24", "Abr/2024 → fechamento 24/Mar/2024"},
+		{"2024-05", "2024-04-24", "Mai/2024 → fechamento 24/Abr/2024 (mês de 30 dias)"},
+		{"2024-12", "2024-11-24", "Dez/2024 → fechamento 24/Nov/2024"},
+		{"2025-01", "2024-12-24", "Jan/2025 → fechamento 24/Dez/2024 (virada de ano)"},
+		{"2025-02", "2025-01-24", "Fev/2025 → fechamento 24/Jan/2025"},
+		{"2023-03", "2023-02-24", "Mar/2023 → fechamento 24/Fev/2023 (fev. não-bissexto)"},
+	}
+
+	calc := factories.NewInvoiceCalculator()
+
+	for _, tc := range cases {
+		t.Run(tc.referenceMonth, func(t *testing.T) {
+			t.Parallel()
+
+			rm := refMonth(t, tc.referenceMonth)
+			got := calc.ClosingDateFor(rm)
+			want, err := time.Parse("2006-01-02", tc.wantClosing)
+			if err != nil {
+				t.Fatalf("parse want date %q: %v", tc.wantClosing, err)
+			}
+
+			if !got.Equal(want) {
+				t.Errorf("\nreferenceMonth: %s\ngot:  %s\nwant: %s\n%s",
+					tc.referenceMonth,
+					got.Format("2006-01-02"),
+					want.Format("2006-01-02"),
+					tc.justificativa,
+				)
+			}
+			if got.Day() != factories.ClosingDay {
+				t.Errorf("ClosingDateFor(%s).Day() = %d, want %d (ClosingDay)",
+					tc.referenceMonth, got.Day(), factories.ClosingDay)
+			}
+		})
+	}
+}
+
+// TestOpeningDateFor valida que OpeningDateFor retorna o dia 25 do mês
+// anteanterior ao vencimento, conforme definição formal:
+// opening_date(v) = 25/month(abs_due-2).
+func TestOpeningDateFor(t *testing.T) {
+	t.Parallel()
+
+	cases := []struct {
+		referenceMonth string
+		wantOpening    string
+		justificativa  string
+	}{
+		{"2024-02", "2023-12-25", "Fev/2024 → abertura 25/Dez/2023"},
+		{"2024-03", "2024-01-25", "Mar/2024 → abertura 25/Jan/2024"},
+		{"2024-04", "2024-02-25", "Abr/2024 → abertura 25/Fev/2024 (bissexto, dia 25 existe)"},
+		{"2024-05", "2024-03-25", "Mai/2024 → abertura 25/Mar/2024"},
+		{"2024-12", "2024-10-25", "Dez/2024 → abertura 25/Out/2024"},
+		{"2025-01", "2024-11-25", "Jan/2025 → abertura 25/Nov/2024 (virada de ano)"},
+		{"2025-02", "2024-12-25", "Fev/2025 → abertura 25/Dez/2024"},
+		{"2024-01", "2023-11-25", "Jan/2024 → abertura 25/Nov/2023"},
+	}
+
+	calc := factories.NewInvoiceCalculator()
+
+	for _, tc := range cases {
+		t.Run(tc.referenceMonth, func(t *testing.T) {
+			t.Parallel()
+
+			rm := refMonth(t, tc.referenceMonth)
+			got := calc.OpeningDateFor(rm)
+			want, err := time.Parse("2006-01-02", tc.wantOpening)
+			if err != nil {
+				t.Fatalf("parse want date %q: %v", tc.wantOpening, err)
+			}
+
+			if !got.Equal(want) {
+				t.Errorf("\nreferenceMonth: %s\ngot:  %s\nwant: %s\n%s",
+					tc.referenceMonth,
+					got.Format("2006-01-02"),
+					want.Format("2006-01-02"),
+					tc.justificativa,
+				)
+			}
+			if got.Day() != factories.OpeningDay {
+				t.Errorf("OpeningDateFor(%s).Day() = %d, want %d (OpeningDay)",
+					tc.referenceMonth, got.Day(), factories.OpeningDay)
+			}
+		})
+	}
+}
+
 // TestNoDuplicateCycles verifica que dias consecutivos nas fronteiras do ciclo
 // nunca produzem o mesmo vencimento.
 func TestNoDuplicateCycles(t *testing.T) {
@@ -379,6 +533,57 @@ func TestNoDuplicateCycles(t *testing.T) {
 				b.after.Format("2006-01-02"),
 				rmAfter.String(),
 				expectedAfter.String(),
+			)
+		}
+	}
+}
+
+// TestCyclePartitionAllDays é um teste de propriedade que verifica, para todos
+// os 366 dias do ano bissexto de 2024, que:
+//
+//  1. purchaseDate ∈ [openingDate, closingDate]  — sem lacunas
+//  2. closingDate.Day() = ClosingDay (24)         — invariante de fechamento
+//  3. openingDate.Day() = OpeningDay (25)         — invariante de abertura
+//  4. openingDate ≤ closingDate                   — ordenação correta
+//
+// Prova computacional da Seção 4 (cobertura total e disjunção).
+func TestCyclePartitionAllDays(t *testing.T) {
+	t.Parallel()
+
+	calc := factories.NewInvoiceCalculator()
+	start := date(2024, 1, 1)
+
+	for d := range 366 {
+		p := start.AddDate(0, 0, d)
+		opening, closing := calc.CycleFor(p)
+
+		// Propriedade 1: p ∈ [opening, closing]
+		if p.Before(opening) || p.After(closing) {
+			t.Errorf("partição violada: %s ∉ [%s, %s]",
+				p.Format("2006-01-02"),
+				opening.Format("2006-01-02"),
+				closing.Format("2006-01-02"),
+			)
+		}
+
+		// Propriedade 2: fechamento é sempre o dia 24
+		if closing.Day() != factories.ClosingDay {
+			t.Errorf("closing day para %s: got %d, want %d",
+				p.Format("2006-01-02"), closing.Day(), factories.ClosingDay)
+		}
+
+		// Propriedade 3: abertura é sempre o dia 25
+		if opening.Day() != factories.OpeningDay {
+			t.Errorf("opening day para %s: got %d, want %d",
+				p.Format("2006-01-02"), opening.Day(), factories.OpeningDay)
+		}
+
+		// Propriedade 4: abertura ≤ fechamento
+		if opening.After(closing) {
+			t.Errorf("ordenação violada: opening %s > closing %s para compra %s",
+				opening.Format("2006-01-02"),
+				closing.Format("2006-01-02"),
+				p.Format("2006-01-02"),
 			)
 		}
 	}

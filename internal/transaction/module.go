@@ -18,6 +18,7 @@ import (
 	"github.com/jailtonjunior94/financial/pkg/api/httperrors"
 	"github.com/jailtonjunior94/financial/pkg/api/middlewares"
 	"github.com/jailtonjunior94/financial/pkg/auth"
+	"github.com/jailtonjunior94/financial/pkg/observability/metrics"
 )
 
 type TransactionModule struct {
@@ -44,16 +45,18 @@ func NewTransactionModule(
 		return TransactionModule{}, fmt.Errorf("transaction module: failed to create unit of work: %v", err)
 	}
 
-	transactionRepository := repositories.NewTransactionRepository(db, o11y)
+	financialMetrics := metrics.NewFinancialMetrics(o11y)
+
+	transactionRepository := repositories.NewTransactionRepository(db, o11y, financialMetrics)
 
 	ccItemPersister := appstrategies.NewCreditCardItemPersister(transactionRepository)
 
-	registerTransactionUseCase := usecase.NewRegisterTransactionUseCase(unitOfWork, transactionRepository, invoiceTotalProvider, ccItemPersister, o11y)
-	updateTransactionItemUseCase := usecase.NewUpdateTransactionItemUseCase(unitOfWork, transactionRepository, o11y)
-	deleteTransactionItemUseCase := usecase.NewDeleteTransactionItemUseCase(unitOfWork, transactionRepository, o11y)
-	listMonthlyPaginatedUseCase := usecase.NewListMonthlyPaginatedUseCase(o11y, transactionRepository)
-	getMonthlyUseCase := usecase.NewGetMonthlyUseCase(o11y, transactionRepository)
-	syncMonthlyFromInvoicesUseCase := usecase.NewSyncMonthlyFromInvoicesUseCase(unitOfWork, transactionRepository, invoiceTotalProvider, ccItemPersister, o11y)
+	registerTransactionUseCase := usecase.NewRegisterTransactionUseCase(unitOfWork, transactionRepository, invoiceTotalProvider, ccItemPersister, o11y, financialMetrics)
+	updateTransactionItemUseCase := usecase.NewUpdateTransactionItemUseCase(unitOfWork, transactionRepository, o11y, financialMetrics)
+	deleteTransactionItemUseCase := usecase.NewDeleteTransactionItemUseCase(unitOfWork, transactionRepository, o11y, financialMetrics)
+	listMonthlyPaginatedUseCase := usecase.NewListMonthlyPaginatedUseCase(o11y, transactionRepository, financialMetrics)
+	getMonthlyUseCase := usecase.NewGetMonthlyUseCase(o11y, transactionRepository, financialMetrics)
+	syncMonthlyFromInvoicesUseCase := usecase.NewSyncMonthlyFromInvoicesUseCase(unitOfWork, transactionRepository, invoiceTotalProvider, ccItemPersister, o11y, financialMetrics)
 
 	transactionHandler := http.NewTransactionHandler(
 		o11y,
@@ -67,7 +70,7 @@ func NewTransactionModule(
 
 	transactionRouter := http.NewTransactionRouter(transactionHandler, authMiddleware)
 
-	purchaseEventConsumer := messaging.NewPurchaseEventConsumer(syncMonthlyFromInvoicesUseCase, db, o11y)
+	purchaseEventConsumer := messaging.NewPurchaseEventConsumer(syncMonthlyFromInvoicesUseCase, db, o11y, financialMetrics)
 
 	return TransactionModule{
 		TransactionRouter:     transactionRouter,

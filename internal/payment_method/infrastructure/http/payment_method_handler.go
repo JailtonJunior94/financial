@@ -11,6 +11,7 @@ import (
 
 	"github.com/JailtonJunior94/devkit-go/pkg/observability"
 	"github.com/JailtonJunior94/devkit-go/pkg/responses"
+	"go.opentelemetry.io/otel/trace"
 
 	"github.com/go-chi/chi/v5"
 )
@@ -18,7 +19,6 @@ import (
 type PaymentMethodHandler struct {
 	o11y                              observability.Observability
 	errorHandler                      httperrors.ErrorHandler
-	findPaymentMethodUseCase          usecase.FindPaymentMethodUseCase
 	findPaymentMethodPaginatedUseCase usecase.FindPaymentMethodPaginatedUseCase
 	createPaymentMethodUseCase        usecase.CreatePaymentMethodUseCase
 	findPaymentMethodByUseCase        usecase.FindPaymentMethodByUseCase
@@ -30,7 +30,6 @@ type PaymentMethodHandler struct {
 func NewPaymentMethodHandler(
 	o11y observability.Observability,
 	errorHandler httperrors.ErrorHandler,
-	findPaymentMethodUseCase usecase.FindPaymentMethodUseCase,
 	findPaymentMethodPaginatedUseCase usecase.FindPaymentMethodPaginatedUseCase,
 	createPaymentMethodUseCase usecase.CreatePaymentMethodUseCase,
 	findPaymentMethodByUseCase usecase.FindPaymentMethodByUseCase,
@@ -41,7 +40,6 @@ func NewPaymentMethodHandler(
 	return &PaymentMethodHandler{
 		o11y:                              o11y,
 		errorHandler:                      errorHandler,
-		findPaymentMethodUseCase:          findPaymentMethodUseCase,
 		findPaymentMethodPaginatedUseCase: findPaymentMethodPaginatedUseCase,
 		createPaymentMethodUseCase:        createPaymentMethodUseCase,
 		updatePaymentMethodUseCase:        updatePaymentMethodUseCase,
@@ -69,17 +67,52 @@ func (h *PaymentMethodHandler) Create(w http.ResponseWriter, r *http.Request) {
 	ctx, span := h.o11y.Tracer().Start(r.Context(), "payment_method_handler.create")
 	defer span.End()
 
+	correlationID := trace.SpanFromContext(ctx).SpanContext().TraceID().String()
+
+	h.o11y.Logger().Info(ctx, "request_received",
+		observability.String("operation", "CreatePaymentMethod"),
+		observability.String("layer", "handler"),
+		observability.String("entity", "payment_method"),
+		observability.String("correlation_id", correlationID),
+	)
+
 	var input *dtos.PaymentMethodInput
 	if err := json.NewDecoder(r.Body).Decode(&input); err != nil {
+		h.o11y.Logger().Error(ctx, "validation_failed",
+			observability.String("operation", "CreatePaymentMethod"),
+			observability.String("layer", "handler"),
+			observability.String("entity", "payment_method"),
+			observability.String("correlation_id", correlationID),
+			observability.String("error_type", "validation"),
+			observability.String("error_code", "DECODE_BODY_FAILED"),
+			observability.Error(err),
+		)
 		h.errorHandler.HandleError(w, r, err)
 		return
 	}
 
 	output, err := h.createPaymentMethodUseCase.Execute(ctx, input)
 	if err != nil {
+		h.o11y.Logger().Error(ctx, "request_failed",
+			observability.String("operation", "CreatePaymentMethod"),
+			observability.String("layer", "handler"),
+			observability.String("entity", "payment_method"),
+			observability.String("correlation_id", correlationID),
+			observability.String("error_type", "business"),
+			observability.String("error_code", "CREATE_PAYMENT_METHOD_FAILED"),
+			observability.Error(err),
+		)
 		h.errorHandler.HandleError(w, r, err)
 		return
 	}
+
+	h.o11y.Logger().Info(ctx, "request_completed",
+		observability.String("operation", "CreatePaymentMethod"),
+		observability.String("layer", "handler"),
+		observability.String("entity", "payment_method"),
+		observability.String("correlation_id", correlationID),
+		observability.String("payment_method_id", output.ID),
+	)
 
 	responses.JSON(w, http.StatusCreated, output)
 }
@@ -102,14 +135,30 @@ func (h *PaymentMethodHandler) Find(w http.ResponseWriter, r *http.Request) {
 	ctx, span := h.o11y.Tracer().Start(r.Context(), "payment_method_handler.find")
 	defer span.End()
 
-	// Parse cursor parameters (default: limit=20, max=100)
+	correlationID := trace.SpanFromContext(ctx).SpanContext().TraceID().String()
+
+	h.o11y.Logger().Info(ctx, "request_received",
+		observability.String("operation", "FindPaymentMethods"),
+		observability.String("layer", "handler"),
+		observability.String("entity", "payment_method"),
+		observability.String("correlation_id", correlationID),
+	)
+
 	params, err := pagination.ParseCursorParams(r, 20, 100)
 	if err != nil {
+		h.o11y.Logger().Error(ctx, "request_failed",
+			observability.String("operation", "FindPaymentMethods"),
+			observability.String("layer", "handler"),
+			observability.String("entity", "payment_method"),
+			observability.String("correlation_id", correlationID),
+			observability.String("error_type", "validation"),
+			observability.String("error_code", "PAGINATION_PARAMS_INVALID"),
+			observability.Error(err),
+		)
 		h.errorHandler.HandleError(w, r, err)
 		return
 	}
 
-	// Get code query param if provided (Change 5: code filter via query param)
 	code := r.URL.Query().Get("code")
 
 	output, err := h.findPaymentMethodPaginatedUseCase.Execute(ctx, usecase.FindPaymentMethodPaginatedInput{
@@ -118,11 +167,26 @@ func (h *PaymentMethodHandler) Find(w http.ResponseWriter, r *http.Request) {
 		Code:   code,
 	})
 	if err != nil {
+		h.o11y.Logger().Error(ctx, "request_failed",
+			observability.String("operation", "FindPaymentMethods"),
+			observability.String("layer", "handler"),
+			observability.String("entity", "payment_method"),
+			observability.String("correlation_id", correlationID),
+			observability.String("error_type", "business"),
+			observability.String("error_code", "FIND_PAYMENT_METHODS_FAILED"),
+			observability.Error(err),
+		)
 		h.errorHandler.HandleError(w, r, err)
 		return
 	}
 
-	// Build paginated response
+	h.o11y.Logger().Info(ctx, "request_completed",
+		observability.String("operation", "FindPaymentMethods"),
+		observability.String("layer", "handler"),
+		observability.String("entity", "payment_method"),
+		observability.String("correlation_id", correlationID),
+	)
+
 	response := pagination.NewPaginatedResponse(output.PaymentMethods, params.Limit, output.NextCursor)
 	responses.JSON(w, http.StatusOK, response)
 }
@@ -142,11 +206,40 @@ func (h *PaymentMethodHandler) FindBy(w http.ResponseWriter, r *http.Request) {
 	ctx, span := h.o11y.Tracer().Start(r.Context(), "payment_method_handler.find_by")
 	defer span.End()
 
-	output, err := h.findPaymentMethodByUseCase.Execute(ctx, chi.URLParam(r, "id"))
+	correlationID := trace.SpanFromContext(ctx).SpanContext().TraceID().String()
+	pmID := chi.URLParam(r, "id")
+
+	h.o11y.Logger().Info(ctx, "request_received",
+		observability.String("operation", "FindPaymentMethodBy"),
+		observability.String("layer", "handler"),
+		observability.String("entity", "payment_method"),
+		observability.String("correlation_id", correlationID),
+		observability.String("payment_method_id", pmID),
+	)
+
+	output, err := h.findPaymentMethodByUseCase.Execute(ctx, pmID)
 	if err != nil {
+		h.o11y.Logger().Error(ctx, "request_failed",
+			observability.String("operation", "FindPaymentMethodBy"),
+			observability.String("layer", "handler"),
+			observability.String("entity", "payment_method"),
+			observability.String("correlation_id", correlationID),
+			observability.String("payment_method_id", pmID),
+			observability.String("error_type", "business"),
+			observability.String("error_code", "FIND_PAYMENT_METHOD_FAILED"),
+			observability.Error(err),
+		)
 		h.errorHandler.HandleError(w, r, err)
 		return
 	}
+
+	h.o11y.Logger().Info(ctx, "request_completed",
+		observability.String("operation", "FindPaymentMethodBy"),
+		observability.String("layer", "handler"),
+		observability.String("entity", "payment_method"),
+		observability.String("correlation_id", correlationID),
+		observability.String("payment_method_id", pmID),
+	)
 
 	responses.JSON(w, http.StatusOK, output)
 }
@@ -155,11 +248,40 @@ func (h *PaymentMethodHandler) FindByCode(w http.ResponseWriter, r *http.Request
 	ctx, span := h.o11y.Tracer().Start(r.Context(), "payment_method_handler.find_by_code")
 	defer span.End()
 
-	output, err := h.findPaymentMethodByCodeUseCase.Execute(ctx, chi.URLParam(r, "code"))
+	correlationID := trace.SpanFromContext(ctx).SpanContext().TraceID().String()
+	code := chi.URLParam(r, "code")
+
+	h.o11y.Logger().Info(ctx, "request_received",
+		observability.String("operation", "FindPaymentMethodByCode"),
+		observability.String("layer", "handler"),
+		observability.String("entity", "payment_method"),
+		observability.String("correlation_id", correlationID),
+		observability.String("code", code),
+	)
+
+	output, err := h.findPaymentMethodByCodeUseCase.Execute(ctx, code)
 	if err != nil {
+		h.o11y.Logger().Error(ctx, "request_failed",
+			observability.String("operation", "FindPaymentMethodByCode"),
+			observability.String("layer", "handler"),
+			observability.String("entity", "payment_method"),
+			observability.String("correlation_id", correlationID),
+			observability.String("code", code),
+			observability.String("error_type", "business"),
+			observability.String("error_code", "FIND_PAYMENT_METHOD_BY_CODE_FAILED"),
+			observability.Error(err),
+		)
 		h.errorHandler.HandleError(w, r, err)
 		return
 	}
+
+	h.o11y.Logger().Info(ctx, "request_completed",
+		observability.String("operation", "FindPaymentMethodByCode"),
+		observability.String("layer", "handler"),
+		observability.String("entity", "payment_method"),
+		observability.String("correlation_id", correlationID),
+		observability.String("code", code),
+	)
 
 	responses.JSON(w, http.StatusOK, output)
 }
@@ -182,17 +304,55 @@ func (h *PaymentMethodHandler) Update(w http.ResponseWriter, r *http.Request) {
 	ctx, span := h.o11y.Tracer().Start(r.Context(), "payment_method_handler.update")
 	defer span.End()
 
+	correlationID := trace.SpanFromContext(ctx).SpanContext().TraceID().String()
+	pmID := chi.URLParam(r, "id")
+
+	h.o11y.Logger().Info(ctx, "request_received",
+		observability.String("operation", "UpdatePaymentMethod"),
+		observability.String("layer", "handler"),
+		observability.String("entity", "payment_method"),
+		observability.String("correlation_id", correlationID),
+		observability.String("payment_method_id", pmID),
+	)
+
 	var input *dtos.PaymentMethodUpdateInput
 	if err := json.NewDecoder(r.Body).Decode(&input); err != nil {
+		h.o11y.Logger().Error(ctx, "validation_failed",
+			observability.String("operation", "UpdatePaymentMethod"),
+			observability.String("layer", "handler"),
+			observability.String("entity", "payment_method"),
+			observability.String("correlation_id", correlationID),
+			observability.String("error_type", "validation"),
+			observability.String("error_code", "DECODE_BODY_FAILED"),
+			observability.Error(err),
+		)
 		h.errorHandler.HandleError(w, r, err)
 		return
 	}
 
-	output, err := h.updatePaymentMethodUseCase.Execute(ctx, chi.URLParam(r, "id"), input)
+	output, err := h.updatePaymentMethodUseCase.Execute(ctx, pmID, input)
 	if err != nil {
+		h.o11y.Logger().Error(ctx, "request_failed",
+			observability.String("operation", "UpdatePaymentMethod"),
+			observability.String("layer", "handler"),
+			observability.String("entity", "payment_method"),
+			observability.String("correlation_id", correlationID),
+			observability.String("payment_method_id", pmID),
+			observability.String("error_type", "business"),
+			observability.String("error_code", "UPDATE_PAYMENT_METHOD_FAILED"),
+			observability.Error(err),
+		)
 		h.errorHandler.HandleError(w, r, err)
 		return
 	}
+
+	h.o11y.Logger().Info(ctx, "request_completed",
+		observability.String("operation", "UpdatePaymentMethod"),
+		observability.String("layer", "handler"),
+		observability.String("entity", "payment_method"),
+		observability.String("correlation_id", correlationID),
+		observability.String("payment_method_id", pmID),
+	)
 
 	responses.JSON(w, http.StatusOK, output)
 }
@@ -212,10 +372,39 @@ func (h *PaymentMethodHandler) Delete(w http.ResponseWriter, r *http.Request) {
 	ctx, span := h.o11y.Tracer().Start(r.Context(), "payment_method_handler.delete")
 	defer span.End()
 
-	if err := h.removePaymentMethodUseCase.Execute(ctx, chi.URLParam(r, "id")); err != nil {
+	correlationID := trace.SpanFromContext(ctx).SpanContext().TraceID().String()
+	pmID := chi.URLParam(r, "id")
+
+	h.o11y.Logger().Info(ctx, "request_received",
+		observability.String("operation", "DeletePaymentMethod"),
+		observability.String("layer", "handler"),
+		observability.String("entity", "payment_method"),
+		observability.String("correlation_id", correlationID),
+		observability.String("payment_method_id", pmID),
+	)
+
+	if err := h.removePaymentMethodUseCase.Execute(ctx, pmID); err != nil {
+		h.o11y.Logger().Error(ctx, "request_failed",
+			observability.String("operation", "DeletePaymentMethod"),
+			observability.String("layer", "handler"),
+			observability.String("entity", "payment_method"),
+			observability.String("correlation_id", correlationID),
+			observability.String("payment_method_id", pmID),
+			observability.String("error_type", "business"),
+			observability.String("error_code", "DELETE_PAYMENT_METHOD_FAILED"),
+			observability.Error(err),
+		)
 		h.errorHandler.HandleError(w, r, err)
 		return
 	}
+
+	h.o11y.Logger().Info(ctx, "request_completed",
+		observability.String("operation", "DeletePaymentMethod"),
+		observability.String("layer", "handler"),
+		observability.String("entity", "payment_method"),
+		observability.String("correlation_id", correlationID),
+		observability.String("payment_method_id", pmID),
+	)
 
 	responses.JSON(w, http.StatusNoContent, nil)
 }

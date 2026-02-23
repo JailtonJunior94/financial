@@ -11,6 +11,7 @@ import (
 	"github.com/jailtonjunior94/financial/internal/user/infrastructure/repositories"
 	"github.com/jailtonjunior94/financial/pkg/api/httperrors"
 	"github.com/jailtonjunior94/financial/pkg/auth"
+	"github.com/jailtonjunior94/financial/pkg/observability/metrics"
 )
 
 type UserModule struct {
@@ -22,7 +23,8 @@ func NewUserModule(db *sql.DB, cfg *configs.Config, o11y observability.Observabi
 	jwt := auth.NewJwtAdapter(cfg, o11y)
 	errorHandler := httperrors.NewErrorHandler(o11y)
 
-	userRepository := repositories.NewUserRepository(db, o11y)
+	financialMetrics := metrics.NewFinancialMetrics(o11y)
+	userRepository := repositories.NewUserRepository(db, o11y, financialMetrics)
 
 	authUseCase := usecase.NewTokenUseCase(cfg, o11y, hash, jwt, userRepository)
 	createUserUseCase := usecase.NewCreateUserUseCase(o11y, hash, userRepository)

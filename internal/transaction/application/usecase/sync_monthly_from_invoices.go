@@ -7,6 +7,7 @@ import (
 	appstrategies "github.com/jailtonjunior94/financial/internal/transaction/application/strategies"
 	"github.com/jailtonjunior94/financial/internal/transaction/domain/interfaces"
 	pkgVos "github.com/jailtonjunior94/financial/pkg/domain/vos"
+	"github.com/jailtonjunior94/financial/pkg/observability/metrics"
 
 	"github.com/JailtonJunior94/devkit-go/pkg/database"
 	"github.com/JailtonJunior94/devkit-go/pkg/database/uow"
@@ -25,6 +26,7 @@ type (
 		invoiceTotalProvider interfaces.InvoiceTotalProvider
 		ccItemPersister      appstrategies.CreditCardItemPersister
 		o11y                 observability.Observability
+		fm                   *metrics.FinancialMetrics
 	}
 )
 
@@ -34,6 +36,7 @@ func NewSyncMonthlyFromInvoicesUseCase(
 	invoiceTotalProvider interfaces.InvoiceTotalProvider,
 	ccItemPersister appstrategies.CreditCardItemPersister,
 	o11y observability.Observability,
+	fm *metrics.FinancialMetrics,
 ) SyncMonthlyFromInvoicesUseCase {
 	return &syncMonthlyFromInvoicesUseCase{
 		uow:                  uow,
@@ -41,6 +44,7 @@ func NewSyncMonthlyFromInvoicesUseCase(
 		invoiceTotalProvider: invoiceTotalProvider,
 		ccItemPersister:      ccItemPersister,
 		o11y:                 o11y,
+		fm:                   fm,
 	}
 }
 

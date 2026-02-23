@@ -13,6 +13,7 @@ import (
 	"github.com/jailtonjunior94/financial/internal/budget/domain/interfaces"
 	"github.com/jailtonjunior94/financial/internal/budget/infrastructure/repositories"
 	pkgVos "github.com/jailtonjunior94/financial/pkg/domain/vos"
+	"github.com/jailtonjunior94/financial/pkg/observability/metrics"
 )
 
 type (
@@ -24,6 +25,7 @@ type (
 		uow                  uow.UnitOfWork
 		invoiceCategoryTotal interfaces.InvoiceCategoryTotalProvider
 		o11y                 observability.Observability
+		fm                   *metrics.FinancialMetrics
 	}
 )
 
@@ -31,11 +33,13 @@ func NewSyncBudgetSpentAmountUseCase(
 	uow uow.UnitOfWork,
 	invoiceCategoryTotal interfaces.InvoiceCategoryTotalProvider,
 	o11y observability.Observability,
+	fm *metrics.FinancialMetrics,
 ) SyncBudgetSpentAmountUseCase {
 	return &syncBudgetSpentAmountUseCase{
 		uow:                  uow,
 		invoiceCategoryTotal: invoiceCategoryTotal,
 		o11y:                 o11y,
+		fm:                   fm,
 	}
 }
 
@@ -56,7 +60,7 @@ func (u *syncBudgetSpentAmountUseCase) Execute(
 	}
 
 	err = u.uow.Do(ctx, func(ctx context.Context, tx database.DBTX) error {
-		budgetRepository := repositories.NewBudgetRepository(tx, u.o11y)
+		budgetRepository := repositories.NewBudgetRepository(tx, u.o11y, u.fm)
 
 		budget, err := budgetRepository.FindByUserIDAndReferenceMonth(ctx, userID, referenceMonth)
 		if err != nil {

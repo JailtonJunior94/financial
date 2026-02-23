@@ -23,6 +23,7 @@ import (
 	"github.com/jailtonjunior94/financial/pkg/auth"
 	"github.com/jailtonjunior94/financial/pkg/database"
 	"github.com/jailtonjunior94/financial/pkg/messaging"
+	"github.com/jailtonjunior94/financial/pkg/observability/metrics"
 )
 
 type application struct {
@@ -239,7 +240,8 @@ func (app *application) Start() error {
 
 	jwtAdapter := auth.NewJwtAdapter(app.config, app.o11y)
 
-	invoiceRepo := invoicerepos.NewInvoiceRepository(app.dbManager.DB(), app.o11y)
+	fm := metrics.NewFinancialMetrics(app.o11y)
+	invoiceRepo := invoicerepos.NewInvoiceRepository(app.dbManager.DB(), app.o11y, fm)
 	invoiceTotalProvider := invoiceadapters.NewInvoiceTotalProviderAdapter(invoiceRepo)
 	invoiceCategoryTotalProvider := invoiceadapters.NewInvoiceCategoryTotalAdapter(invoiceRepo)
 

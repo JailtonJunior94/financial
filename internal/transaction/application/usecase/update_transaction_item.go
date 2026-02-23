@@ -9,6 +9,7 @@ import (
 	"github.com/jailtonjunior94/financial/internal/transaction/domain/strategies"
 	transactionVos "github.com/jailtonjunior94/financial/internal/transaction/domain/vos"
 	"github.com/jailtonjunior94/financial/pkg/money"
+	"github.com/jailtonjunior94/financial/pkg/observability/metrics"
 
 	"github.com/JailtonJunior94/devkit-go/pkg/database"
 	"github.com/JailtonJunior94/devkit-go/pkg/database/uow"
@@ -25,6 +26,7 @@ type (
 		uow  uow.UnitOfWork
 		repo interfaces.TransactionRepository
 		o11y observability.Observability
+		fm   *metrics.FinancialMetrics
 	}
 )
 
@@ -32,11 +34,13 @@ func NewUpdateTransactionItemUseCase(
 	uow uow.UnitOfWork,
 	repo interfaces.TransactionRepository,
 	o11y observability.Observability,
+	fm *metrics.FinancialMetrics,
 ) UpdateTransactionItemUseCase {
 	return &updateTransactionItemUseCase{
 		uow:  uow,
 		repo: repo,
 		o11y: o11y,
+		fm:   fm,
 	}
 }
 

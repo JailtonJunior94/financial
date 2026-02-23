@@ -5,9 +5,11 @@ import (
 	"database/sql"
 	"errors"
 	"fmt"
+	"time"
 
 	"github.com/jailtonjunior94/financial/internal/card/domain/entities"
 	"github.com/jailtonjunior94/financial/internal/card/domain/interfaces"
+	"github.com/jailtonjunior94/financial/pkg/observability/metrics"
 
 	"github.com/JailtonJunior94/devkit-go/pkg/database"
 	"github.com/JailtonJunior94/devkit-go/pkg/observability"
@@ -17,16 +19,19 @@ import (
 type cardRepository struct {
 	db   database.DBTX
 	o11y observability.Observability
+	fm   *metrics.FinancialMetrics
 }
 
-func NewCardRepository(db database.DBTX, o11y observability.Observability) interfaces.CardRepository {
+func NewCardRepository(db database.DBTX, o11y observability.Observability, fm *metrics.FinancialMetrics) interfaces.CardRepository {
 	return &cardRepository{
 		db:   db,
 		o11y: o11y,
+		fm:   fm,
 	}
 }
 
 func (r *cardRepository) List(ctx context.Context, userID vos.UUID) ([]*entities.Card, error) {
+	start := time.Now()
 	ctx, span := r.o11y.Tracer().Start(ctx, "card_repository.list")
 	defer span.End()
 
@@ -50,6 +55,7 @@ func (r *cardRepository) List(ctx context.Context, userID vos.UUID) ([]*entities
 	rows, err := r.db.QueryContext(ctx, query, userID.String())
 	if err != nil {
 		span.RecordError(err)
+		r.fm.RecordRepositoryFailure(ctx, "list", "card", "infra", time.Since(start))
 		return nil, err
 	}
 	defer func() {
@@ -73,15 +79,18 @@ func (r *cardRepository) List(ctx context.Context, userID vos.UUID) ([]*entities
 		)
 		if err != nil {
 			span.RecordError(err)
+			r.fm.RecordRepositoryFailure(ctx, "list", "card", "infra", time.Since(start))
 			return nil, err
 		}
 		cards = append(cards, &card)
 	}
+	r.fm.RecordRepositoryQuery(ctx, "list", "card", time.Since(start))
 	return cards, nil
 }
 
 // ListPaginated lista cards de um usuário com paginação cursor-based.
 func (r *cardRepository) ListPaginated(ctx context.Context, params interfaces.ListCardsParams) ([]*entities.Card, error) {
+	start := time.Now()
 	ctx, span := r.o11y.Tracer().Start(ctx, "card_repository.list_paginated")
 	defer span.End()
 
@@ -121,6 +130,7 @@ func (r *cardRepository) ListPaginated(ctx context.Context, params interfaces.Li
 	rows, err := r.db.QueryContext(ctx, query, args...)
 	if err != nil {
 		span.RecordError(err)
+		r.fm.RecordRepositoryFailure(ctx, "list_paginated", "card", "infra", time.Since(start))
 		return nil, err
 	}
 	defer func() {
@@ -144,15 +154,18 @@ func (r *cardRepository) ListPaginated(ctx context.Context, params interfaces.Li
 		)
 		if err != nil {
 			span.RecordError(err)
+			r.fm.RecordRepositoryFailure(ctx, "list_paginated", "card", "infra", time.Since(start))
 			return nil, err
 		}
 		cards = append(cards, &card)
 	}
 
+	r.fm.RecordRepositoryQuery(ctx, "list_paginated", "card", time.Since(start))
 	return cards, nil
 }
 
 func (r *cardRepository) FindByID(ctx context.Context, userID, id vos.UUID) (*entities.Card, error) {
+	start := time.Now()
 	ctx, span := r.o11y.Tracer().Start(ctx, "card_repository.find_by_id")
 	defer span.End()
 
@@ -186,16 +199,20 @@ func (r *cardRepository) FindByID(ctx context.Context, userID, id vos.UUID) (*en
 
 	if err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
+			r.fm.RecordRepositoryQuery(ctx, "find_by_id", "card", time.Since(start))
 			return nil, nil
 		}
 		span.RecordError(err)
+		r.fm.RecordRepositoryFailure(ctx, "find_by_id", "card", "infra", time.Since(start))
 		return nil, err
 	}
 
+	r.fm.RecordRepositoryQuery(ctx, "find_by_id", "card", time.Since(start))
 	return &card, nil
 }
 
 func (r *cardRepository) Save(ctx context.Context, card *entities.Card) error {
+	start := time.Now()
 	ctx, span := r.o11y.Tracer().Start(ctx, "card_repository.save")
 	defer span.End()
 
@@ -220,7 +237,7 @@ func (r *cardRepository) Save(ctx context.Context, card *entities.Card) error {
 			observability.String("user_id", card.UserID.String()),
 			observability.Error(err),
 		)
-
+		r.fm.RecordRepositoryFailure(ctx, "save", "card", "infra", time.Since(start))
 		return err
 	}
 	defer func() {
@@ -246,13 +263,15 @@ func (r *cardRepository) Save(ctx context.Context, card *entities.Card) error {
 			observability.Error(err),
 			observability.String("user_id", card.UserID.String()),
 		)
-
+		r.fm.RecordRepositoryFailure(ctx, "save", "card", "infra", time.Since(start))
 		return err
 	}
+	r.fm.RecordRepositoryQuery(ctx, "save", "card", time.Since(start))
 	return nil
 }
 
 func (r *cardRepository) Update(ctx context.Context, card *entities.Card) error {
+	start := time.Now()
 	ctx, span := r.o11y.Tracer().Start(ctx, "card_repository.update")
 	defer span.End()
 
@@ -275,7 +294,7 @@ func (r *cardRepository) Update(ctx context.Context, card *entities.Card) error 
 			observability.String("user_id", card.UserID.String()),
 			observability.Error(err),
 		)
-
+		r.fm.RecordRepositoryFailure(ctx, "update", "card", "infra", time.Since(start))
 		return err
 	}
 	defer func() {
@@ -300,9 +319,10 @@ func (r *cardRepository) Update(ctx context.Context, card *entities.Card) error 
 			observability.String("user_id", card.UserID.String()),
 			observability.Error(err),
 		)
-
+		r.fm.RecordRepositoryFailure(ctx, "update", "card", "infra", time.Since(start))
 		return err
 	}
 
+	r.fm.RecordRepositoryQuery(ctx, "update", "card", time.Since(start))
 	return nil
 }

@@ -12,6 +12,7 @@ import (
 	"github.com/jailtonjunior94/financial/internal/transaction/domain/strategies"
 	transactionVos "github.com/jailtonjunior94/financial/internal/transaction/domain/vos"
 	pkgVos "github.com/jailtonjunior94/financial/pkg/domain/vos"
+	"github.com/jailtonjunior94/financial/pkg/observability/metrics"
 
 	"github.com/JailtonJunior94/devkit-go/pkg/database"
 	"github.com/JailtonJunior94/devkit-go/pkg/database/uow"
@@ -30,6 +31,7 @@ type (
 		invoiceTotalProvider interfaces.InvoiceTotalProvider
 		ccItemPersister      appstrategies.CreditCardItemPersister
 		o11y                 observability.Observability
+		fm                   *metrics.FinancialMetrics
 	}
 )
 
@@ -39,6 +41,7 @@ func NewRegisterTransactionUseCase(
 	invoiceTotalProvider interfaces.InvoiceTotalProvider,
 	ccItemPersister appstrategies.CreditCardItemPersister,
 	o11y observability.Observability,
+	fm *metrics.FinancialMetrics,
 ) RegisterTransactionUseCase {
 	return &registerTransactionUseCase{
 		uow:                  uow,
@@ -46,6 +49,7 @@ func NewRegisterTransactionUseCase(
 		invoiceTotalProvider: invoiceTotalProvider,
 		ccItemPersister:      ccItemPersister,
 		o11y:                 o11y,
+		fm:                   fm,
 	}
 }
 

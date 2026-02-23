@@ -9,6 +9,7 @@ import (
 
 	"github.com/JailtonJunior94/devkit-go/pkg/observability"
 	"github.com/JailtonJunior94/devkit-go/pkg/responses"
+	"go.opentelemetry.io/otel/trace"
 )
 
 type AuthHandler struct {
@@ -48,7 +49,25 @@ func (h *AuthHandler) Token(w http.ResponseWriter, r *http.Request) {
 	ctx, span := h.o11y.Tracer().Start(r.Context(), "auth_handler.token")
 	defer span.End()
 
+	correlationID := trace.SpanFromContext(ctx).SpanContext().TraceID().String()
+
+	h.o11y.Logger().Info(ctx, "request_received",
+		observability.String("operation", "Token"),
+		observability.String("layer", "handler"),
+		observability.String("entity", "user"),
+		observability.String("correlation_id", correlationID),
+	)
+
 	if err := r.ParseForm(); err != nil {
+		h.o11y.Logger().Error(ctx, "request_failed",
+			observability.String("operation", "Token"),
+			observability.String("layer", "handler"),
+			observability.String("entity", "user"),
+			observability.String("correlation_id", correlationID),
+			observability.String("error_type", "validation"),
+			observability.String("error_code", "PARSE_FORM_FAILED"),
+			observability.Error(err),
+		)
 		h.errorHandler.HandleError(w, r, err)
 		return
 	}
@@ -60,9 +79,25 @@ func (h *AuthHandler) Token(w http.ResponseWriter, r *http.Request) {
 
 	output, err := h.tokenUseCase.Execute(ctx, input)
 	if err != nil {
+		h.o11y.Logger().Error(ctx, "request_failed",
+			observability.String("operation", "Token"),
+			observability.String("layer", "handler"),
+			observability.String("entity", "user"),
+			observability.String("correlation_id", correlationID),
+			observability.String("error_type", "business"),
+			observability.String("error_code", "TOKEN_GENERATION_FAILED"),
+			observability.Error(err),
+		)
 		h.errorHandler.HandleError(w, r, err)
 		return
 	}
+
+	h.o11y.Logger().Info(ctx, "request_completed",
+		observability.String("operation", "Token"),
+		observability.String("layer", "handler"),
+		observability.String("entity", "user"),
+		observability.String("correlation_id", correlationID),
+	)
 
 	responses.JSON(w, http.StatusOK, output)
 }

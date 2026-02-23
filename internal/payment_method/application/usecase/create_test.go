@@ -11,6 +11,7 @@ import (
 	"github.com/JailtonJunior94/devkit-go/pkg/observability"
 	"github.com/jailtonjunior94/financial/internal/payment_method/application/dtos"
 	repositoryMock "github.com/jailtonjunior94/financial/internal/payment_method/infrastructure/repositories/mocks"
+	"github.com/jailtonjunior94/financial/pkg/observability/metrics"
 
 	"github.com/JailtonJunior94/devkit-go/pkg/observability/fake"
 )
@@ -164,7 +165,7 @@ func (s *CreatePaymentMethodUseCaseSuite) TestExecute() {
 	for _, scenario := range scenarios {
 		s.Run(scenario.name, func() {
 			// Act
-			uc := NewCreatePaymentMethodUseCase(s.obs, scenario.dependencies.paymentMethodRepository)
+			uc := NewCreatePaymentMethodUseCase(s.obs, scenario.dependencies.paymentMethodRepository, metrics.NewFinancialMetrics(s.obs))
 			output, err := uc.Execute(s.ctx, scenario.args.input)
 
 			// Assert

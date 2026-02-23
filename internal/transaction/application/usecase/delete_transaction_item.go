@@ -6,6 +6,7 @@ import (
 
 	"github.com/jailtonjunior94/financial/internal/transaction/application/dtos"
 	"github.com/jailtonjunior94/financial/internal/transaction/domain/interfaces"
+	"github.com/jailtonjunior94/financial/pkg/observability/metrics"
 
 	"github.com/JailtonJunior94/devkit-go/pkg/database"
 	"github.com/JailtonJunior94/devkit-go/pkg/database/uow"
@@ -22,6 +23,7 @@ type (
 		uow  uow.UnitOfWork
 		repo interfaces.TransactionRepository
 		o11y observability.Observability
+		fm   *metrics.FinancialMetrics
 	}
 )
 
@@ -29,11 +31,13 @@ func NewDeleteTransactionItemUseCase(
 	uow uow.UnitOfWork,
 	repo interfaces.TransactionRepository,
 	o11y observability.Observability,
+	fm *metrics.FinancialMetrics,
 ) DeleteTransactionItemUseCase {
 	return &deleteTransactionItemUseCase{
 		uow:  uow,
 		repo: repo,
 		o11y: o11y,
+		fm:   fm,
 	}
 }
 

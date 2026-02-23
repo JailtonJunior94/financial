@@ -13,6 +13,7 @@ import (
 	"github.com/jailtonjunior94/financial/pkg/api/httperrors"
 	"github.com/jailtonjunior94/financial/pkg/api/middlewares"
 	"github.com/jailtonjunior94/financial/pkg/auth"
+	"github.com/jailtonjunior94/financial/pkg/observability/metrics"
 
 	"github.com/JailtonJunior94/devkit-go/pkg/database/uow"
 	"github.com/JailtonJunior94/devkit-go/pkg/observability"
@@ -37,11 +38,13 @@ func NewBudgetModule(
 		return BudgetModule{}, fmt.Errorf("budget module: failed to create unit of work: %v", err)
 	}
 
-	budgetRepository := repositories.NewBudgetRepository(db, o11y)
-	createBudgetUseCase := usecase.NewCreateBudgetUseCase(unitOfWork, o11y)
-	updateBudgetUseCase := usecase.NewUpdateBudgetUseCase(unitOfWork, o11y)
-	deleteBudgetUseCase := usecase.NewDeleteBudgetUseCase(unitOfWork, o11y)
-	findBudgetUseCase := usecase.NewFindBudgetUseCase(budgetRepository, o11y)
+	financialMetrics := metrics.NewFinancialMetrics(o11y)
+
+	budgetRepository := repositories.NewBudgetRepository(db, o11y, financialMetrics)
+	createBudgetUseCase := usecase.NewCreateBudgetUseCase(unitOfWork, o11y, financialMetrics)
+	updateBudgetUseCase := usecase.NewUpdateBudgetUseCase(unitOfWork, o11y, financialMetrics)
+	deleteBudgetUseCase := usecase.NewDeleteBudgetUseCase(unitOfWork, o11y, financialMetrics)
+	findBudgetUseCase := usecase.NewFindBudgetUseCase(budgetRepository, o11y, financialMetrics)
 	listBudgetsPaginatedUseCase := usecase.NewListBudgetsPaginatedUseCase(o11y, budgetRepository)
 
 	budgetHandler := budgethttp.NewBudgetHandler(
@@ -58,7 +61,7 @@ func NewBudgetModule(
 
 	var budgetEventConsumer *messaging.BudgetEventConsumer
 	if invoiceCategoryTotal != nil {
-		syncUseCase := usecase.NewSyncBudgetSpentAmountUseCase(unitOfWork, invoiceCategoryTotal, o11y)
+		syncUseCase := usecase.NewSyncBudgetSpentAmountUseCase(unitOfWork, invoiceCategoryTotal, o11y, financialMetrics)
 		budgetEventConsumer = messaging.NewBudgetEventConsumer(syncUseCase, db, o11y)
 	}
 

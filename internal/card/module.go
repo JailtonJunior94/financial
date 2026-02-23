@@ -25,11 +25,10 @@ func NewCardModule(db *sql.DB, o11y observability.Observability, tokenValidator 
 	errorHandler := httperrors.NewErrorHandler(o11y)
 	authMiddleware := middlewares.NewAuthorization(tokenValidator, o11y, errorHandler)
 
-	// Inicializa métricas do módulo de cartões
 	cardMetrics := metrics.NewCardMetrics(o11y)
+	financialMetrics := metrics.NewFinancialMetrics(o11y)
 
-	cardRepository := repositories.NewCardRepository(db, o11y)
-	findCardUsecase := usecase.NewFindCardUseCase(o11y, cardRepository, cardMetrics)
+	cardRepository := repositories.NewCardRepository(db, o11y, financialMetrics)
 	findCardPaginatedUsecase := usecase.NewFindCardPaginatedUseCase(o11y, cardRepository, cardMetrics)
 	findCardByUsecase := usecase.NewFindCardByUseCase(o11y, cardRepository, cardMetrics)
 	createCardUsecase := usecase.NewCreateCardUseCase(o11y, cardRepository, cardMetrics)
@@ -39,7 +38,6 @@ func NewCardModule(db *sql.DB, o11y observability.Observability, tokenValidator 
 	cardHandler := http.NewCardHandler(
 		o11y,
 		errorHandler,
-		findCardUsecase,
 		findCardPaginatedUsecase,
 		createCardUsecase,
 		findCardByUsecase,

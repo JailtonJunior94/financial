@@ -8,6 +8,7 @@ import (
 	"github.com/jailtonjunior94/financial/internal/budget/domain"
 	"github.com/jailtonjunior94/financial/internal/budget/infrastructure/repositories"
 	"github.com/jailtonjunior94/financial/pkg/money"
+	"github.com/jailtonjunior94/financial/pkg/observability/metrics"
 
 	"github.com/JailtonJunior94/devkit-go/pkg/database"
 	"github.com/JailtonJunior94/devkit-go/pkg/database/uow"
@@ -21,18 +22,21 @@ type (
 	}
 
 	updateSpentAmountUseCase struct {
-		uow  uow.UnitOfWork
-		o11y observability.Observability
+		uow     uow.UnitOfWork
+		o11y    observability.Observability
+		metrics *metrics.FinancialMetrics
 	}
 )
 
 func NewUpdateSpentAmountUseCase(
 	uow uow.UnitOfWork,
 	o11y observability.Observability,
+	fm *metrics.FinancialMetrics,
 ) UpdateSpentAmountUseCase {
 	return &updateSpentAmountUseCase{
-		uow:  uow,
-		o11y: o11y,
+		uow:     uow,
+		o11y:    o11y,
+		metrics: fm,
 	}
 }
 
@@ -60,7 +64,7 @@ func (u *updateSpentAmountUseCase) Execute(ctx context.Context, userID, budgetID
 
 	err = u.uow.Do(ctx, func(ctx context.Context, tx database.DBTX) error {
 		// Criar repositório com a transação
-		budgetRepository := repositories.NewBudgetRepository(tx, u.o11y)
+		budgetRepository := repositories.NewBudgetRepository(tx, u.o11y, u.metrics)
 
 		// Buscar o orçamento completo (scoped by userID to prevent IDOR)
 		budget, err := budgetRepository.FindByID(ctx, userUUID, budgetUUID)

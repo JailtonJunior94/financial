@@ -4,9 +4,11 @@ import (
 	"context"
 	"database/sql"
 	"fmt"
+	"time"
 
 	"github.com/jailtonjunior94/financial/internal/category/domain/entities"
 	"github.com/jailtonjunior94/financial/internal/category/domain/interfaces"
+	"github.com/jailtonjunior94/financial/pkg/observability/metrics"
 
 	"github.com/JailtonJunior94/devkit-go/pkg/database"
 	"github.com/JailtonJunior94/devkit-go/pkg/observability"
@@ -14,21 +16,30 @@ import (
 )
 
 type categoryRepository struct {
-	db   database.DBTX
+	db  database.DBTX
 	o11y observability.Observability
+	fm  *metrics.FinancialMetrics
 }
 
-func NewCategoryRepository(db database.DBTX, o11y observability.Observability) interfaces.CategoryRepository {
+func NewCategoryRepository(db database.DBTX, o11y observability.Observability, fm *metrics.FinancialMetrics) interfaces.CategoryRepository {
 	return &categoryRepository{
 		db:   db,
 		o11y: o11y,
+		fm:   fm,
 	}
 }
 
 func (r *categoryRepository) List(ctx context.Context, userID vos.UUID) ([]*entities.Category, error) {
-	// Removido WithTimeout: confiar no timeout do contexto pai (HTTP request ou transação)
+	start := time.Now()
 	ctx, span := r.o11y.Tracer().Start(ctx, "category_repository.list")
 	defer span.End()
+
+	r.o11y.Logger().Debug(ctx, "query_started",
+		observability.String("operation", "list"),
+		observability.String("layer", "repository"),
+		observability.String("entity", "category"),
+		observability.String("user_id", userID.String()),
+	)
 
 	query := `select
 				id,
@@ -50,7 +61,14 @@ func (r *categoryRepository) List(ctx context.Context, userID vos.UUID) ([]*enti
 	rows, err := r.db.QueryContext(ctx, query, userID.String())
 	if err != nil {
 		span.RecordError(err)
-
+		r.o11y.Logger().Error(ctx, "query_failed",
+			observability.String("operation", "list"),
+			observability.String("layer", "repository"),
+			observability.String("entity", "category"),
+			observability.String("user_id", userID.String()),
+			observability.Error(err),
+		)
+		r.fm.RecordRepositoryFailure(ctx, "list", "category", "infra", time.Since(start))
 		return nil, err
 	}
 	defer func() { _ = rows.Close() }()
@@ -69,6 +87,14 @@ func (r *categoryRepository) List(ctx context.Context, userID vos.UUID) ([]*enti
 		)
 		if err != nil {
 			span.RecordError(err)
+			r.o11y.Logger().Error(ctx, "query_failed",
+				observability.String("operation", "list"),
+				observability.String("layer", "repository"),
+				observability.String("entity", "category"),
+				observability.String("user_id", userID.String()),
+				observability.Error(err),
+			)
+			r.fm.RecordRepositoryFailure(ctx, "list", "category", "infra", time.Since(start))
 			return nil, err
 		}
 		categories = append(categories, &category)
@@ -76,16 +102,40 @@ func (r *categoryRepository) List(ctx context.Context, userID vos.UUID) ([]*enti
 
 	if err := rows.Err(); err != nil {
 		span.RecordError(err)
+		r.o11y.Logger().Error(ctx, "query_failed",
+			observability.String("operation", "list"),
+			observability.String("layer", "repository"),
+			observability.String("entity", "category"),
+			observability.String("user_id", userID.String()),
+			observability.Error(err),
+		)
+		r.fm.RecordRepositoryFailure(ctx, "list", "category", "infra", time.Since(start))
 		return nil, err
 	}
+
+	r.o11y.Logger().Debug(ctx, "query_completed",
+		observability.String("operation", "list"),
+		observability.String("layer", "repository"),
+		observability.String("entity", "category"),
+		observability.String("user_id", userID.String()),
+	)
+	r.fm.RecordRepositoryQuery(ctx, "list", "category", time.Since(start))
 
 	return categories, nil
 }
 
 // ListPaginated lista categorias de um usuário com paginação cursor-based.
 func (r *categoryRepository) ListPaginated(ctx context.Context, params interfaces.ListCategoriesParams) ([]*entities.Category, error) {
+	start := time.Now()
 	ctx, span := r.o11y.Tracer().Start(ctx, "category_repository.list_paginated")
 	defer span.End()
+
+	r.o11y.Logger().Debug(ctx, "query_started",
+		observability.String("operation", "list_paginated"),
+		observability.String("layer", "repository"),
+		observability.String("entity", "category"),
+		observability.String("user_id", params.UserID.String()),
+	)
 
 	// Build WHERE clause with cursor
 	whereClause := "user_id = $1 AND deleted_at IS NULL AND parent_id IS NULL"
@@ -122,6 +172,14 @@ func (r *categoryRepository) ListPaginated(ctx context.Context, params interface
 	rows, err := r.db.QueryContext(ctx, query, args...)
 	if err != nil {
 		span.RecordError(err)
+		r.o11y.Logger().Error(ctx, "query_failed",
+			observability.String("operation", "list_paginated"),
+			observability.String("layer", "repository"),
+			observability.String("entity", "category"),
+			observability.String("user_id", params.UserID.String()),
+			observability.Error(err),
+		)
+		r.fm.RecordRepositoryFailure(ctx, "list_paginated", "category", "infra", time.Since(start))
 		return nil, err
 	}
 	defer func() { _ = rows.Close() }()
@@ -140,6 +198,14 @@ func (r *categoryRepository) ListPaginated(ctx context.Context, params interface
 		)
 		if err != nil {
 			span.RecordError(err)
+			r.o11y.Logger().Error(ctx, "query_failed",
+				observability.String("operation", "list_paginated"),
+				observability.String("layer", "repository"),
+				observability.String("entity", "category"),
+				observability.String("user_id", params.UserID.String()),
+				observability.Error(err),
+			)
+			r.fm.RecordRepositoryFailure(ctx, "list_paginated", "category", "infra", time.Since(start))
 			return nil, err
 		}
 		categories = append(categories, &category)
@@ -147,15 +213,40 @@ func (r *categoryRepository) ListPaginated(ctx context.Context, params interface
 
 	if err := rows.Err(); err != nil {
 		span.RecordError(err)
+		r.o11y.Logger().Error(ctx, "query_failed",
+			observability.String("operation", "list_paginated"),
+			observability.String("layer", "repository"),
+			observability.String("entity", "category"),
+			observability.String("user_id", params.UserID.String()),
+			observability.Error(err),
+		)
+		r.fm.RecordRepositoryFailure(ctx, "list_paginated", "category", "infra", time.Since(start))
 		return nil, err
 	}
+
+	r.o11y.Logger().Debug(ctx, "query_completed",
+		observability.String("operation", "list_paginated"),
+		observability.String("layer", "repository"),
+		observability.String("entity", "category"),
+		observability.String("user_id", params.UserID.String()),
+	)
+	r.fm.RecordRepositoryQuery(ctx, "list_paginated", "category", time.Since(start))
 
 	return categories, nil
 }
 
 func (r *categoryRepository) FindByID(ctx context.Context, userID, id vos.UUID) (*entities.Category, error) {
+	start := time.Now()
 	ctx, span := r.o11y.Tracer().Start(ctx, "category_repository.find_by_id")
 	defer span.End()
+
+	r.o11y.Logger().Debug(ctx, "query_started",
+		observability.String("operation", "find_by_id"),
+		observability.String("layer", "repository"),
+		observability.String("entity", "category"),
+		observability.String("user_id", userID.String()),
+		observability.String("category_id", id.String()),
+	)
 
 	// 1. Buscar categoria principal
 	queryCategory := `
@@ -172,10 +263,6 @@ func (r *categoryRepository) FindByID(ctx context.Context, userID, id vos.UUID) 
 		WHERE user_id = $1
 			AND id = $2
 			AND deleted_at IS NULL`
-
-	r.o11y.Logger().Info(ctx, "FindByID - searching category",
-		observability.String("user_id", userID.String()),
-		observability.String("category_id", id.String()))
 
 	var category entities.Category
 	var parentIDStr sql.NullString
@@ -205,30 +292,40 @@ func (r *categoryRepository) FindByID(ctx context.Context, userID, id vos.UUID) 
 		_ = r.db.QueryRowContext(ctx, checkQuery, id.String()).Scan(&existsForOtherUser)
 
 		if existsForOtherUser {
-			r.o11y.Logger().Warn(ctx, "FindByID - category exists but belongs to different user",
-				observability.String("requested_user_id", userID.String()),
-				observability.String("category_id", id.String()))
-		} else {
-			r.o11y.Logger().Warn(ctx, "FindByID - category does not exist in database",
+			r.o11y.Logger().Warn(ctx, "query_completed",
+				observability.String("operation", "find_by_id"),
+				observability.String("layer", "repository"),
+				observability.String("entity", "category"),
 				observability.String("user_id", userID.String()),
-				observability.String("category_id", id.String()))
+				observability.String("category_id", id.String()),
+				observability.String("result", "category_belongs_to_different_user"),
+			)
+		} else {
+			r.o11y.Logger().Warn(ctx, "query_completed",
+				observability.String("operation", "find_by_id"),
+				observability.String("layer", "repository"),
+				observability.String("entity", "category"),
+				observability.String("user_id", userID.String()),
+				observability.String("category_id", id.String()),
+				observability.String("result", "not_found"),
+			)
 		}
+		r.fm.RecordRepositoryQuery(ctx, "find_by_id", "category", time.Since(start))
 		return nil, nil
 	}
 	if err != nil {
-		r.o11y.Logger().Error(ctx, "FindByID - scan error",
-			observability.Error(err),
-			observability.String("user_id", userID.String()),
-			observability.String("category_id", id.String()))
 		span.RecordError(err)
+		r.o11y.Logger().Error(ctx, "query_failed",
+			observability.String("operation", "find_by_id"),
+			observability.String("layer", "repository"),
+			observability.String("entity", "category"),
+			observability.String("user_id", userID.String()),
+			observability.String("category_id", id.String()),
+			observability.Error(err),
+		)
+		r.fm.RecordRepositoryFailure(ctx, "find_by_id", "category", "infra", time.Since(start))
 		return nil, err
 	}
-
-	r.o11y.Logger().Info(ctx, "FindByID - category found successfully",
-		observability.String("user_id", userID.String()),
-		observability.String("category_id", id.String()),
-		observability.String("category_name", category.Name.String()),
-		observability.String("has_parent", fmt.Sprintf("%v", category.ParentID != nil)))
 
 	// 2. Buscar subcategorias (filhos)
 	queryChildren := `
@@ -248,6 +345,15 @@ func (r *categoryRepository) FindByID(ctx context.Context, userID, id vos.UUID) 
 	rows, err := r.db.QueryContext(ctx, queryChildren, id.String())
 	if err != nil {
 		span.RecordError(err)
+		r.o11y.Logger().Error(ctx, "query_failed",
+			observability.String("operation", "find_by_id"),
+			observability.String("layer", "repository"),
+			observability.String("entity", "category"),
+			observability.String("user_id", userID.String()),
+			observability.String("category_id", id.String()),
+			observability.Error(err),
+		)
+		r.fm.RecordRepositoryFailure(ctx, "find_by_id", "category", "infra", time.Since(start))
 		return nil, err
 	}
 	defer func() { _ = rows.Close() }()
@@ -266,6 +372,15 @@ func (r *categoryRepository) FindByID(ctx context.Context, userID, id vos.UUID) 
 		)
 		if err != nil {
 			span.RecordError(err)
+			r.o11y.Logger().Error(ctx, "query_failed",
+				observability.String("operation", "find_by_id"),
+				observability.String("layer", "repository"),
+				observability.String("entity", "category"),
+				observability.String("user_id", userID.String()),
+				observability.String("category_id", id.String()),
+				observability.Error(err),
+			)
+			r.fm.RecordRepositoryFailure(ctx, "find_by_id", "category", "infra", time.Since(start))
 			return nil, err
 		}
 		children = append(children, child)
@@ -273,6 +388,15 @@ func (r *categoryRepository) FindByID(ctx context.Context, userID, id vos.UUID) 
 
 	if err := rows.Err(); err != nil {
 		span.RecordError(err)
+		r.o11y.Logger().Error(ctx, "query_failed",
+			observability.String("operation", "find_by_id"),
+			observability.String("layer", "repository"),
+			observability.String("entity", "category"),
+			observability.String("user_id", userID.String()),
+			observability.String("category_id", id.String()),
+			observability.Error(err),
+		)
+		r.fm.RecordRepositoryFailure(ctx, "find_by_id", "category", "infra", time.Since(start))
 		return nil, err
 	}
 
@@ -281,13 +405,29 @@ func (r *categoryRepository) FindByID(ctx context.Context, userID, id vos.UUID) 
 		category.AddChildrens(children)
 	}
 
+	r.o11y.Logger().Debug(ctx, "query_completed",
+		observability.String("operation", "find_by_id"),
+		observability.String("layer", "repository"),
+		observability.String("entity", "category"),
+		observability.String("user_id", userID.String()),
+		observability.String("category_id", id.String()),
+	)
+	r.fm.RecordRepositoryQuery(ctx, "find_by_id", "category", time.Since(start))
+
 	return &category, nil
 }
 
 func (r *categoryRepository) Save(ctx context.Context, category *entities.Category) error {
-	// Removido WithTimeout: confiar no timeout do contexto pai (HTTP request ou transação)
+	start := time.Now()
 	ctx, span := r.o11y.Tracer().Start(ctx, "category_repository.save")
 	defer span.End()
+
+	r.o11y.Logger().Debug(ctx, "query_started",
+		observability.String("operation", "save"),
+		observability.String("layer", "repository"),
+		observability.String("entity", "category"),
+		observability.String("user_id", category.UserID.String()),
+	)
 
 	query := `insert into
 				categories (
@@ -305,12 +445,15 @@ func (r *categoryRepository) Save(ctx context.Context, category *entities.Catego
 
 	stmt, err := r.db.PrepareContext(ctx, query)
 	if err != nil {
-		span.AddEvent(
-			"error preparing insert category",
-			observability.Field{Key: "user_id", Value: category.UserID},
-			observability.Field{Key: "error", Value: err},
+		span.RecordError(err)
+		r.o11y.Logger().Error(ctx, "query_failed",
+			observability.String("operation", "save"),
+			observability.String("layer", "repository"),
+			observability.String("entity", "category"),
+			observability.String("user_id", category.UserID.String()),
+			observability.Error(err),
 		)
-
+		r.fm.RecordRepositoryFailure(ctx, "save", "category", "infra", time.Since(start))
 		return err
 	}
 	defer func() { _ = stmt.Close() }()
@@ -327,21 +470,41 @@ func (r *categoryRepository) Save(ctx context.Context, category *entities.Catego
 		category.DeletedAt.Ptr(),
 	)
 	if err != nil {
-		span.AddEvent(
-			"error inserting category",
-			observability.Field{Key: "user_id", Value: category.UserID},
-			observability.Field{Key: "error", Value: err},
+		span.RecordError(err)
+		r.o11y.Logger().Error(ctx, "query_failed",
+			observability.String("operation", "save"),
+			observability.String("layer", "repository"),
+			observability.String("entity", "category"),
+			observability.String("user_id", category.UserID.String()),
+			observability.Error(err),
 		)
-
+		r.fm.RecordRepositoryFailure(ctx, "save", "category", "infra", time.Since(start))
 		return err
 	}
+
+	r.o11y.Logger().Debug(ctx, "query_completed",
+		observability.String("operation", "save"),
+		observability.String("layer", "repository"),
+		observability.String("entity", "category"),
+		observability.String("user_id", category.UserID.String()),
+	)
+	r.fm.RecordRepositoryQuery(ctx, "save", "category", time.Since(start))
+
 	return nil
 }
 
 func (r *categoryRepository) Update(ctx context.Context, category *entities.Category) error {
-	// Removido WithTimeout: confiar no timeout do contexto pai (HTTP request ou transação)
+	start := time.Now()
 	ctx, span := r.o11y.Tracer().Start(ctx, "category_repository.update")
 	defer span.End()
+
+	r.o11y.Logger().Debug(ctx, "query_started",
+		observability.String("operation", "update"),
+		observability.String("layer", "repository"),
+		observability.String("entity", "category"),
+		observability.String("user_id", category.UserID.String()),
+		observability.String("category_id", category.ID.String()),
+	)
 
 	query := `update
 				categories
@@ -357,12 +520,16 @@ func (r *categoryRepository) Update(ctx context.Context, category *entities.Cate
 
 	stmt, err := r.db.PrepareContext(ctx, query)
 	if err != nil {
-		span.AddEvent(
-			"error preparing update category",
-			observability.Field{Key: "user_id", Value: category.UserID},
-			observability.Field{Key: "error", Value: err},
+		span.RecordError(err)
+		r.o11y.Logger().Error(ctx, "query_failed",
+			observability.String("operation", "update"),
+			observability.String("layer", "repository"),
+			observability.String("entity", "category"),
+			observability.String("user_id", category.UserID.String()),
+			observability.String("category_id", category.ID.String()),
+			observability.Error(err),
 		)
-
+		r.fm.RecordRepositoryFailure(ctx, "update", "category", "infra", time.Since(start))
 		return err
 	}
 	defer func() { _ = stmt.Close() }()
@@ -378,22 +545,44 @@ func (r *categoryRepository) Update(ctx context.Context, category *entities.Cate
 		category.UserID.Value,
 	)
 	if err != nil {
-		span.AddEvent(
-			"error updating category",
-			observability.Field{Key: "user_id", Value: category.UserID},
-			observability.Field{Key: "error", Value: err},
+		span.RecordError(err)
+		r.o11y.Logger().Error(ctx, "query_failed",
+			observability.String("operation", "update"),
+			observability.String("layer", "repository"),
+			observability.String("entity", "category"),
+			observability.String("user_id", category.UserID.String()),
+			observability.String("category_id", category.ID.String()),
+			observability.Error(err),
 		)
-
+		r.fm.RecordRepositoryFailure(ctx, "update", "category", "infra", time.Since(start))
 		return err
 	}
+
+	r.o11y.Logger().Debug(ctx, "query_completed",
+		observability.String("operation", "update"),
+		observability.String("layer", "repository"),
+		observability.String("entity", "category"),
+		observability.String("user_id", category.UserID.String()),
+		observability.String("category_id", category.ID.String()),
+	)
+	r.fm.RecordRepositoryQuery(ctx, "update", "category", time.Since(start))
 
 	return nil
 }
 
 func (r *categoryRepository) CheckCycleExists(ctx context.Context, userID, categoryID, parentID vos.UUID) (bool, error) {
-	// Removido WithTimeout: confiar no timeout do contexto pai (HTTP request ou transação)
+	start := time.Now()
 	ctx, span := r.o11y.Tracer().Start(ctx, "category_repository.check_cycle_exists")
 	defer span.End()
+
+	r.o11y.Logger().Debug(ctx, "query_started",
+		observability.String("operation", "check_cycle_exists"),
+		observability.String("layer", "repository"),
+		observability.String("entity", "category"),
+		observability.String("user_id", userID.String()),
+		observability.String("category_id", categoryID.String()),
+		observability.String("parent_id", parentID.String()),
+	)
 
 	query := `
 		WITH RECURSIVE category_path AS (
@@ -415,20 +604,29 @@ func (r *categoryRepository) CheckCycleExists(ctx context.Context, userID, categ
 	var cycleExists bool
 	err := r.db.QueryRowContext(ctx, query, parentID.String(), userID.String(), categoryID.String()).Scan(&cycleExists)
 	if err != nil {
-		span.AddEvent(
-			"error checking category cycle",
-			observability.Field{Key: "user_id", Value: userID.String()},
-			observability.Field{Key: "category_id", Value: categoryID.String()},
-			observability.Field{Key: "parent_id", Value: parentID.String()},
-			observability.Field{Key: "error", Value: err},
-		)
-		r.o11y.Logger().Error(ctx, "error checking category cycle",
-			observability.Error(err),
+		span.RecordError(err)
+		r.o11y.Logger().Error(ctx, "query_failed",
+			observability.String("operation", "check_cycle_exists"),
+			observability.String("layer", "repository"),
+			observability.String("entity", "category"),
 			observability.String("user_id", userID.String()),
 			observability.String("category_id", categoryID.String()),
-			observability.String("parent_id", parentID.String()))
+			observability.String("parent_id", parentID.String()),
+			observability.Error(err),
+		)
+		r.fm.RecordRepositoryFailure(ctx, "check_cycle_exists", "category", "infra", time.Since(start))
 		return false, err
 	}
+
+	r.o11y.Logger().Debug(ctx, "query_completed",
+		observability.String("operation", "check_cycle_exists"),
+		observability.String("layer", "repository"),
+		observability.String("entity", "category"),
+		observability.String("user_id", userID.String()),
+		observability.String("category_id", categoryID.String()),
+		observability.String("parent_id", parentID.String()),
+	)
+	r.fm.RecordRepositoryQuery(ctx, "check_cycle_exists", "category", time.Since(start))
 
 	return cycleExists, nil
 }

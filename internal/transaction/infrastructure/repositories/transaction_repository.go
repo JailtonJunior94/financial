@@ -13,6 +13,8 @@ import (
 	transactionVos "github.com/jailtonjunior94/financial/internal/transaction/domain/vos"
 	pkgVos "github.com/jailtonjunior94/financial/pkg/domain/vos"
 
+	"github.com/jailtonjunior94/financial/pkg/observability/metrics"
+
 	"github.com/JailtonJunior94/devkit-go/pkg/database"
 	"github.com/JailtonJunior94/devkit-go/pkg/observability"
 	sharedVos "github.com/JailtonJunior94/devkit-go/pkg/vos"
@@ -21,16 +23,19 @@ import (
 type transactionRepository struct {
 	db   database.DBTX
 	o11y observability.Observability
+	fm   *metrics.FinancialMetrics
 }
 
 // NewTransactionRepository cria uma nova instância do repositório.
 func NewTransactionRepository(
 	db database.DBTX,
 	o11y observability.Observability,
+	fm *metrics.FinancialMetrics,
 ) interfaces.TransactionRepository {
 	return &transactionRepository{
 		db:   db,
 		o11y: o11y,
+		fm:   fm,
 	}
 }
 
@@ -41,12 +46,15 @@ func (r *transactionRepository) FindOrCreateMonthly(
 	userID sharedVos.UUID,
 	referenceMonth pkgVos.ReferenceMonth,
 ) (*entities.MonthlyTransaction, error) {
+	start := time.Now()
 	ctx, span := r.o11y.Tracer().Start(ctx, "transaction_repository.find_or_create_monthly")
 	defer span.End()
 
 	// Tenta buscar existente
 	monthly, err := r.findMonthlyByUserAndMonth(ctx, executor, userID, referenceMonth)
 	if err != nil {
+		span.RecordError(err)
+		r.fm.RecordRepositoryFailure(ctx, "find_or_create_monthly", "transaction", "infra", time.Since(start))
 		return nil, err
 	}
 
@@ -55,30 +63,38 @@ func (r *transactionRepository) FindOrCreateMonthly(
 		// Carrega os items
 		items, err := r.findItemsByMonthlyID(ctx, executor, monthly.ID)
 		if err != nil {
+			span.RecordError(err)
+			r.fm.RecordRepositoryFailure(ctx, "find_or_create_monthly", "transaction", "infra", time.Since(start))
 			return nil, err
 		}
 		monthly.LoadItems(items)
+		r.fm.RecordRepositoryQuery(ctx, "find_or_create_monthly", "transaction", time.Since(start))
 		return monthly, nil
 	}
 
 	// Se não encontrou, cria novo
 	monthly, err = entities.NewMonthlyTransaction(userID, referenceMonth)
 	if err != nil {
+		r.fm.RecordRepositoryFailure(ctx, "find_or_create_monthly", "transaction", "infra", time.Since(start))
 		return nil, err
 	}
 
 	// Gera ID
 	id, err := sharedVos.NewUUID()
 	if err != nil {
+		r.fm.RecordRepositoryFailure(ctx, "find_or_create_monthly", "transaction", "infra", time.Since(start))
 		return nil, fmt.Errorf("failed to generate UUID: %w", err)
 	}
 	monthly.SetID(id)
 
 	// Persiste
 	if err := r.insertMonthly(ctx, executor, monthly); err != nil {
+		span.RecordError(err)
+		r.fm.RecordRepositoryFailure(ctx, "find_or_create_monthly", "transaction", "infra", time.Since(start))
 		return nil, err
 	}
 
+	r.fm.RecordRepositoryQuery(ctx, "find_or_create_monthly", "transaction", time.Since(start))
 	return monthly, nil
 }
 
@@ -89,12 +105,13 @@ func (r *transactionRepository) FindMonthlyByID(
 	userID sharedVos.UUID,
 	monthlyID sharedVos.UUID,
 ) (*entities.MonthlyTransaction, error) {
+	start := time.Now()
 	ctx, span := r.o11y.Tracer().Start(ctx, "transaction_repository.find_monthly_by_id")
 	defer span.End()
 
 	query := `
-		SELECT 
-			id, user_id, reference_month, 
+		SELECT
+			id, user_id, reference_month,
 			total_income, total_expense, total_amount,
 			created_at, updated_at
 		FROM monthly_transactions
@@ -119,32 +136,39 @@ func (r *transactionRepository) FindMonthlyByID(
 	)
 
 	if errors.Is(err, sql.ErrNoRows) {
+		r.fm.RecordRepositoryQuery(ctx, "find_monthly_by_id", "transaction", time.Since(start))
 		return nil, nil
 	}
 	if err != nil {
+		span.RecordError(err)
 		r.o11y.Logger().Error(ctx, "failed to find monthly transaction", observability.Error(err))
+		r.fm.RecordRepositoryFailure(ctx, "find_monthly_by_id", "transaction", "infra", time.Since(start))
 		return nil, err
 	}
 
 	// Parse reference month
 	monthly.ReferenceMonth, err = pkgVos.NewReferenceMonth(refMonthStr)
 	if err != nil {
+		r.fm.RecordRepositoryFailure(ctx, "find_monthly_by_id", "transaction", "infra", time.Since(start))
 		return nil, err
 	}
 
 	// Parse money values from NUMERIC strings
 	monthly.TotalIncome, err = sharedVos.NewMoneyFromString(totalIncomeStr, sharedVos.CurrencyBRL)
 	if err != nil {
+		r.fm.RecordRepositoryFailure(ctx, "find_monthly_by_id", "transaction", "infra", time.Since(start))
 		return nil, fmt.Errorf("failed to parse total_income: %w", err)
 	}
 
 	monthly.TotalExpense, err = sharedVos.NewMoneyFromString(totalExpenseStr, sharedVos.CurrencyBRL)
 	if err != nil {
+		r.fm.RecordRepositoryFailure(ctx, "find_monthly_by_id", "transaction", "infra", time.Since(start))
 		return nil, fmt.Errorf("failed to parse total_expense: %w", err)
 	}
 
 	monthly.TotalAmount, err = sharedVos.NewMoneyFromString(totalAmountStr, sharedVos.CurrencyBRL)
 	if err != nil {
+		r.fm.RecordRepositoryFailure(ctx, "find_monthly_by_id", "transaction", "infra", time.Since(start))
 		return nil, fmt.Errorf("failed to parse total_amount: %w", err)
 	}
 
@@ -157,10 +181,13 @@ func (r *transactionRepository) FindMonthlyByID(
 	// Load items
 	items, err := r.findItemsByMonthlyID(ctx, executor, monthly.ID)
 	if err != nil {
+		span.RecordError(err)
+		r.fm.RecordRepositoryFailure(ctx, "find_monthly_by_id", "transaction", "infra", time.Since(start))
 		return nil, err
 	}
 	monthly.LoadItems(items)
 
+	r.fm.RecordRepositoryQuery(ctx, "find_monthly_by_id", "transaction", time.Since(start))
 	return &monthly, nil
 }
 
@@ -170,12 +197,13 @@ func (r *transactionRepository) UpdateMonthly(
 	executor database.DBTX,
 	monthly *entities.MonthlyTransaction,
 ) error {
+	start := time.Now()
 	ctx, span := r.o11y.Tracer().Start(ctx, "transaction_repository.update_monthly")
 	defer span.End()
 
 	query := `
 		UPDATE monthly_transactions
-		SET 
+		SET
 			total_income = $1,
 			total_expense = $2,
 			total_amount = $3,
@@ -194,10 +222,13 @@ func (r *transactionRepository) UpdateMonthly(
 	)
 
 	if err != nil {
+		span.RecordError(err)
 		r.o11y.Logger().Error(ctx, "failed to update monthly transaction", observability.Error(err))
+		r.fm.RecordRepositoryFailure(ctx, "update_monthly", "transaction", "infra", time.Since(start))
 		return err
 	}
 
+	r.fm.RecordRepositoryQuery(ctx, "update_monthly", "transaction", time.Since(start))
 	return nil
 }
 
@@ -207,6 +238,7 @@ func (r *transactionRepository) InsertItem(
 	executor database.DBTX,
 	item *entities.TransactionItem,
 ) error {
+	start := time.Now()
 	ctx, span := r.o11y.Tracer().Start(ctx, "transaction_repository.insert_item")
 	defer span.End()
 
@@ -231,10 +263,13 @@ func (r *transactionRepository) InsertItem(
 	)
 
 	if err != nil {
+		span.RecordError(err)
 		r.o11y.Logger().Error(ctx, "failed to insert transaction item", observability.Error(err))
+		r.fm.RecordRepositoryFailure(ctx, "insert_item", "transaction", "infra", time.Since(start))
 		return err
 	}
 
+	r.fm.RecordRepositoryQuery(ctx, "insert_item", "transaction", time.Since(start))
 	return nil
 }
 
@@ -244,12 +279,13 @@ func (r *transactionRepository) UpdateItem(
 	executor database.DBTX,
 	item *entities.TransactionItem,
 ) error {
+	start := time.Now()
 	ctx, span := r.o11y.Tracer().Start(ctx, "transaction_repository.update_item")
 	defer span.End()
 
 	query := `
 		UPDATE transaction_items
-		SET 
+		SET
 			title = $1,
 			description = $2,
 			amount = $3,
@@ -281,10 +317,13 @@ func (r *transactionRepository) UpdateItem(
 	)
 
 	if err != nil {
+		span.RecordError(err)
 		r.o11y.Logger().Error(ctx, "failed to update transaction item", observability.Error(err))
+		r.fm.RecordRepositoryFailure(ctx, "update_item", "transaction", "infra", time.Since(start))
 		return err
 	}
 
+	r.fm.RecordRepositoryQuery(ctx, "update_item", "transaction", time.Since(start))
 	return nil
 }
 
@@ -295,11 +334,12 @@ func (r *transactionRepository) FindItemByID(
 	userID sharedVos.UUID,
 	itemID sharedVos.UUID,
 ) (*entities.TransactionItem, error) {
+	start := time.Now()
 	ctx, span := r.o11y.Tracer().Start(ctx, "transaction_repository.find_item_by_id")
 	defer span.End()
 
 	query := `
-		SELECT 
+		SELECT
 			ti.id, ti.monthly_id, ti.category_id, ti.title, ti.description,
 			ti.amount, ti.direction, ti.type, ti.is_paid,
 			ti.created_at, ti.updated_at, ti.deleted_at
@@ -330,26 +370,32 @@ func (r *transactionRepository) FindItemByID(
 	)
 
 	if errors.Is(err, sql.ErrNoRows) {
+		r.fm.RecordRepositoryQuery(ctx, "find_item_by_id", "transaction", time.Since(start))
 		return nil, nil
 	}
 	if err != nil {
+		span.RecordError(err)
 		r.o11y.Logger().Error(ctx, "failed to find transaction item", observability.Error(err))
+		r.fm.RecordRepositoryFailure(ctx, "find_item_by_id", "transaction", "infra", time.Since(start))
 		return nil, err
 	}
 
 	// Parse values
 	item.Amount, err = sharedVos.NewMoneyFromString(amountStr, sharedVos.CurrencyBRL)
 	if err != nil {
+		r.fm.RecordRepositoryFailure(ctx, "find_item_by_id", "transaction", "infra", time.Since(start))
 		return nil, fmt.Errorf("failed to parse amount: %w", err)
 	}
 
 	item.Direction, err = transactionVos.NewTransactionDirection(direction)
 	if err != nil {
+		r.fm.RecordRepositoryFailure(ctx, "find_item_by_id", "transaction", "infra", time.Since(start))
 		return nil, err
 	}
 
 	item.Type, err = transactionVos.NewTransactionType(itemType)
 	if err != nil {
+		r.fm.RecordRepositoryFailure(ctx, "find_item_by_id", "transaction", "infra", time.Since(start))
 		return nil, err
 	}
 
@@ -361,6 +407,7 @@ func (r *transactionRepository) FindItemByID(
 		item.DeletedAt = sharedVos.NewNullableTime(deletedAt.Time)
 	}
 
+	r.fm.RecordRepositoryQuery(ctx, "find_item_by_id", "transaction", time.Since(start))
 	return &item, nil
 }
 
@@ -647,6 +694,7 @@ func (r *transactionRepository) ListMonthlyPaginated(
 	ctx context.Context,
 	params interfaces.ListMonthlyParams,
 ) ([]*entities.MonthlyTransaction, error) {
+	start := time.Now()
 	ctx, span := r.o11y.Tracer().Start(ctx, "transaction_repository.list_monthly_paginated")
 	defer span.End()
 
@@ -679,7 +727,9 @@ func (r *transactionRepository) ListMonthlyPaginated(
 
 	rows, err := r.db.QueryContext(ctx, query, args...)
 	if err != nil {
+		span.RecordError(err)
 		r.o11y.Logger().Error(ctx, "failed to list monthly transactions", observability.Error(err))
+		r.fm.RecordRepositoryFailure(ctx, "list_monthly_paginated", "transaction", "infra", time.Since(start))
 		return nil, err
 	}
 	defer func() { _ = rows.Close() }()
@@ -704,29 +754,35 @@ func (r *transactionRepository) ListMonthlyPaginated(
 			&updatedAt,
 		)
 		if err != nil {
+			span.RecordError(err)
 			r.o11y.Logger().Error(ctx, "failed to scan monthly transaction", observability.Error(err))
+			r.fm.RecordRepositoryFailure(ctx, "list_monthly_paginated", "transaction", "infra", time.Since(start))
 			return nil, err
 		}
 
 		// Parse reference month
 		monthly.ReferenceMonth, err = pkgVos.NewReferenceMonth(refMonthStr)
 		if err != nil {
+			r.fm.RecordRepositoryFailure(ctx, "list_monthly_paginated", "transaction", "infra", time.Since(start))
 			return nil, err
 		}
 
 		// Parse money values from NUMERIC strings
 		monthly.TotalIncome, err = sharedVos.NewMoneyFromString(totalIncomeStr, sharedVos.CurrencyBRL)
 		if err != nil {
+			r.fm.RecordRepositoryFailure(ctx, "list_monthly_paginated", "transaction", "infra", time.Since(start))
 			return nil, fmt.Errorf("failed to parse total_income: %w", err)
 		}
 
 		monthly.TotalExpense, err = sharedVos.NewMoneyFromString(totalExpenseStr, sharedVos.CurrencyBRL)
 		if err != nil {
+			r.fm.RecordRepositoryFailure(ctx, "list_monthly_paginated", "transaction", "infra", time.Since(start))
 			return nil, fmt.Errorf("failed to parse total_expense: %w", err)
 		}
 
 		monthly.TotalAmount, err = sharedVos.NewMoneyFromString(totalAmountStr, sharedVos.CurrencyBRL)
 		if err != nil {
+			r.fm.RecordRepositoryFailure(ctx, "list_monthly_paginated", "transaction", "infra", time.Since(start))
 			return nil, fmt.Errorf("failed to parse total_amount: %w", err)
 		}
 
@@ -740,6 +796,8 @@ func (r *transactionRepository) ListMonthlyPaginated(
 	}
 
 	if err := rows.Err(); err != nil {
+		span.RecordError(err)
+		r.fm.RecordRepositoryFailure(ctx, "list_monthly_paginated", "transaction", "infra", time.Since(start))
 		return nil, err
 	}
 
@@ -751,6 +809,8 @@ func (r *transactionRepository) ListMonthlyPaginated(
 
 	itemsByMonthly, err := r.findItemsByMonthlyIDs(ctx, ids)
 	if err != nil {
+		span.RecordError(err)
+		r.fm.RecordRepositoryFailure(ctx, "list_monthly_paginated", "transaction", "infra", time.Since(start))
 		return nil, err
 	}
 
@@ -758,6 +818,7 @@ func (r *transactionRepository) ListMonthlyPaginated(
 		m.LoadItems(itemsByMonthly[m.ID.String()])
 	}
 
+	r.fm.RecordRepositoryQuery(ctx, "list_monthly_paginated", "transaction", time.Since(start))
 	return monthlyList, nil
 }
 

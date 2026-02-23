@@ -15,6 +15,7 @@ import (
 	"github.com/jailtonjunior94/financial/internal/invoice/domain/entities"
 	"github.com/jailtonjunior94/financial/internal/invoice/domain/events"
 	"github.com/jailtonjunior94/financial/internal/invoice/infrastructure/repositories"
+	"github.com/jailtonjunior94/financial/pkg/observability/metrics"
 	"github.com/jailtonjunior94/financial/pkg/outbox"
 )
 
@@ -27,6 +28,7 @@ type (
 		uow           uow.UnitOfWork
 		outboxService outbox.Service
 		o11y          observability.Observability
+		fm            *metrics.FinancialMetrics
 	}
 )
 
@@ -34,11 +36,13 @@ func NewDeletePurchaseUseCase(
 	uow uow.UnitOfWork,
 	outboxService outbox.Service,
 	o11y observability.Observability,
+	fm *metrics.FinancialMetrics,
 ) DeletePurchaseUseCase {
 	return &deletePurchaseUseCase{
 		uow:           uow,
 		outboxService: outboxService,
 		o11y:          o11y,
+		fm:            fm,
 	}
 }
 
@@ -56,7 +60,7 @@ func (u *deletePurchaseUseCase) Execute(ctx context.Context, userID string, item
 	var affectedMonths []string
 
 	err = u.uow.Do(ctx, func(ctx context.Context, tx database.DBTX) error {
-		invoiceRepo := repositories.NewInvoiceRepository(tx, u.o11y)
+		invoiceRepo := repositories.NewInvoiceRepository(tx, u.o11y, u.fm)
 
 		// Find the invoice containing this item to get purchase origin details
 		invoice, err := invoiceRepo.FindByID(ctx, id)

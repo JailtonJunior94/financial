@@ -13,9 +13,17 @@ const (
 	//   dia_compra ≤ 24  →  pertence ao ciclo atual   (offset = 1)
 	//   dia_compra ≥ 25  →  pertence ao ciclo seguinte (offset = 2)
 	//
-	// IMPORTANTE: "7 dias corridos antes do vencimento" é um mnemônico
-	// válido apenas para meses com 30 dias. A regra canônica é esta constante.
+	// AVISO: "7 dias corridos antes do vencimento" é matematicamente incorreto
+	// para a maioria dos meses — o gap real entre o dia 24 e o dia 1 do mês
+	// seguinte varia de 4 dias (fev. não-bissexto) a 7 dias (meses de 31 dias).
+	// A regra canônica e auditável é esta constante numérica.
 	ClosingDay = 24
+
+	// OpeningDay é o dia fixo de abertura do próximo ciclo — D_aber = 25.
+	//
+	// Invariante: OpeningDay = ClosingDay + 1.
+	// Todo ciclo começa no dia 25 e termina no dia 24 do mês seguinte.
+	OpeningDay = ClosingDay + 1
 
 	// DueDay é o dia fixo de vencimento da fatura — D_venc = 1.
 	DueDay = 1
@@ -98,4 +106,46 @@ func (c *InvoiceCalculator) CalculateInstallmentMonths(
 	}
 
 	return months
+}
+
+// ClosingDateFor retorna a data de fechamento do ciclo de uma fatura.
+//
+// Definição formal:
+//
+//	closing_date(v) = 24 / month(abs_due − 1)
+//
+// Implementação: primeiro dia do mês de vencimento − 1 mês + 23 dias = dia 24
+// do mês anterior. Correto para todos os meses (dia 24 existe em todo mês
+// gregoriano, pois min(LastDay) = 28 > 24).
+func (c *InvoiceCalculator) ClosingDateFor(referenceMonth pkgVos.ReferenceMonth) time.Time {
+	return referenceMonth.FirstDay().AddDate(0, -1, ClosingDay-1)
+}
+
+// OpeningDateFor retorna a data de abertura do ciclo de uma fatura.
+//
+// Definição formal:
+//
+//	opening_date(v) = 25 / month(abs_due − 2)
+//
+// Implementação: primeiro dia do mês de vencimento − 2 meses + 24 dias = dia 25
+// do mês anteanterior. Correto para todos os meses (dia 25 existe em todo mês
+// gregoriano, pois min(LastDay) = 28 > 25).
+func (c *InvoiceCalculator) OpeningDateFor(referenceMonth pkgVos.ReferenceMonth) time.Time {
+	return referenceMonth.FirstDay().AddDate(0, -2, OpeningDay-1)
+}
+
+// CycleFor retorna o intervalo fechado [openingDate, closingDate] do ciclo ao
+// qual a compra pertence.
+//
+// Equivalente a:
+//
+//	rm           := CalculateInvoiceMonth(purchaseDate)
+//	openingDate  := OpeningDateFor(rm)
+//	closingDate  := ClosingDateFor(rm)
+//
+// Útil para auditoria, exibição de intervalo ao usuário e validação de
+// reconciliação contábil.
+func (c *InvoiceCalculator) CycleFor(purchaseDate time.Time) (openingDate, closingDate time.Time) {
+	rm := c.CalculateInvoiceMonth(purchaseDate)
+	return c.OpeningDateFor(rm), c.ClosingDateFor(rm)
 }

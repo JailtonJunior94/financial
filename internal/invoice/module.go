@@ -8,6 +8,7 @@ import (
 	"github.com/JailtonJunior94/devkit-go/pkg/observability"
 
 	"github.com/jailtonjunior94/financial/internal/invoice/application/usecase"
+	"github.com/jailtonjunior94/financial/pkg/observability/metrics"
 	invoicedomain "github.com/jailtonjunior94/financial/internal/invoice/domain"
 	"github.com/jailtonjunior94/financial/internal/invoice/domain/interfaces"
 	"github.com/jailtonjunior94/financial/internal/invoice/infrastructure/adapters"
@@ -42,13 +43,15 @@ func NewInvoiceModule(
 		return InvoiceModule{}, fmt.Errorf("invoice module: failed to create unit of work: %v", err)
 	}
 
+	financialMetrics := metrics.NewFinancialMetrics(o11y)
+
 	// Create repository (will be created inside UoW transactions)
-	invoiceRepository := repositories.NewInvoiceRepository(db, o11y)
+	invoiceRepository := repositories.NewInvoiceRepository(db, o11y, financialMetrics)
 
 	// Create use cases
-	createPurchaseUseCase := usecase.NewCreatePurchaseUseCase(uow, cardProvider, outboxService, o11y)
-	updatePurchaseUseCase := usecase.NewUpdatePurchaseUseCase(uow, outboxService, o11y)
-	deletePurchaseUseCase := usecase.NewDeletePurchaseUseCase(uow, outboxService, o11y)
+	createPurchaseUseCase := usecase.NewCreatePurchaseUseCase(uow, cardProvider, outboxService, o11y, financialMetrics)
+	updatePurchaseUseCase := usecase.NewUpdatePurchaseUseCase(uow, outboxService, o11y, financialMetrics)
+	deletePurchaseUseCase := usecase.NewDeletePurchaseUseCase(uow, outboxService, o11y, financialMetrics)
 	getInvoiceUseCase := usecase.NewGetInvoiceUseCase(invoiceRepository, o11y)
 	listInvoicesByMonthPaginatedUseCase := usecase.NewListInvoicesByMonthPaginatedUseCase(invoiceRepository, o11y)
 	listInvoicesByCardPaginatedUseCase := usecase.NewListInvoicesByCardPaginatedUseCase(invoiceRepository, o11y)

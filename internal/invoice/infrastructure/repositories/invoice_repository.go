@@ -17,6 +17,7 @@ import (
 	"github.com/JailtonJunior94/devkit-go/pkg/vos"
 	"github.com/jailtonjunior94/financial/pkg/constants"
 	"github.com/jailtonjunior94/financial/pkg/helpers"
+	"github.com/jailtonjunior94/financial/pkg/observability/metrics"
 )
 
 // scanner é uma interface comum para *sql.Row e *sql.Rows.
@@ -27,16 +28,19 @@ type scanner interface {
 type invoiceRepository struct {
 	db   database.DBTX
 	o11y observability.Observability
+	fm   *metrics.FinancialMetrics
 }
 
-func NewInvoiceRepository(db database.DBTX, o11y observability.Observability) interfaces.InvoiceRepository {
+func NewInvoiceRepository(db database.DBTX, o11y observability.Observability, fm *metrics.FinancialMetrics) interfaces.InvoiceRepository {
 	return &invoiceRepository{
 		db:   db,
 		o11y: o11y,
+		fm:   fm,
 	}
 }
 
 func (r *invoiceRepository) Insert(ctx context.Context, invoice *entities.Invoice) error {
+	start := time.Now()
 	ctx, span := r.o11y.Tracer().Start(ctx, "invoice_repository.insert")
 	defer span.End()
 
@@ -65,8 +69,13 @@ func (r *invoiceRepository) Insert(ctx context.Context, invoice *entities.Invoic
 		invoice.UpdatedAt.Ptr(),
 		invoice.DeletedAt.Ptr(),
 	)
-
-	return err
+	if err != nil {
+		span.RecordError(err)
+		r.fm.RecordRepositoryFailure(ctx, "insert", "invoice", "infra", time.Since(start))
+		return err
+	}
+	r.fm.RecordRepositoryQuery(ctx, "insert", "invoice", time.Since(start))
+	return nil
 }
 
 // UpsertInvoice insere uma nova fatura ou retorna a já existente de forma atômica.
@@ -74,6 +83,7 @@ func (r *invoiceRepository) Insert(ctx context.Context, invoice *entities.Invoic
 // que a cláusula RETURNING sempre devolva a linha — seja a recém-inserida ou a existente —
 // eliminando o race condition de criações concorrentes para o mesmo (user_id, card_id, reference_month).
 func (r *invoiceRepository) UpsertInvoice(ctx context.Context, invoice *entities.Invoice) (*entities.Invoice, error) {
+	start := time.Now()
 	ctx, span := r.o11y.Tracer().Start(ctx, "invoice_repository.upsert_invoice")
 	defer span.End()
 
@@ -102,23 +112,30 @@ func (r *invoiceRepository) UpsertInvoice(ctx context.Context, invoice *entities
 
 	result, err := r.scanInvoice(row)
 	if err != nil {
+		span.RecordError(err)
+		r.fm.RecordRepositoryFailure(ctx, "upsert_invoice", "invoice", "infra", time.Since(start))
 		return nil, fmt.Errorf("upsert invoice: %w", err)
 	}
 
 	items, err := r.findItemsByInvoiceID(ctx, result.ID)
 	if err != nil {
+		span.RecordError(err)
+		r.fm.RecordRepositoryFailure(ctx, "upsert_invoice", "invoice", "infra", time.Since(start))
 		return nil, fmt.Errorf("upsert invoice: load items: %w", err)
 	}
 	result.Items = items
 
+	r.fm.RecordRepositoryQuery(ctx, "upsert_invoice", "invoice", time.Since(start))
 	return result, nil
 }
 
 func (r *invoiceRepository) InsertItems(ctx context.Context, items []*entities.InvoiceItem) error {
+	start := time.Now()
 	ctx, span := r.o11y.Tracer().Start(ctx, "invoice_repository.insert_items")
 	defer span.End()
 
 	if len(items) == 0 {
+		r.fm.RecordRepositoryQuery(ctx, "insert_items", "invoice", time.Since(start))
 		return nil
 	}
 
@@ -167,13 +184,17 @@ func (r *invoiceRepository) InsertItems(ctx context.Context, items []*entities.I
 
 	_, err := r.db.ExecContext(ctx, query, valueArgs...)
 	if err != nil {
+		span.RecordError(err)
+		r.fm.RecordRepositoryFailure(ctx, "insert_items", "invoice", "infra", time.Since(start))
 		return err
 	}
 
+	r.fm.RecordRepositoryQuery(ctx, "insert_items", "invoice", time.Since(start))
 	return nil
 }
 
 func (r *invoiceRepository) FindByID(ctx context.Context, id vos.UUID) (*entities.Invoice, error) {
+	start := time.Now()
 	ctx, span := r.o11y.Tracer().Start(ctx, "invoice_repository.find_by_id")
 	defer span.End()
 
@@ -195,18 +216,23 @@ func (r *invoiceRepository) FindByID(ctx context.Context, id vos.UUID) (*entitie
 	invoice, err := r.scanInvoice(row)
 	if err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
+			r.fm.RecordRepositoryQuery(ctx, "find_by_id", "invoice", time.Since(start))
 			return nil, nil
 		}
+		span.RecordError(err)
+		r.fm.RecordRepositoryFailure(ctx, "find_by_id", "invoice", "infra", time.Since(start))
 		return nil, err
 	}
 
-	// Carregar itens
 	items, err := r.findItemsByInvoiceID(ctx, invoice.ID)
 	if err != nil {
+		span.RecordError(err)
+		r.fm.RecordRepositoryFailure(ctx, "find_by_id", "invoice", "infra", time.Since(start))
 		return nil, err
 	}
 	invoice.Items = items
 
+	r.fm.RecordRepositoryQuery(ctx, "find_by_id", "invoice", time.Since(start))
 	return invoice, nil
 }
 
@@ -216,6 +242,7 @@ func (r *invoiceRepository) FindByUserAndCardAndMonth(
 	cardID vos.UUID,
 	referenceMonth pkgVos.ReferenceMonth,
 ) (*entities.Invoice, error) {
+	start := time.Now()
 	ctx, span := r.o11y.Tracer().Start(ctx, "invoice_repository.find_by_user_card_month")
 	defer span.End()
 
@@ -241,18 +268,23 @@ func (r *invoiceRepository) FindByUserAndCardAndMonth(
 	invoice, err := r.scanInvoice(row)
 	if err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
+			r.fm.RecordRepositoryQuery(ctx, "find_by_user_card_month", "invoice", time.Since(start))
 			return nil, nil
 		}
+		span.RecordError(err)
+		r.fm.RecordRepositoryFailure(ctx, "find_by_user_card_month", "invoice", "infra", time.Since(start))
 		return nil, err
 	}
 
-	// Carregar itens
 	items, err := r.findItemsByInvoiceID(ctx, invoice.ID)
 	if err != nil {
+		span.RecordError(err)
+		r.fm.RecordRepositoryFailure(ctx, "find_by_user_card_month", "invoice", "infra", time.Since(start))
 		return nil, err
 	}
 	invoice.Items = items
 
+	r.fm.RecordRepositoryQuery(ctx, "find_by_user_card_month", "invoice", time.Since(start))
 	return invoice, nil
 }
 
@@ -261,6 +293,7 @@ func (r *invoiceRepository) FindByUserAndMonth(
 	userID vos.UUID,
 	referenceMonth pkgVos.ReferenceMonth,
 ) ([]*entities.Invoice, error) {
+	start := time.Now()
 	ctx, span := r.o11y.Tracer().Start(ctx, "invoice_repository.find_by_user_month")
 	defer span.End()
 
@@ -283,6 +316,8 @@ func (r *invoiceRepository) FindByUserAndMonth(
 
 	rows, err := r.db.QueryContext(ctx, query, userID.Value, referenceMonth.FirstDay(), referenceMonth.AddMonths(1).FirstDay())
 	if err != nil {
+		span.RecordError(err)
+		r.fm.RecordRepositoryFailure(ctx, "find_by_user_month", "invoice", "infra", time.Since(start))
 		return nil, err
 	}
 	defer func() { _ = rows.Close() }()
@@ -291,12 +326,16 @@ func (r *invoiceRepository) FindByUserAndMonth(
 	for rows.Next() {
 		invoice, err := r.scanInvoice(rows)
 		if err != nil {
+			span.RecordError(err)
+			r.fm.RecordRepositoryFailure(ctx, "find_by_user_month", "invoice", "infra", time.Since(start))
 			return nil, err
 		}
 		invoices = append(invoices, invoice)
 	}
 
 	if err := rows.Err(); err != nil {
+		span.RecordError(err)
+		r.fm.RecordRepositoryFailure(ctx, "find_by_user_month", "invoice", "infra", time.Since(start))
 		return nil, err
 	}
 
@@ -308,6 +347,8 @@ func (r *invoiceRepository) FindByUserAndMonth(
 
 	itemsByInvoice, err := r.findItemsByInvoiceIDs(ctx, ids)
 	if err != nil {
+		span.RecordError(err)
+		r.fm.RecordRepositoryFailure(ctx, "find_by_user_month", "invoice", "infra", time.Since(start))
 		return nil, err
 	}
 
@@ -318,6 +359,7 @@ func (r *invoiceRepository) FindByUserAndMonth(
 		}
 	}
 
+	r.fm.RecordRepositoryQuery(ctx, "find_by_user_month", "invoice", time.Since(start))
 	return invoices, nil
 }
 
@@ -326,6 +368,7 @@ func (r *invoiceRepository) ListByUserAndMonthPaginated(
 	ctx context.Context,
 	params interfaces.ListInvoicesByMonthParams,
 ) ([]*entities.Invoice, error) {
+	start := time.Now()
 	ctx, span := r.o11y.Tracer().Start(ctx, "invoice_repository.list_by_user_month_paginated")
 	defer span.End()
 
@@ -368,6 +411,8 @@ func (r *invoiceRepository) ListByUserAndMonthPaginated(
 
 	rows, err := r.db.QueryContext(ctx, query, args...)
 	if err != nil {
+		span.RecordError(err)
+		r.fm.RecordRepositoryFailure(ctx, "list_by_user_month_paginated", "invoice", "infra", time.Since(start))
 		return nil, err
 	}
 	defer func() { _ = rows.Close() }()
@@ -376,12 +421,16 @@ func (r *invoiceRepository) ListByUserAndMonthPaginated(
 	for rows.Next() {
 		invoice, err := r.scanInvoice(rows)
 		if err != nil {
+			span.RecordError(err)
+			r.fm.RecordRepositoryFailure(ctx, "list_by_user_month_paginated", "invoice", "infra", time.Since(start))
 			return nil, err
 		}
 		invoices = append(invoices, invoice)
 	}
 
 	if err := rows.Err(); err != nil {
+		span.RecordError(err)
+		r.fm.RecordRepositoryFailure(ctx, "list_by_user_month_paginated", "invoice", "infra", time.Since(start))
 		return nil, err
 	}
 
@@ -393,6 +442,8 @@ func (r *invoiceRepository) ListByUserAndMonthPaginated(
 
 	itemsByInvoice, err := r.findItemsByInvoiceIDs(ctx, ids)
 	if err != nil {
+		span.RecordError(err)
+		r.fm.RecordRepositoryFailure(ctx, "list_by_user_month_paginated", "invoice", "infra", time.Since(start))
 		return nil, err
 	}
 
@@ -403,10 +454,12 @@ func (r *invoiceRepository) ListByUserAndMonthPaginated(
 		}
 	}
 
+	r.fm.RecordRepositoryQuery(ctx, "list_by_user_month_paginated", "invoice", time.Since(start))
 	return invoices, nil
 }
 
 func (r *invoiceRepository) FindByCard(ctx context.Context, cardID vos.UUID) ([]*entities.Invoice, error) {
+	start := time.Now()
 	ctx, span := r.o11y.Tracer().Start(ctx, "invoice_repository.find_by_card")
 	defer span.End()
 
@@ -426,6 +479,8 @@ func (r *invoiceRepository) FindByCard(ctx context.Context, cardID vos.UUID) ([]
 
 	rows, err := r.db.QueryContext(ctx, query, cardID.Value)
 	if err != nil {
+		span.RecordError(err)
+		r.fm.RecordRepositoryFailure(ctx, "find_by_card", "invoice", "infra", time.Since(start))
 		return nil, err
 	}
 	defer func() { _ = rows.Close() }()
@@ -434,12 +489,16 @@ func (r *invoiceRepository) FindByCard(ctx context.Context, cardID vos.UUID) ([]
 	for rows.Next() {
 		invoice, err := r.scanInvoice(rows)
 		if err != nil {
+			span.RecordError(err)
+			r.fm.RecordRepositoryFailure(ctx, "find_by_card", "invoice", "infra", time.Since(start))
 			return nil, err
 		}
 		invoices = append(invoices, invoice)
 	}
 
 	if err := rows.Err(); err != nil {
+		span.RecordError(err)
+		r.fm.RecordRepositoryFailure(ctx, "find_by_card", "invoice", "infra", time.Since(start))
 		return nil, err
 	}
 
@@ -451,6 +510,8 @@ func (r *invoiceRepository) FindByCard(ctx context.Context, cardID vos.UUID) ([]
 
 	itemsByInvoice, err := r.findItemsByInvoiceIDs(ctx, ids)
 	if err != nil {
+		span.RecordError(err)
+		r.fm.RecordRepositoryFailure(ctx, "find_by_card", "invoice", "infra", time.Since(start))
 		return nil, err
 	}
 
@@ -461,12 +522,14 @@ func (r *invoiceRepository) FindByCard(ctx context.Context, cardID vos.UUID) ([]
 		}
 	}
 
+	r.fm.RecordRepositoryQuery(ctx, "find_by_card", "invoice", time.Since(start))
 	return invoices, nil
 }
 
 // ListByCard busca faturas de um cartão com cursor-based pagination.
 // Ordena por reference_month DESC, id DESC (mais recentes primeiro).
 func (r *invoiceRepository) ListByCard(ctx context.Context, params interfaces.ListInvoicesByCardParams) ([]*entities.Invoice, error) {
+	start := time.Now()
 	ctx, span := r.o11y.Tracer().Start(ctx, "invoice_repository.list_by_card")
 	defer span.End()
 
@@ -512,6 +575,7 @@ func (r *invoiceRepository) ListByCard(ctx context.Context, params interfaces.Li
 	rows, err := r.db.QueryContext(ctx, query, args...)
 	if err != nil {
 		span.RecordError(err)
+		r.fm.RecordRepositoryFailure(ctx, "list_by_card", "invoice", "infra", time.Since(start))
 		return nil, err
 	}
 	defer func() { _ = rows.Close() }()
@@ -522,6 +586,7 @@ func (r *invoiceRepository) ListByCard(ctx context.Context, params interfaces.Li
 		invoice, err := r.scanInvoice(rows)
 		if err != nil {
 			span.RecordError(err)
+			r.fm.RecordRepositoryFailure(ctx, "list_by_card", "invoice", "infra", time.Since(start))
 			return nil, err
 		}
 		invoices = append(invoices, invoice)
@@ -529,6 +594,7 @@ func (r *invoiceRepository) ListByCard(ctx context.Context, params interfaces.Li
 
 	if err := rows.Err(); err != nil {
 		span.RecordError(err)
+		r.fm.RecordRepositoryFailure(ctx, "list_by_card", "invoice", "infra", time.Since(start))
 		return nil, err
 	}
 
@@ -541,6 +607,7 @@ func (r *invoiceRepository) ListByCard(ctx context.Context, params interfaces.Li
 	itemsByInvoice, err := r.findItemsByInvoiceIDs(ctx, ids)
 	if err != nil {
 		span.RecordError(err)
+		r.fm.RecordRepositoryFailure(ctx, "list_by_card", "invoice", "infra", time.Since(start))
 		return nil, err
 	}
 
@@ -551,10 +618,12 @@ func (r *invoiceRepository) ListByCard(ctx context.Context, params interfaces.Li
 		}
 	}
 
+	r.fm.RecordRepositoryQuery(ctx, "list_by_card", "invoice", time.Since(start))
 	return invoices, nil
 }
 
 func (r *invoiceRepository) Update(ctx context.Context, invoice *entities.Invoice) error {
+	start := time.Now()
 	ctx, span := r.o11y.Tracer().Start(ctx, "invoice_repository.update")
 	defer span.End()
 
@@ -570,11 +639,17 @@ func (r *invoiceRepository) Update(ctx context.Context, invoice *entities.Invoic
 		invoice.TotalAmount.Float(),
 		time.Now().UTC(),
 	)
-
-	return err
+	if err != nil {
+		span.RecordError(err)
+		r.fm.RecordRepositoryFailure(ctx, "update", "invoice", "infra", time.Since(start))
+		return err
+	}
+	r.fm.RecordRepositoryQuery(ctx, "update", "invoice", time.Since(start))
+	return nil
 }
 
 func (r *invoiceRepository) UpdateItem(ctx context.Context, item *entities.InvoiceItem) error {
+	start := time.Now()
 	ctx, span := r.o11y.Tracer().Start(ctx, "invoice_repository.update_item")
 	defer span.End()
 
@@ -596,11 +671,17 @@ func (r *invoiceRepository) UpdateItem(ctx context.Context, item *entities.Invoi
 		item.InstallmentAmount.Float(),
 		time.Now().UTC(),
 	)
-
-	return err
+	if err != nil {
+		span.RecordError(err)
+		r.fm.RecordRepositoryFailure(ctx, "update_item", "invoice", "infra", time.Since(start))
+		return err
+	}
+	r.fm.RecordRepositoryQuery(ctx, "update_item", "invoice", time.Since(start))
+	return nil
 }
 
 func (r *invoiceRepository) DeleteItem(ctx context.Context, itemID vos.UUID) error {
+	start := time.Now()
 	ctx, span := r.o11y.Tracer().Start(ctx, "invoice_repository.delete_item")
 	defer span.End()
 
@@ -609,7 +690,13 @@ func (r *invoiceRepository) DeleteItem(ctx context.Context, itemID vos.UUID) err
 	where id = $1`
 
 	_, err := r.db.ExecContext(ctx, query, itemID.Value, time.Now().UTC())
-	return err
+	if err != nil {
+		span.RecordError(err)
+		r.fm.RecordRepositoryFailure(ctx, "delete_item", "invoice", "infra", time.Since(start))
+		return err
+	}
+	r.fm.RecordRepositoryQuery(ctx, "delete_item", "invoice", time.Since(start))
+	return nil
 }
 
 func (r *invoiceRepository) FindItemsByPurchaseOrigin(
@@ -618,6 +705,7 @@ func (r *invoiceRepository) FindItemsByPurchaseOrigin(
 	categoryID vos.UUID,
 	description string,
 ) ([]*entities.InvoiceItem, error) {
+	start := time.Now()
 	ctx, span := r.o11y.Tracer().Start(ctx, "invoice_repository.find_items_by_purchase_origin")
 	defer span.End()
 
@@ -643,6 +731,8 @@ func (r *invoiceRepository) FindItemsByPurchaseOrigin(
 
 	rows, err := r.db.QueryContext(ctx, query, purchaseDate, categoryID.Value, description)
 	if err != nil {
+		span.RecordError(err)
+		r.fm.RecordRepositoryFailure(ctx, "find_items_by_purchase_origin", "invoice", "infra", time.Since(start))
 		return nil, err
 	}
 	defer func() { _ = rows.Close() }()
@@ -651,12 +741,21 @@ func (r *invoiceRepository) FindItemsByPurchaseOrigin(
 	for rows.Next() {
 		item, err := r.scanInvoiceItemFromRows(rows)
 		if err != nil {
+			span.RecordError(err)
+			r.fm.RecordRepositoryFailure(ctx, "find_items_by_purchase_origin", "invoice", "infra", time.Since(start))
 			return nil, err
 		}
 		items = append(items, item)
 	}
 
-	return items, rows.Err()
+	if err := rows.Err(); err != nil {
+		span.RecordError(err)
+		r.fm.RecordRepositoryFailure(ctx, "find_items_by_purchase_origin", "invoice", "infra", time.Since(start))
+		return nil, err
+	}
+
+	r.fm.RecordRepositoryQuery(ctx, "find_items_by_purchase_origin", "invoice", time.Since(start))
+	return items, nil
 }
 
 func (r *invoiceRepository) findItemsByInvoiceIDs(ctx context.Context, ids []vos.UUID) (map[string][]*entities.InvoiceItem, error) {

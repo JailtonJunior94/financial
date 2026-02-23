@@ -30,20 +30,7 @@ type (
 		config *configs.Config
 		obs    observability.Observability
 	}
-
-	// User representa um usuário (mantido para compatibilidade com código existente).
-	// Deprecated: Use AuthenticatedUser da interface TokenValidator.
-	User struct {
-		ID    string `json:"id"`
-		Email string `json:"email"`
-	}
 )
-
-// NewUser cria uma nova instância de User.
-// Deprecated: Use NewAuthenticatedUser.
-func NewUser(id, email string) *User {
-	return &User{ID: id, Email: email}
-}
 
 // NewJwtAdapter cria uma nova instância do adaptador JWT.
 func NewJwtAdapter(config *configs.Config, obs observability.Observability) JwtAdapter {
