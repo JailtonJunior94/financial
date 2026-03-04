@@ -4,4 +4,5 @@ bin
 coverage.out
 cockroachdb_data
 __debug*
-.claude
+.claude/settings.local.json
+tasks/*
