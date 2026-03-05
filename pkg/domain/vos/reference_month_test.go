@@ -138,10 +138,10 @@ func TestReferenceMonthFirstAndLastDay(t *testing.T) {
 	t.Parallel()
 
 	cases := []struct {
-		name         string
-		rm           string
-		wantFirst    string
-		wantLastDay  int
+		name        string
+		rm          string
+		wantFirst   string
+		wantLastDay int
 	}{
 		{name: "jan 31 days", rm: "2024-01", wantFirst: "2024-01-01", wantLastDay: 31},
 		{name: "feb leap 29 days", rm: "2024-02", wantFirst: "2024-02-01", wantLastDay: 29},
@@ -173,10 +173,10 @@ func TestReferenceMonthAddMonths(t *testing.T) {
 	t.Parallel()
 
 	cases := []struct {
-		name   string
-		start  string
-		add    int
-		want   string
+		name  string
+		start string
+		add   int
+		want  string
 	}{
 		{name: "+1 month", start: "2024-01", add: 1, want: "2024-02"},
 		{name: "+11 months (year boundary)", start: "2024-02", add: 11, want: "2025-01"},

@@ -4,8 +4,8 @@ import (
 	"context"
 
 	"github.com/jailtonjunior94/financial/internal/transaction/domain/entities"
-	"github.com/jailtonjunior94/financial/pkg/pagination"
 	pkgVos "github.com/jailtonjunior94/financial/pkg/domain/vos"
+	"github.com/jailtonjunior94/financial/pkg/pagination"
 
 	"github.com/JailtonJunior94/devkit-go/pkg/database"
 	sharedVos "github.com/JailtonJunior94/devkit-go/pkg/vos"

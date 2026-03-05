@@ -75,6 +75,7 @@ func NewInvoiceHandler(
 //	@Failure		503		{object}	httperrors.ProblemDetail	"Serviço de cartão indisponível"
 //	@Failure		500		{object}	httperrors.ProblemDetail	"Erro interno"
 //	@Router			/api/v1/invoice-items [post]
+//
 // CreatePurchase creates a new purchase with installments.
 func (h *InvoiceHandler) CreatePurchase(w http.ResponseWriter, r *http.Request) {
 	ctx, span := h.o11y.Tracer().Start(r.Context(), "invoice_handler.create_purchase")
@@ -171,6 +172,7 @@ func (h *InvoiceHandler) CreatePurchase(w http.ResponseWriter, r *http.Request) 
 //	@Failure		404		{object}	httperrors.ProblemDetail	"Item não encontrado"
 //	@Failure		500		{object}	httperrors.ProblemDetail	"Erro interno"
 //	@Router			/api/v1/invoice-items/{id} [put]
+//
 // UpdatePurchase updates all installments of a purchase.
 func (h *InvoiceHandler) UpdatePurchase(w http.ResponseWriter, r *http.Request) {
 	ctx, span := h.o11y.Tracer().Start(r.Context(), "invoice_handler.update_purchase")
@@ -269,6 +271,7 @@ func (h *InvoiceHandler) UpdatePurchase(w http.ResponseWriter, r *http.Request) 
 //	@Failure		404	{object}	httperrors.ProblemDetail	"Item não encontrado"
 //	@Failure		500	{object}	httperrors.ProblemDetail	"Erro interno"
 //	@Router			/api/v1/invoice-items/{id} [delete]
+//
 // DeletePurchase deletes all installments of a purchase.
 func (h *InvoiceHandler) DeletePurchase(w http.ResponseWriter, r *http.Request) {
 	ctx, span := h.o11y.Tracer().Start(r.Context(), "invoice_handler.delete_purchase")
@@ -353,6 +356,7 @@ func (h *InvoiceHandler) DeletePurchase(w http.ResponseWriter, r *http.Request) 
 //	@Failure		404	{object}	httperrors.ProblemDetail	"Fatura não encontrada"
 //	@Failure		500	{object}	httperrors.ProblemDetail	"Erro interno"
 //	@Router			/api/v1/invoices/{id} [get]
+//
 // GetInvoice retrieves a single invoice with its items.
 func (h *InvoiceHandler) GetInvoice(w http.ResponseWriter, r *http.Request) {
 	ctx, span := h.o11y.Tracer().Start(r.Context(), "invoice_handler.get_invoice")

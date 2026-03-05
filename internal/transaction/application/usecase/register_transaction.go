@@ -4,14 +4,14 @@ import (
 	"context"
 	"fmt"
 
-	appstrategies "github.com/jailtonjunior94/financial/internal/transaction/application/strategies"
 	"github.com/jailtonjunior94/financial/internal/transaction/application/dtos"
-	"github.com/jailtonjunior94/financial/pkg/money"
+	appstrategies "github.com/jailtonjunior94/financial/internal/transaction/application/strategies"
 	"github.com/jailtonjunior94/financial/internal/transaction/domain/entities"
 	"github.com/jailtonjunior94/financial/internal/transaction/domain/interfaces"
 	"github.com/jailtonjunior94/financial/internal/transaction/domain/strategies"
 	transactionVos "github.com/jailtonjunior94/financial/internal/transaction/domain/vos"
 	pkgVos "github.com/jailtonjunior94/financial/pkg/domain/vos"
+	"github.com/jailtonjunior94/financial/pkg/money"
 	"github.com/jailtonjunior94/financial/pkg/observability/metrics"
 
 	"github.com/JailtonJunior94/devkit-go/pkg/database"

@@ -8,3 +8,10 @@ func NewTestCardMetrics() *CardMetrics {
 	fakeProvider := fake.NewProvider()
 	return NewCardMetrics(fakeProvider)
 }
+
+// NewTestFinancialMetrics cria uma instância de FinancialMetrics para testes
+// usando um fake provider para evitar dependências de exportação.
+func NewTestFinancialMetrics() *FinancialMetrics {
+	fakeProvider := fake.NewProvider()
+	return NewFinancialMetrics(fakeProvider)
+}

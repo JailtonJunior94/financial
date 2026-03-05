@@ -38,6 +38,88 @@ func (_m *UserRepository) EXPECT() *UserRepository_Expecter {
 	return &UserRepository_Expecter{mock: &_m.Mock}
 }
 
+// FindAll provides a mock function for the type UserRepository
+func (_mock *UserRepository) FindAll(ctx context.Context, limit int, cursor string) ([]*entities.User, *string, error) {
+	ret := _mock.Called(ctx, limit, cursor)
+
+	if len(ret) == 0 {
+		panic("no return value specified for FindAll")
+	}
+
+	var r0 []*entities.User
+	var r1 *string
+	var r2 error
+	if returnFunc, ok := ret.Get(0).(func(context.Context, int, string) ([]*entities.User, *string, error)); ok {
+		return returnFunc(ctx, limit, cursor)
+	}
+	if returnFunc, ok := ret.Get(0).(func(context.Context, int, string) []*entities.User); ok {
+		r0 = returnFunc(ctx, limit, cursor)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).([]*entities.User)
+		}
+	}
+	if returnFunc, ok := ret.Get(1).(func(context.Context, int, string) *string); ok {
+		r1 = returnFunc(ctx, limit, cursor)
+	} else {
+		if ret.Get(1) != nil {
+			r1 = ret.Get(1).(*string)
+		}
+	}
+	if returnFunc, ok := ret.Get(2).(func(context.Context, int, string) error); ok {
+		r2 = returnFunc(ctx, limit, cursor)
+	} else {
+		r2 = ret.Error(2)
+	}
+	return r0, r1, r2
+}
+
+// UserRepository_FindAll_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'FindAll'
+type UserRepository_FindAll_Call struct {
+	*mock.Call
+}
+
+// FindAll is a helper method to define mock.On call
+//   - ctx context.Context
+//   - limit int
+//   - cursor string
+func (_e *UserRepository_Expecter) FindAll(ctx interface{}, limit interface{}, cursor interface{}) *UserRepository_FindAll_Call {
+	return &UserRepository_FindAll_Call{Call: _e.mock.On("FindAll", ctx, limit, cursor)}
+}
+
+func (_c *UserRepository_FindAll_Call) Run(run func(ctx context.Context, limit int, cursor string)) *UserRepository_FindAll_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		var arg0 context.Context
+		if args[0] != nil {
+			arg0 = args[0].(context.Context)
+		}
+		var arg1 int
+		if args[1] != nil {
+			arg1 = args[1].(int)
+		}
+		var arg2 string
+		if args[2] != nil {
+			arg2 = args[2].(string)
+		}
+		run(
+			arg0,
+			arg1,
+			arg2,
+		)
+	})
+	return _c
+}
+
+func (_c *UserRepository_FindAll_Call) Return(users []*entities.User, s *string, err error) *UserRepository_FindAll_Call {
+	_c.Call.Return(users, s, err)
+	return _c
+}
+
+func (_c *UserRepository_FindAll_Call) RunAndReturn(run func(ctx context.Context, limit int, cursor string) ([]*entities.User, *string, error)) *UserRepository_FindAll_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
 // FindByEmail provides a mock function for the type UserRepository
 func (_mock *UserRepository) FindByEmail(ctx context.Context, email string) (*entities.User, error) {
 	ret := _mock.Called(ctx, email)
@@ -106,6 +188,74 @@ func (_c *UserRepository_FindByEmail_Call) RunAndReturn(run func(ctx context.Con
 	return _c
 }
 
+// FindByID provides a mock function for the type UserRepository
+func (_mock *UserRepository) FindByID(ctx context.Context, id string) (*entities.User, error) {
+	ret := _mock.Called(ctx, id)
+
+	if len(ret) == 0 {
+		panic("no return value specified for FindByID")
+	}
+
+	var r0 *entities.User
+	var r1 error
+	if returnFunc, ok := ret.Get(0).(func(context.Context, string) (*entities.User, error)); ok {
+		return returnFunc(ctx, id)
+	}
+	if returnFunc, ok := ret.Get(0).(func(context.Context, string) *entities.User); ok {
+		r0 = returnFunc(ctx, id)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).(*entities.User)
+		}
+	}
+	if returnFunc, ok := ret.Get(1).(func(context.Context, string) error); ok {
+		r1 = returnFunc(ctx, id)
+	} else {
+		r1 = ret.Error(1)
+	}
+	return r0, r1
+}
+
+// UserRepository_FindByID_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'FindByID'
+type UserRepository_FindByID_Call struct {
+	*mock.Call
+}
+
+// FindByID is a helper method to define mock.On call
+//   - ctx context.Context
+//   - id string
+func (_e *UserRepository_Expecter) FindByID(ctx interface{}, id interface{}) *UserRepository_FindByID_Call {
+	return &UserRepository_FindByID_Call{Call: _e.mock.On("FindByID", ctx, id)}
+}
+
+func (_c *UserRepository_FindByID_Call) Run(run func(ctx context.Context, id string)) *UserRepository_FindByID_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		var arg0 context.Context
+		if args[0] != nil {
+			arg0 = args[0].(context.Context)
+		}
+		var arg1 string
+		if args[1] != nil {
+			arg1 = args[1].(string)
+		}
+		run(
+			arg0,
+			arg1,
+		)
+	})
+	return _c
+}
+
+func (_c *UserRepository_FindByID_Call) Return(user *entities.User, err error) *UserRepository_FindByID_Call {
+	_c.Call.Return(user, err)
+	return _c
+}
+
+func (_c *UserRepository_FindByID_Call) RunAndReturn(run func(ctx context.Context, id string) (*entities.User, error)) *UserRepository_FindByID_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
 // Insert provides a mock function for the type UserRepository
 func (_mock *UserRepository) Insert(ctx context.Context, user *entities.User) (*entities.User, error) {
 	ret := _mock.Called(ctx, user)
@@ -170,6 +320,131 @@ func (_c *UserRepository_Insert_Call) Return(user1 *entities.User, err error) *U
 }
 
 func (_c *UserRepository_Insert_Call) RunAndReturn(run func(ctx context.Context, user *entities.User) (*entities.User, error)) *UserRepository_Insert_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
+// SoftDelete provides a mock function for the type UserRepository
+func (_mock *UserRepository) SoftDelete(ctx context.Context, id string) error {
+	ret := _mock.Called(ctx, id)
+
+	if len(ret) == 0 {
+		panic("no return value specified for SoftDelete")
+	}
+
+	var r0 error
+	if returnFunc, ok := ret.Get(0).(func(context.Context, string) error); ok {
+		r0 = returnFunc(ctx, id)
+	} else {
+		r0 = ret.Error(0)
+	}
+	return r0
+}
+
+// UserRepository_SoftDelete_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'SoftDelete'
+type UserRepository_SoftDelete_Call struct {
+	*mock.Call
+}
+
+// SoftDelete is a helper method to define mock.On call
+//   - ctx context.Context
+//   - id string
+func (_e *UserRepository_Expecter) SoftDelete(ctx interface{}, id interface{}) *UserRepository_SoftDelete_Call {
+	return &UserRepository_SoftDelete_Call{Call: _e.mock.On("SoftDelete", ctx, id)}
+}
+
+func (_c *UserRepository_SoftDelete_Call) Run(run func(ctx context.Context, id string)) *UserRepository_SoftDelete_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		var arg0 context.Context
+		if args[0] != nil {
+			arg0 = args[0].(context.Context)
+		}
+		var arg1 string
+		if args[1] != nil {
+			arg1 = args[1].(string)
+		}
+		run(
+			arg0,
+			arg1,
+		)
+	})
+	return _c
+}
+
+func (_c *UserRepository_SoftDelete_Call) Return(err error) *UserRepository_SoftDelete_Call {
+	_c.Call.Return(err)
+	return _c
+}
+
+func (_c *UserRepository_SoftDelete_Call) RunAndReturn(run func(ctx context.Context, id string) error) *UserRepository_SoftDelete_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
+// Update provides a mock function for the type UserRepository
+func (_mock *UserRepository) Update(ctx context.Context, user *entities.User) (*entities.User, error) {
+	ret := _mock.Called(ctx, user)
+
+	if len(ret) == 0 {
+		panic("no return value specified for Update")
+	}
+
+	var r0 *entities.User
+	var r1 error
+	if returnFunc, ok := ret.Get(0).(func(context.Context, *entities.User) (*entities.User, error)); ok {
+		return returnFunc(ctx, user)
+	}
+	if returnFunc, ok := ret.Get(0).(func(context.Context, *entities.User) *entities.User); ok {
+		r0 = returnFunc(ctx, user)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).(*entities.User)
+		}
+	}
+	if returnFunc, ok := ret.Get(1).(func(context.Context, *entities.User) error); ok {
+		r1 = returnFunc(ctx, user)
+	} else {
+		r1 = ret.Error(1)
+	}
+	return r0, r1
+}
+
+// UserRepository_Update_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'Update'
+type UserRepository_Update_Call struct {
+	*mock.Call
+}
+
+// Update is a helper method to define mock.On call
+//   - ctx context.Context
+//   - user *entities.User
+func (_e *UserRepository_Expecter) Update(ctx interface{}, user interface{}) *UserRepository_Update_Call {
+	return &UserRepository_Update_Call{Call: _e.mock.On("Update", ctx, user)}
+}
+
+func (_c *UserRepository_Update_Call) Run(run func(ctx context.Context, user *entities.User)) *UserRepository_Update_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		var arg0 context.Context
+		if args[0] != nil {
+			arg0 = args[0].(context.Context)
+		}
+		var arg1 *entities.User
+		if args[1] != nil {
+			arg1 = args[1].(*entities.User)
+		}
+		run(
+			arg0,
+			arg1,
+		)
+	})
+	return _c
+}
+
+func (_c *UserRepository_Update_Call) Return(user1 *entities.User, err error) *UserRepository_Update_Call {
+	_c.Call.Return(user1, err)
+	return _c
+}
+
+func (_c *UserRepository_Update_Call) RunAndReturn(run func(ctx context.Context, user *entities.User) (*entities.User, error)) *UserRepository_Update_Call {
 	_c.Call.Return(run)
 	return _c
 }

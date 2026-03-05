@@ -21,12 +21,12 @@ type MonthlyTransactionPaginatedOutput struct {
 
 // RegisterTransactionInput representa os dados para registrar uma nova transação.
 type RegisterTransactionInput struct {
-	ReferenceMonth string `json:"reference_month" example:"2025-01"`                                    // Formato: YYYY-MM
+	ReferenceMonth string `json:"reference_month" example:"2025-01"` // Formato: YYYY-MM
 	CategoryID     string `json:"category_id"     example:"550e8400-e29b-41d4-a716-446655440000"`
 	Title          string `json:"title"           example:"Supermercado Pão de Açúcar"`
 	Description    string `json:"description"     example:"Compras da semana"`
-	Amount         string `json:"amount"          example:"350.75"`                                     // String decimal (e.g., "1234.56")
-	Direction      string `json:"direction"       example:"EXPENSE"    enums:"INCOME,EXPENSE"`         // INCOME | EXPENSE
+	Amount         string `json:"amount"          example:"350.75"`                                             // String decimal (e.g., "1234.56")
+	Direction      string `json:"direction"       example:"EXPENSE"    enums:"INCOME,EXPENSE"`                  // INCOME | EXPENSE
 	Type           string `json:"type"            example:"PIX"        enums:"PIX,BOLETO,TRANSFER,CREDIT_CARD"` // PIX | BOLETO | TRANSFER | CREDIT_CARD
 	IsPaid         bool   `json:"is_paid"         example:"true"`
 }
@@ -95,7 +95,7 @@ func (i *RegisterTransactionInput) Validate() validation.ValidationErrors {
 type UpdateTransactionItemInput struct {
 	Title       string `json:"title"       example:"Supermercado Extra"`
 	Description string `json:"description" example:"Compras do mês"`
-	Amount      string `json:"amount"      example:"420.00"`                                         // String decimal (e.g., "1234.56")
+	Amount      string `json:"amount"      example:"420.00"` // String decimal (e.g., "1234.56")
 	Direction   string `json:"direction"   example:"EXPENSE" enums:"INCOME,EXPENSE"`
 	Type        string `json:"type"        example:"PIX"     enums:"PIX,BOLETO,TRANSFER,CREDIT_CARD"`
 	IsPaid      bool   `json:"is_paid"     example:"false"`

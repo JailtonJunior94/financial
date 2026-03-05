@@ -12,12 +12,12 @@ import (
 	"github.com/google/uuid"
 
 	"github.com/jailtonjunior94/financial/internal/invoice/application/dtos"
-	"github.com/jailtonjunior94/financial/pkg/money"
 	"github.com/jailtonjunior94/financial/internal/invoice/domain/entities"
 	"github.com/jailtonjunior94/financial/internal/invoice/domain/events"
 	"github.com/jailtonjunior94/financial/internal/invoice/domain/factories"
 	"github.com/jailtonjunior94/financial/internal/invoice/domain/interfaces"
 	"github.com/jailtonjunior94/financial/internal/invoice/infrastructure/repositories"
+	"github.com/jailtonjunior94/financial/pkg/money"
 	"github.com/jailtonjunior94/financial/pkg/observability/metrics"
 	"github.com/jailtonjunior94/financial/pkg/outbox"
 )
@@ -248,4 +248,3 @@ func (u *createPurchaseUseCase) Execute(ctx context.Context, userID string, inpu
 		Items: itemOutputs,
 	}, nil
 }
-

@@ -8,7 +8,6 @@ import (
 	"github.com/JailtonJunior94/devkit-go/pkg/observability"
 
 	"github.com/jailtonjunior94/financial/internal/invoice/application/usecase"
-	"github.com/jailtonjunior94/financial/pkg/observability/metrics"
 	invoicedomain "github.com/jailtonjunior94/financial/internal/invoice/domain"
 	"github.com/jailtonjunior94/financial/internal/invoice/domain/interfaces"
 	"github.com/jailtonjunior94/financial/internal/invoice/infrastructure/adapters"
@@ -18,6 +17,7 @@ import (
 	"github.com/jailtonjunior94/financial/pkg/api/middlewares"
 	"github.com/jailtonjunior94/financial/pkg/auth"
 	pkginterfaces "github.com/jailtonjunior94/financial/pkg/domain/interfaces"
+	"github.com/jailtonjunior94/financial/pkg/observability/metrics"
 	"github.com/jailtonjunior94/financial/pkg/outbox"
 )
 

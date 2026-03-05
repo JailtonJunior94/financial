@@ -7,13 +7,14 @@ import (
 	financialErrors "github.com/jailtonjunior94/financial/pkg/custom_errors"
 
 	"github.com/JailtonJunior94/devkit-go/pkg/entity"
+	devkitVos "github.com/JailtonJunior94/devkit-go/pkg/vos"
 )
 
 type User struct {
 	entity.Base
 	Name     vos.UserName
 	Email    vos.Email
-	Password string
+	Password string //nolint:gosec
 }
 
 func NewUser(name vos.UserName, email vos.Email) (*User, error) {
@@ -38,4 +39,17 @@ func (u *User) SetPassword(password string) error {
 
 	u.Password = password
 	return nil
+}
+
+func (u *User) UpdateName(name vos.UserName) {
+	u.Name = name
+}
+
+func (u *User) UpdateEmail(email vos.Email) {
+	u.Email = email
+}
+
+func (u *User) MarkAsDeleted() {
+	now := time.Now()
+	u.DeletedAt = devkitVos.NewNullableTime(now)
 }

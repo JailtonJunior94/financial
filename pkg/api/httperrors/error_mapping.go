@@ -174,6 +174,12 @@ func buildDomainErrorMappings() map[error]ErrorMapping {
 			Message: "Invalid parent category",
 		},
 
+		// Authorization errors → 403 Forbidden
+		customerrors.ErrForbidden: {
+			Status:  http.StatusForbidden,
+			Message: "You do not have permission to access this resource",
+		},
+
 		// Authentication errors → 401 Unauthorized
 		customerrors.ErrUnauthorized: {
 			Status:  http.StatusUnauthorized,

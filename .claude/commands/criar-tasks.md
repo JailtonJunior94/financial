@@ -86,3 +86,15 @@ A funcionalidade em que você trabalhará é identificada por este slug:
 Após completar a análise e gerar todos os arquivos necessários, apresente os resultados ao usuário e aguarde confirmação para prosseguir com a implementação.
 
 <critical>NÃO IMPLEMENTE NADA, O FOCO DESSA ETAPA É NA LISTA E NO DETALHAMENTO DAS TAREFAS</critical>
+
+## Mandatory Rules
+
+This command MUST follow the project rules defined in:
+
+`.claude/rules/`
+
+Rules are mandatory and non-negotiable.
+
+Before executing any task, the agent MUST consult the relevant rule files and comply with their constraints.
+
+If any instruction in this file conflicts with a rule, the rule takes precedence.

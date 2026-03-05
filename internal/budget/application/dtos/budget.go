@@ -22,9 +22,9 @@ type BudgetPaginatedOutput struct {
 
 // BudgetCreateInput representa o input para criar um orçamento.
 type BudgetCreateInput struct {
-	ReferenceMonth string            `json:"reference_month" example:"2025-01"`                        // YYYY-MM format
-	TotalAmount    string            `json:"total_amount"    example:"5000.00"`                         // String decimal (e.g., "5000.00")
-	Currency       string            `json:"currency"        example:"BRL" enums:"BRL,USD,EUR"`         // ISO 4217 (e.g., "BRL")
+	ReferenceMonth string            `json:"reference_month" example:"2025-01"`                 // YYYY-MM format
+	TotalAmount    string            `json:"total_amount"    example:"5000.00"`                 // String decimal (e.g., "5000.00")
+	Currency       string            `json:"currency"        example:"BRL" enums:"BRL,USD,EUR"` // ISO 4217 (e.g., "BRL")
 	Items          []BudgetItemInput `json:"items"`
 }
 

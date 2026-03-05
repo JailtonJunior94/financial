@@ -20,9 +20,9 @@ var (
 
 type (
 	// JwtAdapter é responsável pela geração e validação de tokens JWT.
-	// Implementa a interface TokenValidator.
+	// Implementa as interfaces TokenGenerator e TokenValidator.
 	JwtAdapter interface {
-		GenerateToken(ctx context.Context, id, email string) (string, error)
+		TokenGenerator
 		TokenValidator
 	}
 
@@ -52,10 +52,9 @@ func (j *jwtAdapter) GenerateToken(ctx context.Context, id, email string) (strin
 	if err != nil {
 		span.AddEvent(
 			"error trying to generate token",
-			observability.Field{Key: "e-mail", Value: email},
 			observability.Field{Key: "error", Value: err.Error()},
 		)
-		j.obs.Logger().Error(ctx, "error trying to generate token", observability.Error(err), observability.String("e-mail", email))
+		j.obs.Logger().Error(ctx, "error trying to generate token", observability.Error(err))
 		return "", ErrGenerateToken
 	}
 	return tokenSigned, nil
@@ -123,7 +122,7 @@ func (j *jwtAdapter) Validate(ctx context.Context, token string) (*Authenticated
 	// Valida claim "email"
 	email, ok := claims["email"].(string)
 	if !ok || email == "" {
-		span.AddEvent("invalid email claim", observability.Field{Key: "email", Value: claims["email"]})
+		span.AddEvent("invalid email claim")
 		j.obs.Logger().Error(ctx, "invalid email claim", observability.Error(customerrors.ErrInvalidTokenClaims))
 		return nil, customerrors.ErrInvalidTokenClaims
 	}
