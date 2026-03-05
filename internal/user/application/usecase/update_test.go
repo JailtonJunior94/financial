@@ -246,6 +246,31 @@ func (s *UpdateUserUseCaseSuite) TestExecute() {
 				s.Contains(err.Error(), "bcrypt error")
 			},
 		},
+		{
+			name: "partial update (só nome) — email e password permanecem inalterados",
+			args: args{
+				id:    "550e8400-e29b-41d4-a716-446655440000",
+				input: &dtos.UpdateUserInput{Name: strPtr("Updated Name")},
+			},
+			setup: func() {
+				user := newTestUserEntity(s.T())
+				s.userRepository.EXPECT().
+					FindByID(s.ctx, "550e8400-e29b-41d4-a716-446655440000").
+					Return(user, nil).
+					Once()
+				s.userRepository.EXPECT().
+					Update(s.ctx, mock.AnythingOfType("*entities.User")).
+					Return(user, nil).
+					Once()
+			},
+			expect: func(output interface{}, err error) {
+				s.NoError(err)
+				s.NotNil(output)
+				typed, ok := output.(*dtos.UserOutput)
+				s.True(ok)
+				s.Equal("john@example.com", typed.Email)
+			},
+		},
 	}
 
 	for _, scenario := range scenarios {

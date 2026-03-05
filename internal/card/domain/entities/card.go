@@ -57,4 +57,3 @@ func (c *Card) Delete() *Card {
 	c.DeletedAt = sharedVos.NewNullableTime(time.Now())
 	return c
 }
-

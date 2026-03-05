@@ -45,6 +45,11 @@ func (m *resourceOwnership) Ownership(paramName string) func(next http.Handler) 
 
 			paramID := chi.URLParam(r, paramName)
 			if user.ID != paramID {
+				m.o11y.Logger().Warn(ctx, "ownership_denied",
+					observability.String("user_id", user.ID),
+					observability.String("resource_id", paramID),
+					observability.String("param_name", paramName),
+				)
 				m.errorHandler.HandleError(w, r, customerrors.ErrForbidden)
 				return
 			}

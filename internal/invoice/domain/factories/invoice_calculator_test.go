@@ -34,207 +34,207 @@ func TestCalculateInvoiceMonth(t *testing.T) {
 	t.Parallel()
 
 	cases := []struct {
-		name         string
-		purchaseDate time.Time
-		wantDueDate  string // formato "YYYY-MM"
+		name          string
+		purchaseDate  time.Time
+		wantDueDate   string // formato "YYYY-MM"
 		justificativa string
 	}{
 		// ── Casos de borda em dia ──────────────────────────────────────────────
 		{
-			name:         "dia 01 — abertura do ciclo",
-			purchaseDate: date(2024, 1, 1),
-			wantDueDate:  "2024-02",
+			name:          "dia 01 — abertura do ciclo",
+			purchaseDate:  date(2024, 1, 1),
+			wantDueDate:   "2024-02",
 			justificativa: "01/Jan ∈ [25/Dez, 24/Jan] → Fev",
 		},
 		{
-			name:         "dia 24 — último dia do ciclo (fronteira inclusiva ≤24)",
-			purchaseDate: date(2024, 1, 24),
-			wantDueDate:  "2024-02",
+			name:          "dia 24 — último dia do ciclo (fronteira inclusiva ≤24)",
+			purchaseDate:  date(2024, 1, 24),
+			wantDueDate:   "2024-02",
 			justificativa: "24/Jan é o último dia de [25/Dez, 24/Jan] → Fev",
 		},
 		{
-			name:         "dia 25 — primeiro dia do próximo ciclo (fronteira inclusiva ≥25)",
-			purchaseDate: date(2024, 1, 25),
-			wantDueDate:  "2024-03",
+			name:          "dia 25 — primeiro dia do próximo ciclo (fronteira inclusiva ≥25)",
+			purchaseDate:  date(2024, 1, 25),
+			wantDueDate:   "2024-03",
 			justificativa: "25/Jan é o primeiro dia de [25/Jan, 24/Fev] → Mar",
 		},
 		{
-			name:         "dia 31 — último dia de mês com 31 dias",
-			purchaseDate: date(2024, 1, 31),
-			wantDueDate:  "2024-03",
+			name:          "dia 31 — último dia de mês com 31 dias",
+			purchaseDate:  date(2024, 1, 31),
+			wantDueDate:   "2024-03",
 			justificativa: "31/Jan ∈ [25/Jan, 24/Fev] → Mar",
 		},
 
 		// ── Fevereiro — mês de 28 dias (não-bissexto) ─────────────────────────
 		{
-			name:         "fev/não-bissexto dia 24 — fronteira ≤24",
-			purchaseDate: date(2023, 2, 24),
-			wantDueDate:  "2023-03",
+			name:          "fev/não-bissexto dia 24 — fronteira ≤24",
+			purchaseDate:  date(2023, 2, 24),
+			wantDueDate:   "2023-03",
 			justificativa: "24/Fev/2023 ∈ [25/Jan, 24/Fev] → Mar",
 		},
 		{
-			name:         "fev/não-bissexto dia 25 — fronteira ≥25",
-			purchaseDate: date(2023, 2, 25),
-			wantDueDate:  "2023-04",
+			name:          "fev/não-bissexto dia 25 — fronteira ≥25",
+			purchaseDate:  date(2023, 2, 25),
+			wantDueDate:   "2023-04",
 			justificativa: "25/Fev/2023 ∈ [25/Fev, 24/Mar] → Abr",
 		},
 		{
-			name:         "fev/não-bissexto dia 28 — último dia",
-			purchaseDate: date(2023, 2, 28),
-			wantDueDate:  "2023-04",
+			name:          "fev/não-bissexto dia 28 — último dia",
+			purchaseDate:  date(2023, 2, 28),
+			wantDueDate:   "2023-04",
 			justificativa: "28/Fev/2023 ∈ [25/Fev, 24/Mar] → Abr",
 		},
 
 		// ── Fevereiro — mês de 29 dias (bissexto) ─────────────────────────────
 		{
-			name:         "fev/bissexto dia 24 — fronteira ≤24",
-			purchaseDate: date(2024, 2, 24),
-			wantDueDate:  "2024-03",
+			name:          "fev/bissexto dia 24 — fronteira ≤24",
+			purchaseDate:  date(2024, 2, 24),
+			wantDueDate:   "2024-03",
 			justificativa: "24/Fev/2024 ∈ [25/Jan, 24/Fev] → Mar",
 		},
 		{
-			name:         "fev/bissexto dia 25 — fronteira ≥25",
-			purchaseDate: date(2024, 2, 25),
-			wantDueDate:  "2024-04",
+			name:          "fev/bissexto dia 25 — fronteira ≥25",
+			purchaseDate:  date(2024, 2, 25),
+			wantDueDate:   "2024-04",
 			justificativa: "25/Fev/2024 ∈ [25/Fev, 24/Mar] → Abr",
 		},
 		{
-			name:         "fev/bissexto dia 29 — último dia",
-			purchaseDate: date(2024, 2, 29),
-			wantDueDate:  "2024-04",
+			name:          "fev/bissexto dia 29 — último dia",
+			purchaseDate:  date(2024, 2, 29),
+			wantDueDate:   "2024-04",
 			justificativa: "29/Fev/2024 ∈ [25/Fev, 24/Mar] → Abr",
 		},
 
 		// ── Mês de 30 dias ────────────────────────────────────────────────────
 		// (Caso crítico: "7 dias antes" daria dia 25, não dia 24.)
 		{
-			name:         "abril dia 24 — mês com 30 dias, fronteira ≤24",
-			purchaseDate: date(2024, 4, 24),
-			wantDueDate:  "2024-05",
+			name:          "abril dia 24 — mês com 30 dias, fronteira ≤24",
+			purchaseDate:  date(2024, 4, 24),
+			wantDueDate:   "2024-05",
 			justificativa: "24/Abr ∈ [25/Mar, 24/Abr] → Mai",
 		},
 		{
-			name:         "abril dia 25 — mês com 30 dias, fronteira ≥25",
-			purchaseDate: date(2024, 4, 25),
-			wantDueDate:  "2024-06",
+			name:          "abril dia 25 — mês com 30 dias, fronteira ≥25",
+			purchaseDate:  date(2024, 4, 25),
+			wantDueDate:   "2024-06",
 			justificativa: "25/Abr ∈ [25/Abr, 24/Mai] → Jun",
 		},
 		{
-			name:         "setembro dia 30 — último dia do mês",
-			purchaseDate: date(2024, 9, 30),
-			wantDueDate:  "2024-11",
+			name:          "setembro dia 30 — último dia do mês",
+			purchaseDate:  date(2024, 9, 30),
+			wantDueDate:   "2024-11",
 			justificativa: "30/Set ∈ [25/Set, 24/Out] → Nov",
 		},
 
 		// ── Virada de ano ─────────────────────────────────────────────────────
 		{
-			name:         "dezembro dia 24 — vencimento em janeiro do ano seguinte",
-			purchaseDate: date(2024, 12, 24),
-			wantDueDate:  "2025-01",
+			name:          "dezembro dia 24 — vencimento em janeiro do ano seguinte",
+			purchaseDate:  date(2024, 12, 24),
+			wantDueDate:   "2025-01",
 			justificativa: "24/Dez/2024 ∈ [25/Nov, 24/Dez] → Jan/2025",
 		},
 		{
-			name:         "dezembro dia 25 — vencimento em fevereiro do ano seguinte",
-			purchaseDate: date(2024, 12, 25),
-			wantDueDate:  "2025-02",
+			name:          "dezembro dia 25 — vencimento em fevereiro do ano seguinte",
+			purchaseDate:  date(2024, 12, 25),
+			wantDueDate:   "2025-02",
 			justificativa: "25/Dez/2024 ∈ [25/Dez/2024, 24/Jan/2025] → Fev/2025",
 		},
 		{
-			name:         "dezembro dia 31 — réveillon, vencimento fevereiro",
-			purchaseDate: date(2024, 12, 31),
-			wantDueDate:  "2025-02",
+			name:          "dezembro dia 31 — réveillon, vencimento fevereiro",
+			purchaseDate:  date(2024, 12, 31),
+			wantDueDate:   "2025-02",
 			justificativa: "31/Dez/2024 ∈ [25/Dez/2024, 24/Jan/2025] → Fev/2025",
 		},
 		{
-			name:         "novembro dia 30 — vencimento janeiro do ano seguinte",
-			purchaseDate: date(2024, 11, 30),
-			wantDueDate:  "2025-01",
+			name:          "novembro dia 30 — vencimento janeiro do ano seguinte",
+			purchaseDate:  date(2024, 11, 30),
+			wantDueDate:   "2025-01",
 			justificativa: "30/Nov/2024 ∈ [25/Nov, 24/Dez] → Jan/2025",
 		},
 		{
-			name:         "outubro dia 31 — vencimento dezembro",
-			purchaseDate: date(2024, 10, 31),
-			wantDueDate:  "2024-12",
+			name:          "outubro dia 31 — vencimento dezembro",
+			purchaseDate:  date(2024, 10, 31),
+			wantDueDate:   "2024-12",
 			justificativa: "31/Out ∈ [25/Out, 24/Nov] → Dez",
 		},
 
 		// ── Datas retroativas e futuras ────────────────────────────────────────
 		{
-			name:         "compra retroativa — 2022",
-			purchaseDate: date(2022, 3, 15),
-			wantDueDate:  "2022-04",
+			name:          "compra retroativa — 2022",
+			purchaseDate:  date(2022, 3, 15),
+			wantDueDate:   "2022-04",
 			justificativa: "15/Mar/2022 ≤ 24 → Abr/2022",
 		},
 		{
-			name:         "compra futura — 2028",
-			purchaseDate: date(2028, 11, 10),
-			wantDueDate:  "2028-12",
+			name:          "compra futura — 2028",
+			purchaseDate:  date(2028, 11, 10),
+			wantDueDate:   "2028-12",
 			justificativa: "10/Nov/2028 ≤ 24 → Dez/2028",
 		},
 
 		// ── Ano 2000 (bissexto especial: divisível por 400) ───────────────────
 		{
-			name:         "ano 2000 fev/29 — bissexto secular",
-			purchaseDate: date(2000, 2, 29),
-			wantDueDate:  "2000-04",
+			name:          "ano 2000 fev/29 — bissexto secular",
+			purchaseDate:  date(2000, 2, 29),
+			wantDueDate:   "2000-04",
 			justificativa: "29/Fev/2000 ≥ 25 → Abr/2000",
 		},
 
 		// ── Casos extras da tabela exaustiva formal (Seção 5) ─────────────────
 		{
-			name:         "fev/bissexto dia 28 — ≥25 mas não último dia",
-			purchaseDate: date(2024, 2, 28),
-			wantDueDate:  "2024-04",
+			name:          "fev/bissexto dia 28 — ≥25 mas não último dia",
+			purchaseDate:  date(2024, 2, 28),
+			wantDueDate:   "2024-04",
 			justificativa: "28/Fev/2024 ≥ 25 ∈ [25/Fev, 24/Mar] → Abr",
 		},
 		{
-			name:         "abril dia 30 — último dia de mês com 30 dias",
-			purchaseDate: date(2024, 4, 30),
-			wantDueDate:  "2024-06",
+			name:          "abril dia 30 — último dia de mês com 30 dias",
+			purchaseDate:  date(2024, 4, 30),
+			wantDueDate:   "2024-06",
 			justificativa: "30/Abr ∈ [25/Abr, 24/Mai] → Jun",
 		},
 		{
-			name:         "dezembro dia 01 — primeiro dia do mês, virada de ano",
-			purchaseDate: date(2024, 12, 1),
-			wantDueDate:  "2025-01",
+			name:          "dezembro dia 01 — primeiro dia do mês, virada de ano",
+			purchaseDate:  date(2024, 12, 1),
+			wantDueDate:   "2025-01",
 			justificativa: "01/Dez ≤ 24 ∈ [25/Nov, 24/Dez] → Jan/2025",
 		},
 		{
-			name:         "novembro 2023 dia 25 — abertura cruzando virada de ano",
-			purchaseDate: date(2023, 11, 25),
-			wantDueDate:  "2024-01",
+			name:          "novembro 2023 dia 25 — abertura cruzando virada de ano",
+			purchaseDate:  date(2023, 11, 25),
+			wantDueDate:   "2024-01",
 			justificativa: "25/Nov/2023 ≥ 25 ∈ [25/Nov, 24/Dez] → Jan/2024",
 		},
 		{
-			name:         "dezembro 2023 dia 25 — abertura dupla virada de ano",
-			purchaseDate: date(2023, 12, 25),
-			wantDueDate:  "2024-02",
+			name:          "dezembro 2023 dia 25 — abertura dupla virada de ano",
+			purchaseDate:  date(2023, 12, 25),
+			wantDueDate:   "2024-02",
 			justificativa: "25/Dez/2023 ≥ 25 ∈ [25/Dez/2023, 24/Jan/2024] → Fev/2024",
 		},
 		{
-			name:         "novembro dia 01 — abertura do ciclo de dezembro",
-			purchaseDate: date(2024, 11, 1),
-			wantDueDate:  "2024-12",
+			name:          "novembro dia 01 — abertura do ciclo de dezembro",
+			purchaseDate:  date(2024, 11, 1),
+			wantDueDate:   "2024-12",
 			justificativa: "01/Nov ≤ 24 ∈ [25/Out, 24/Nov] → Dez",
 		},
 		{
-			name:         "compra futura — maio 2026",
-			purchaseDate: date(2026, 5, 10),
-			wantDueDate:  "2026-06",
+			name:          "compra futura — maio 2026",
+			purchaseDate:  date(2026, 5, 10),
+			wantDueDate:   "2026-06",
 			justificativa: "10/Mai/2026 ≤ 24 → Jun/2026",
 		},
 
 		// ── Exemplos do enunciado original ────────────────────────────────────
 		{
-			name:         "enunciado: compra 21/01 → fatura 01/02",
-			purchaseDate: date(2024, 1, 21),
-			wantDueDate:  "2024-02",
+			name:          "enunciado: compra 21/01 → fatura 01/02",
+			purchaseDate:  date(2024, 1, 21),
+			wantDueDate:   "2024-02",
 			justificativa: "21/Jan ≤ 24 → Fev",
 		},
 		{
-			name:         "enunciado: compra 27/01 → fatura 01/03",
-			purchaseDate: date(2024, 1, 27),
-			wantDueDate:  "2024-03",
+			name:          "enunciado: compra 27/01 → fatura 01/03",
+			purchaseDate:  date(2024, 1, 27),
+			wantDueDate:   "2024-03",
 			justificativa: "27/Jan ≥ 25 → Mar",
 		},
 	}

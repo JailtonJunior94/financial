@@ -1,13 +1,12 @@
 package user
 
 import (
-	"database/sql"
-
+	"github.com/JailtonJunior94/devkit-go/pkg/database"
 	"github.com/JailtonJunior94/devkit-go/pkg/encrypt"
 	"github.com/JailtonJunior94/devkit-go/pkg/observability"
 	"github.com/jailtonjunior94/financial/configs"
 	"github.com/jailtonjunior94/financial/internal/user/application/usecase"
-	"github.com/jailtonjunior94/financial/internal/user/infrastructure/http"
+	userHttp "github.com/jailtonjunior94/financial/internal/user/infrastructure/http"
 	"github.com/jailtonjunior94/financial/internal/user/infrastructure/repositories"
 	"github.com/jailtonjunior94/financial/pkg/api/httperrors"
 	"github.com/jailtonjunior94/financial/pkg/api/middlewares"
@@ -16,32 +15,33 @@ import (
 )
 
 type UserModule struct {
-	UserRouter *http.UserRouter
+	UserRouter *userHttp.UserRouter
 }
 
-// NewUserModule follows the same pattern as other modules (auth.TokenValidator for the auth
-// middleware) while also accepting auth.TokenGenerator for the login token use case.
-// In practice both params are satisfied by the same auth.JwtAdapter from the caller.
-func NewUserModule(db *sql.DB, cfg *configs.Config, o11y observability.Observability, tokenGenerator auth.TokenGenerator, tokenValidator auth.TokenValidator) UserModule {
+func NewUserModule(db database.DBTX, cfg *configs.Config, o11y observability.Observability, tokenGenerator auth.TokenGenerator, tokenValidator auth.TokenValidator) UserModule {
 	hash := encrypt.NewHashAdapter()
 	errorHandler := httperrors.NewErrorHandler(o11y)
-
 	financialMetrics := metrics.NewFinancialMetrics(o11y)
 	userRepository := repositories.NewUserRepository(db, o11y, financialMetrics)
-
 	authUseCase := usecase.NewTokenUseCase(cfg, o11y, hash, tokenGenerator, userRepository)
 	createUserUseCase := usecase.NewCreateUserUseCase(o11y, hash, userRepository)
 	getUserUseCase := usecase.NewGetUserUseCase(o11y, financialMetrics, userRepository)
 	listUsersUseCase := usecase.NewListUsersUseCase(o11y, financialMetrics, userRepository)
 	updateUserUseCase := usecase.NewUpdateUserUseCase(o11y, financialMetrics, hash, userRepository)
 	deleteUserUseCase := usecase.NewDeleteUserUseCase(o11y, financialMetrics, userRepository)
-
 	authMiddleware := middlewares.NewAuthorization(tokenValidator, o11y, errorHandler)
 	ownershipMiddleware := middlewares.NewResourceOwnership(o11y, errorHandler)
-
-	authHandler := http.NewAuthHandler(o11y, errorHandler, authUseCase)
-	userHandler := http.NewUserHandler(o11y, financialMetrics, errorHandler, createUserUseCase, getUserUseCase, listUsersUseCase, updateUserUseCase, deleteUserUseCase)
-	userRouter := http.NewUserRouter(authHandler, userHandler, authMiddleware, ownershipMiddleware)
-
+	authHandler := userHttp.NewAuthHandler(o11y, errorHandler, authUseCase)
+	userHandler := userHttp.NewUserHandler(userHttp.UserHandlerDeps{
+		O11y:              o11y,
+		FM:                financialMetrics,
+		ErrorHandler:      errorHandler,
+		CreateUserUseCase: createUserUseCase,
+		GetUserUseCase:    getUserUseCase,
+		ListUsersUseCase:  listUsersUseCase,
+		UpdateUserUseCase: updateUserUseCase,
+		DeleteUserUseCase: deleteUserUseCase,
+	})
+	userRouter := userHttp.NewUserRouter(authHandler, userHandler, authMiddleware, ownershipMiddleware)
 	return UserModule{UserRouter: userRouter}
 }

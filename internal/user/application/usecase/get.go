@@ -12,7 +12,6 @@ import (
 	"github.com/JailtonJunior94/devkit-go/pkg/observability"
 )
 
-
 type (
 	GetUserUseCase interface {
 		Execute(ctx context.Context, id string) (*dtos.UserOutput, error)

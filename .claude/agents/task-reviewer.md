@@ -221,3 +221,15 @@ Examples of what to record:
 - Common testing approaches and gaps
 - File organization and naming conventions actually in use
 - Dependencies and libraries the project relies on
+
+## Mandatory Rules
+
+This agent MUST follow the project rules defined in:
+
+`.claude/rules/`
+
+Rules are mandatory and non-negotiable.
+
+Before executing any task, the agent MUST consult the relevant rule files and comply with their constraints.
+
+If any instruction in this file conflicts with a rule, the rule takes precedence.

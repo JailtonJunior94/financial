@@ -15,6 +15,8 @@ import (
 	"github.com/jailtonjunior94/financial/internal/user/application/usecase"
 	userHttp "github.com/jailtonjunior94/financial/internal/user/infrastructure/http"
 	"github.com/jailtonjunior94/financial/pkg/api/httperrors"
+	"github.com/jailtonjunior94/financial/pkg/api/middlewares"
+	"github.com/jailtonjunior94/financial/pkg/auth"
 	customerrors "github.com/jailtonjunior94/financial/pkg/custom_errors"
 	"github.com/jailtonjunior94/financial/pkg/observability/metrics"
 
@@ -79,7 +81,16 @@ func newTestHandler(
 	obs := fake.NewProvider()
 	fm := metrics.NewTestFinancialMetrics()
 	errorHandler := httperrors.NewErrorHandler(obs)
-	return userHttp.NewUserHandler(obs, fm, errorHandler, createUC, getUC, listUC, updateUC, deleteUC)
+	return userHttp.NewUserHandler(userHttp.UserHandlerDeps{
+		O11y:              obs,
+		FM:                fm,
+		ErrorHandler:      errorHandler,
+		CreateUserUseCase: createUC,
+		GetUserUseCase:    getUC,
+		ListUsersUseCase:  listUC,
+		UpdateUserUseCase: updateUC,
+		DeleteUserUseCase: deleteUC,
+	})
 }
 
 func makeChiRequest(method, path, paramName, paramValue string, body interface{}) *http.Request {
@@ -100,6 +111,13 @@ func makeChiRequest(method, path, paramName, paramValue string, body interface{}
 	return req
 }
 
+func makeAuthenticatedChiRequest(method, path, paramName, paramValue string, body interface{}, userID string) *http.Request {
+	req := makeChiRequest(method, path, paramName, paramValue, body)
+	user := auth.NewAuthenticatedUser(userID, "user@test.com", nil)
+	ctx := middlewares.AddUserToContext(req.Context(), user)
+	return req.WithContext(ctx)
+}
+
 // --- GetByID tests ---
 
 func TestUserHandler_GetByID_Success(t *testing.T) {
@@ -112,7 +130,7 @@ func TestUserHandler_GetByID_Success(t *testing.T) {
 		&stubDeleteUser{},
 	)
 
-	req := makeChiRequest(http.MethodGet, "/api/v1/users/user-1", "id", "user-1", nil)
+	req := makeAuthenticatedChiRequest(http.MethodGet, "/api/v1/users/user-1", "id", "user-1", nil, "user-1")
 	w := httptest.NewRecorder()
 
 	handler.GetByID(w, req)
@@ -132,12 +150,29 @@ func TestUserHandler_GetByID_NotFound(t *testing.T) {
 		&stubDeleteUser{},
 	)
 
-	req := makeChiRequest(http.MethodGet, "/api/v1/users/not-found", "id", "not-found", nil)
+	req := makeAuthenticatedChiRequest(http.MethodGet, "/api/v1/users/not-found", "id", "not-found", nil, "not-found")
 	w := httptest.NewRecorder()
 
 	handler.GetByID(w, req)
 
 	assert.Equal(t, http.StatusNotFound, w.Code)
+}
+
+func TestUserHandler_GetByID_NoUserInContext(t *testing.T) {
+	handler := newTestHandler(
+		&stubCreateUser{},
+		&stubGetUser{},
+		&stubListUsers{},
+		&stubUpdateUser{},
+		&stubDeleteUser{},
+	)
+
+	req := makeChiRequest(http.MethodGet, "/api/v1/users/user-1", "id", "user-1", nil)
+	w := httptest.NewRecorder()
+
+	handler.GetByID(w, req)
+
+	assert.Equal(t, http.StatusUnauthorized, w.Code)
 }
 
 // --- List tests ---
@@ -153,6 +188,8 @@ func TestUserHandler_List_Success(t *testing.T) {
 	)
 
 	req := httptest.NewRequest(http.MethodGet, "/api/v1/users?limit=20", nil)
+	user := auth.NewAuthenticatedUser("user-1", "user@test.com", nil)
+	req = req.WithContext(middlewares.AddUserToContext(req.Context(), user))
 	w := httptest.NewRecorder()
 
 	handler.List(w, req)
@@ -170,11 +207,30 @@ func TestUserHandler_List_InvalidLimit(t *testing.T) {
 	)
 
 	req := httptest.NewRequest(http.MethodGet, "/api/v1/users?limit=abc", nil)
+	user := auth.NewAuthenticatedUser("user-1", "user@test.com", nil)
+	req = req.WithContext(middlewares.AddUserToContext(req.Context(), user))
 	w := httptest.NewRecorder()
 
 	handler.List(w, req)
 
 	assert.Equal(t, http.StatusBadRequest, w.Code)
+}
+
+func TestUserHandler_List_NoUserInContext(t *testing.T) {
+	handler := newTestHandler(
+		&stubCreateUser{},
+		&stubGetUser{},
+		&stubListUsers{},
+		&stubUpdateUser{},
+		&stubDeleteUser{},
+	)
+
+	req := httptest.NewRequest(http.MethodGet, "/api/v1/users?limit=20", nil)
+	w := httptest.NewRecorder()
+
+	handler.List(w, req)
+
+	assert.Equal(t, http.StatusUnauthorized, w.Code)
 }
 
 // --- Update tests ---
@@ -191,7 +247,7 @@ func TestUserHandler_Update_Success(t *testing.T) {
 	)
 
 	body := map[string]string{"name": name}
-	req := makeChiRequest(http.MethodPut, "/api/v1/users/user-1", "id", "user-1", body)
+	req := makeAuthenticatedChiRequest(http.MethodPut, "/api/v1/users/user-1", "id", "user-1", body, "user-1")
 	w := httptest.NewRecorder()
 
 	handler.Update(w, req)
@@ -213,6 +269,8 @@ func TestUserHandler_Update_DecodeError(t *testing.T) {
 	chiCtx := chi.NewRouteContext()
 	chiCtx.URLParams.Add("id", "user-1")
 	req = req.WithContext(context.WithValue(req.Context(), chi.RouteCtxKey, chiCtx))
+	user := auth.NewAuthenticatedUser("user-1", "user@test.com", nil)
+	req = req.WithContext(middlewares.AddUserToContext(req.Context(), user))
 	w := httptest.NewRecorder()
 
 	handler.Update(w, req)
@@ -230,12 +288,30 @@ func TestUserHandler_Update_Conflict(t *testing.T) {
 	)
 
 	body := map[string]string{"email": "conflict@test.com"}
-	req := makeChiRequest(http.MethodPut, "/api/v1/users/user-1", "id", "user-1", body)
+	req := makeAuthenticatedChiRequest(http.MethodPut, "/api/v1/users/user-1", "id", "user-1", body, "user-1")
 	w := httptest.NewRecorder()
 
 	handler.Update(w, req)
 
 	assert.Equal(t, http.StatusConflict, w.Code)
+}
+
+func TestUserHandler_Update_NoUserInContext(t *testing.T) {
+	handler := newTestHandler(
+		&stubCreateUser{},
+		&stubGetUser{},
+		&stubListUsers{},
+		&stubUpdateUser{},
+		&stubDeleteUser{},
+	)
+
+	body := map[string]string{"name": "New Name"}
+	req := makeChiRequest(http.MethodPut, "/api/v1/users/user-1", "id", "user-1", body)
+	w := httptest.NewRecorder()
+
+	handler.Update(w, req)
+
+	assert.Equal(t, http.StatusUnauthorized, w.Code)
 }
 
 // --- Delete tests ---
@@ -249,7 +325,7 @@ func TestUserHandler_Delete_Success(t *testing.T) {
 		&stubDeleteUser{},
 	)
 
-	req := makeChiRequest(http.MethodDelete, "/api/v1/users/user-1", "id", "user-1", nil)
+	req := makeAuthenticatedChiRequest(http.MethodDelete, "/api/v1/users/user-1", "id", "user-1", nil, "user-1")
 	w := httptest.NewRecorder()
 
 	handler.Delete(w, req)
@@ -266,12 +342,29 @@ func TestUserHandler_Delete_NotFound(t *testing.T) {
 		&stubDeleteUser{err: customerrors.ErrUserNotFound},
 	)
 
-	req := makeChiRequest(http.MethodDelete, "/api/v1/users/user-1", "id", "user-1", nil)
+	req := makeAuthenticatedChiRequest(http.MethodDelete, "/api/v1/users/user-1", "id", "user-1", nil, "user-1")
 	w := httptest.NewRecorder()
 
 	handler.Delete(w, req)
 
 	assert.Equal(t, http.StatusNotFound, w.Code)
+}
+
+func TestUserHandler_Delete_NoUserInContext(t *testing.T) {
+	handler := newTestHandler(
+		&stubCreateUser{},
+		&stubGetUser{},
+		&stubListUsers{},
+		&stubUpdateUser{},
+		&stubDeleteUser{},
+	)
+
+	req := makeChiRequest(http.MethodDelete, "/api/v1/users/user-1", "id", "user-1", nil)
+	w := httptest.NewRecorder()
+
+	handler.Delete(w, req)
+
+	assert.Equal(t, http.StatusUnauthorized, w.Code)
 }
 
 // --- Create tests ---

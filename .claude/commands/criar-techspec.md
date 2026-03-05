@@ -109,3 +109,15 @@ Fazer perguntas focadas sobre:
 <critical>NÃO GERE A TECH SPEC SEM ANTES FAZER PERGUNTAS DE CLARIFICAÇÃO (USE A SUA ASK USER QUESTIONS TOOL)</critical>
 <critical>USAR WEB SEARCH (COM PELO MENOS 3 BUSCAS) PARA BUSCAR REGRAS DE NEGÓCIO E INFORMAÇÕES GERAIS ANTES DE FAZER AS PERGUNTAS DE CLARIFICAÇÃO</critical>
 <critical>EM HIPOTESE NENHUMA, FUJA DO PADRÃO DO TEMPLATE DO TECHSPEC</critical>
+
+## Mandatory Rules
+
+This command MUST follow the project rules defined in:
+
+`.claude/rules/`
+
+Rules are mandatory and non-negotiable.
+
+Before executing any task, the agent MUST consult the relevant rule files and comply with their constraints.
+
+If any instruction in this file conflicts with a rule, the rule takes precedence.

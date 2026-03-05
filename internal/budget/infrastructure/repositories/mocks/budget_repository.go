@@ -10,7 +10,7 @@ import (
 	"github.com/JailtonJunior94/devkit-go/pkg/vos"
 	"github.com/jailtonjunior94/financial/internal/budget/domain/entities"
 	"github.com/jailtonjunior94/financial/internal/budget/domain/interfaces"
-	pkgVos "github.com/jailtonjunior94/financial/pkg/domain/vos"
+	vos0 "github.com/jailtonjunior94/financial/pkg/domain/vos"
 	mock "github.com/stretchr/testify/mock"
 )
 
@@ -49,10 +49,13 @@ func (_mock *BudgetRepository) Delete(ctx context.Context, id vos.UUID) error {
 		panic("no return value specified for Delete")
 	}
 
+	var r0 error
 	if returnFunc, ok := ret.Get(0).(func(context.Context, vos.UUID) error); ok {
-		return returnFunc(ctx, id)
+		r0 = returnFunc(ctx, id)
+	} else {
+		r0 = ret.Error(0)
 	}
-	return ret.Error(0)
+	return r0
 }
 
 // BudgetRepository_Delete_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'Delete'
@@ -77,7 +80,10 @@ func (_c *BudgetRepository_Delete_Call) Run(run func(ctx context.Context, id vos
 		if args[1] != nil {
 			arg1 = args[1].(vos.UUID)
 		}
-		run(arg0, arg1)
+		run(
+			arg0,
+			arg1,
+		)
 	})
 	return _c
 }
@@ -147,7 +153,11 @@ func (_c *BudgetRepository_FindByID_Call) Run(run func(ctx context.Context, user
 		if args[2] != nil {
 			arg2 = args[2].(vos.UUID)
 		}
-		run(arg0, arg1, arg2)
+		run(
+			arg0,
+			arg1,
+			arg2,
+		)
 	})
 	return _c
 }
@@ -163,7 +173,7 @@ func (_c *BudgetRepository_FindByID_Call) RunAndReturn(run func(ctx context.Cont
 }
 
 // FindByUserIDAndReferenceMonth provides a mock function for the type BudgetRepository
-func (_mock *BudgetRepository) FindByUserIDAndReferenceMonth(ctx context.Context, userID vos.UUID, referenceMonth pkgVos.ReferenceMonth) (*entities.Budget, error) {
+func (_mock *BudgetRepository) FindByUserIDAndReferenceMonth(ctx context.Context, userID vos.UUID, referenceMonth vos0.ReferenceMonth) (*entities.Budget, error) {
 	ret := _mock.Called(ctx, userID, referenceMonth)
 
 	if len(ret) == 0 {
@@ -172,17 +182,17 @@ func (_mock *BudgetRepository) FindByUserIDAndReferenceMonth(ctx context.Context
 
 	var r0 *entities.Budget
 	var r1 error
-	if returnFunc, ok := ret.Get(0).(func(context.Context, vos.UUID, pkgVos.ReferenceMonth) (*entities.Budget, error)); ok {
+	if returnFunc, ok := ret.Get(0).(func(context.Context, vos.UUID, vos0.ReferenceMonth) (*entities.Budget, error)); ok {
 		return returnFunc(ctx, userID, referenceMonth)
 	}
-	if returnFunc, ok := ret.Get(0).(func(context.Context, vos.UUID, pkgVos.ReferenceMonth) *entities.Budget); ok {
+	if returnFunc, ok := ret.Get(0).(func(context.Context, vos.UUID, vos0.ReferenceMonth) *entities.Budget); ok {
 		r0 = returnFunc(ctx, userID, referenceMonth)
 	} else {
 		if ret.Get(0) != nil {
 			r0 = ret.Get(0).(*entities.Budget)
 		}
 	}
-	if returnFunc, ok := ret.Get(1).(func(context.Context, vos.UUID, pkgVos.ReferenceMonth) error); ok {
+	if returnFunc, ok := ret.Get(1).(func(context.Context, vos.UUID, vos0.ReferenceMonth) error); ok {
 		r1 = returnFunc(ctx, userID, referenceMonth)
 	} else {
 		r1 = ret.Error(1)
@@ -198,12 +208,12 @@ type BudgetRepository_FindByUserIDAndReferenceMonth_Call struct {
 // FindByUserIDAndReferenceMonth is a helper method to define mock.On call
 //   - ctx context.Context
 //   - userID vos.UUID
-//   - referenceMonth pkgVos.ReferenceMonth
+//   - referenceMonth vos0.ReferenceMonth
 func (_e *BudgetRepository_Expecter) FindByUserIDAndReferenceMonth(ctx interface{}, userID interface{}, referenceMonth interface{}) *BudgetRepository_FindByUserIDAndReferenceMonth_Call {
 	return &BudgetRepository_FindByUserIDAndReferenceMonth_Call{Call: _e.mock.On("FindByUserIDAndReferenceMonth", ctx, userID, referenceMonth)}
 }
 
-func (_c *BudgetRepository_FindByUserIDAndReferenceMonth_Call) Run(run func(ctx context.Context, userID vos.UUID, referenceMonth pkgVos.ReferenceMonth)) *BudgetRepository_FindByUserIDAndReferenceMonth_Call {
+func (_c *BudgetRepository_FindByUserIDAndReferenceMonth_Call) Run(run func(ctx context.Context, userID vos.UUID, referenceMonth vos0.ReferenceMonth)) *BudgetRepository_FindByUserIDAndReferenceMonth_Call {
 	_c.Call.Run(func(args mock.Arguments) {
 		var arg0 context.Context
 		if args[0] != nil {
@@ -213,9 +223,9 @@ func (_c *BudgetRepository_FindByUserIDAndReferenceMonth_Call) Run(run func(ctx 
 		if args[1] != nil {
 			arg1 = args[1].(vos.UUID)
 		}
-		var arg2 pkgVos.ReferenceMonth
+		var arg2 vos0.ReferenceMonth
 		if args[2] != nil {
-			arg2 = args[2].(pkgVos.ReferenceMonth)
+			arg2 = args[2].(vos0.ReferenceMonth)
 		}
 		run(
 			arg0,
@@ -231,7 +241,7 @@ func (_c *BudgetRepository_FindByUserIDAndReferenceMonth_Call) Return(budget *en
 	return _c
 }
 
-func (_c *BudgetRepository_FindByUserIDAndReferenceMonth_Call) RunAndReturn(run func(ctx context.Context, userID vos.UUID, referenceMonth pkgVos.ReferenceMonth) (*entities.Budget, error)) *BudgetRepository_FindByUserIDAndReferenceMonth_Call {
+func (_c *BudgetRepository_FindByUserIDAndReferenceMonth_Call) RunAndReturn(run func(ctx context.Context, userID vos.UUID, referenceMonth vos0.ReferenceMonth) (*entities.Budget, error)) *BudgetRepository_FindByUserIDAndReferenceMonth_Call {
 	_c.Call.Return(run)
 	return _c
 }

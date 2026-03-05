@@ -8,6 +8,7 @@ import (
 	"github.com/jailtonjunior94/financial/internal/user/application/dtos"
 	"github.com/jailtonjunior94/financial/internal/user/application/usecase"
 	"github.com/jailtonjunior94/financial/pkg/api/httperrors"
+	"github.com/jailtonjunior94/financial/pkg/api/middlewares"
 	"github.com/jailtonjunior94/financial/pkg/observability/metrics"
 	"github.com/jailtonjunior94/financial/pkg/pagination"
 
@@ -16,6 +17,17 @@ import (
 	"github.com/go-chi/chi/v5"
 	"go.opentelemetry.io/otel/trace"
 )
+
+type UserHandlerDeps struct {
+	O11y              observability.Observability
+	FM                *metrics.FinancialMetrics
+	ErrorHandler      httperrors.ErrorHandler
+	CreateUserUseCase usecase.CreateUserUseCase
+	GetUserUseCase    usecase.GetUserUseCase
+	ListUsersUseCase  usecase.ListUsersUseCase
+	UpdateUserUseCase usecase.UpdateUserUseCase
+	DeleteUserUseCase usecase.DeleteUserUseCase
+}
 
 type UserHandler struct {
 	o11y              observability.Observability
@@ -28,25 +40,16 @@ type UserHandler struct {
 	deleteUserUseCase usecase.DeleteUserUseCase
 }
 
-func NewUserHandler(
-	o11y observability.Observability,
-	fm *metrics.FinancialMetrics,
-	errorHandler httperrors.ErrorHandler,
-	createUserUseCase usecase.CreateUserUseCase,
-	getUserUseCase usecase.GetUserUseCase,
-	listUsersUseCase usecase.ListUsersUseCase,
-	updateUserUseCase usecase.UpdateUserUseCase,
-	deleteUserUseCase usecase.DeleteUserUseCase,
-) *UserHandler {
+func NewUserHandler(deps UserHandlerDeps) *UserHandler {
 	return &UserHandler{
-		o11y:              o11y,
-		fm:                fm,
-		errorHandler:      errorHandler,
-		createUserUseCase: createUserUseCase,
-		getUserUseCase:    getUserUseCase,
-		listUsersUseCase:  listUsersUseCase,
-		updateUserUseCase: updateUserUseCase,
-		deleteUserUseCase: deleteUserUseCase,
+		o11y:              deps.O11y,
+		fm:                deps.FM,
+		errorHandler:      deps.ErrorHandler,
+		createUserUseCase: deps.CreateUserUseCase,
+		getUserUseCase:    deps.GetUserUseCase,
+		listUsersUseCase:  deps.ListUsersUseCase,
+		updateUserUseCase: deps.UpdateUserUseCase,
+		deleteUserUseCase: deps.DeleteUserUseCase,
 	}
 }
 
@@ -67,16 +70,13 @@ func (h *UserHandler) Create(w http.ResponseWriter, r *http.Request) {
 	start := time.Now()
 	ctx, span := h.o11y.Tracer().Start(r.Context(), "user_handler.create")
 	defer span.End()
-
 	correlationID := trace.SpanFromContext(ctx).SpanContext().TraceID().String()
-
 	h.o11y.Logger().Info(ctx, "request_received",
 		observability.String("operation", "CreateUser"),
 		observability.String("layer", "handler"),
 		observability.String("entity", "user"),
 		observability.String("correlation_id", correlationID),
 	)
-
 	var input *dtos.CreateUserInput
 	if err := json.NewDecoder(r.Body).Decode(&input); err != nil {
 		h.o11y.Logger().Error(ctx, "validation_failed",
@@ -92,7 +92,6 @@ func (h *UserHandler) Create(w http.ResponseWriter, r *http.Request) {
 		h.errorHandler.HandleError(w, r, err)
 		return
 	}
-
 	output, err := h.createUserUseCase.Execute(ctx, input)
 	if err != nil {
 		h.o11y.Logger().Error(ctx, "request_failed",
@@ -108,7 +107,6 @@ func (h *UserHandler) Create(w http.ResponseWriter, r *http.Request) {
 		h.errorHandler.HandleError(w, r, err)
 		return
 	}
-
 	h.o11y.Logger().Info(ctx, "request_completed",
 		observability.String("operation", "CreateUser"),
 		observability.String("layer", "handler"),
@@ -116,7 +114,6 @@ func (h *UserHandler) Create(w http.ResponseWriter, r *http.Request) {
 		observability.String("correlation_id", correlationID),
 		observability.String("user_id", output.ID),
 	)
-
 	h.fm.RecordHandlerRequest(ctx, "create_user", "user", time.Since(start))
 	responses.JSON(w, http.StatusCreated, output)
 }
@@ -138,19 +135,30 @@ func (h *UserHandler) GetByID(w http.ResponseWriter, r *http.Request) {
 	start := time.Now()
 	ctx, span := h.o11y.Tracer().Start(r.Context(), "user_handler.get_by_id")
 	defer span.End()
-
 	correlationID := trace.SpanFromContext(ctx).SpanContext().TraceID().String()
-
 	id := chi.URLParam(r, "id")
-
+	authUser, err := middlewares.GetUserFromContext(ctx)
+	if err != nil {
+		h.o11y.Logger().Error(ctx, "request_failed",
+			observability.String("operation", "GetUser"),
+			observability.String("layer", "handler"),
+			observability.String("entity", "user"),
+			observability.String("correlation_id", correlationID),
+			observability.String("error_type", "infra"),
+			observability.String("error_code", "AUTH_CONTEXT_MISSING"),
+			observability.Error(err),
+		)
+		h.fm.RecordHandlerFailure(ctx, "get_user", "user", "infra", time.Since(start))
+		h.errorHandler.HandleError(w, r, err)
+		return
+	}
 	h.o11y.Logger().Info(ctx, "request_received",
 		observability.String("operation", "GetUser"),
 		observability.String("layer", "handler"),
 		observability.String("entity", "user"),
 		observability.String("correlation_id", correlationID),
-		observability.String("user_id", id),
+		observability.String("user_id", authUser.ID),
 	)
-
 	output, err := h.getUserUseCase.Execute(ctx, id)
 	if err != nil {
 		h.o11y.Logger().Error(ctx, "request_failed",
@@ -160,21 +168,20 @@ func (h *UserHandler) GetByID(w http.ResponseWriter, r *http.Request) {
 			observability.String("correlation_id", correlationID),
 			observability.String("error_type", "business"),
 			observability.String("error_code", "GET_USER_FAILED"),
+			observability.String("user_id", authUser.ID),
 			observability.Error(err),
 		)
 		h.fm.RecordHandlerFailure(ctx, "get_user", "user", "business", time.Since(start))
 		h.errorHandler.HandleError(w, r, err)
 		return
 	}
-
 	h.o11y.Logger().Info(ctx, "request_completed",
 		observability.String("operation", "GetUser"),
 		observability.String("layer", "handler"),
 		observability.String("entity", "user"),
 		observability.String("correlation_id", correlationID),
-		observability.String("user_id", id),
+		observability.String("user_id", authUser.ID),
 	)
-
 	h.fm.RecordHandlerRequest(ctx, "get_user", "user", time.Since(start))
 	responses.JSON(w, http.StatusOK, output)
 }
@@ -195,16 +202,29 @@ func (h *UserHandler) List(w http.ResponseWriter, r *http.Request) {
 	start := time.Now()
 	ctx, span := h.o11y.Tracer().Start(r.Context(), "user_handler.list")
 	defer span.End()
-
 	correlationID := trace.SpanFromContext(ctx).SpanContext().TraceID().String()
-
+	authUser, err := middlewares.GetUserFromContext(ctx)
+	if err != nil {
+		h.o11y.Logger().Error(ctx, "request_failed",
+			observability.String("operation", "ListUsers"),
+			observability.String("layer", "handler"),
+			observability.String("entity", "user"),
+			observability.String("correlation_id", correlationID),
+			observability.String("error_type", "infra"),
+			observability.String("error_code", "AUTH_CONTEXT_MISSING"),
+			observability.Error(err),
+		)
+		h.fm.RecordHandlerFailure(ctx, "list_users", "user", "infra", time.Since(start))
+		h.errorHandler.HandleError(w, r, err)
+		return
+	}
 	h.o11y.Logger().Info(ctx, "request_received",
 		observability.String("operation", "ListUsers"),
 		observability.String("layer", "handler"),
 		observability.String("entity", "user"),
 		observability.String("correlation_id", correlationID),
+		observability.String("user_id", authUser.ID),
 	)
-
 	params, err := pagination.ParseCursorParams(r, 20, 100)
 	if err != nil {
 		h.o11y.Logger().Error(ctx, "request_failed",
@@ -212,6 +232,7 @@ func (h *UserHandler) List(w http.ResponseWriter, r *http.Request) {
 			observability.String("layer", "handler"),
 			observability.String("entity", "user"),
 			observability.String("correlation_id", correlationID),
+			observability.String("user_id", authUser.ID),
 			observability.String("error_type", "validation"),
 			observability.Error(err),
 		)
@@ -219,7 +240,6 @@ func (h *UserHandler) List(w http.ResponseWriter, r *http.Request) {
 		h.errorHandler.HandleError(w, r, err)
 		return
 	}
-
 	output, err := h.listUsersUseCase.Execute(ctx, usecase.ListUsersInput{
 		Limit:  params.Limit,
 		Cursor: params.Cursor,
@@ -230,6 +250,7 @@ func (h *UserHandler) List(w http.ResponseWriter, r *http.Request) {
 			observability.String("layer", "handler"),
 			observability.String("entity", "user"),
 			observability.String("correlation_id", correlationID),
+			observability.String("user_id", authUser.ID),
 			observability.String("error_type", "business"),
 			observability.String("error_code", "LIST_USERS_FAILED"),
 			observability.Error(err),
@@ -238,147 +259,14 @@ func (h *UserHandler) List(w http.ResponseWriter, r *http.Request) {
 		h.errorHandler.HandleError(w, r, err)
 		return
 	}
-
 	h.o11y.Logger().Info(ctx, "request_completed",
 		observability.String("operation", "ListUsers"),
 		observability.String("layer", "handler"),
 		observability.String("entity", "user"),
 		observability.String("correlation_id", correlationID),
+		observability.String("user_id", authUser.ID),
 	)
-
 	h.fm.RecordHandlerRequest(ctx, "list_users", "user", time.Since(start))
 	response := pagination.NewPaginatedResponse(output.Users, params.Limit, output.NextCursor)
 	responses.JSON(w, http.StatusOK, response)
-}
-
-// Update godoc
-//
-//	@Summary		Atualizar usuário
-//	@Description	Atualiza dados do próprio usuário (name, email, password).
-//	@Tags			users
-//	@Accept			json
-//	@Produce		json
-//	@Security		BearerAuth
-//	@Param			id		path		string					true	"ID do usuário"
-//	@Param			request	body		dtos.UpdateUserInput	true	"Dados a atualizar"
-//	@Success		200		{object}	dtos.UserOutput			"Usuário atualizado"
-//	@Failure		400		{object}	httperrors.ProblemDetail	"Dados inválidos"
-//	@Failure		403		{object}	httperrors.ProblemDetail	"Acesso negado"
-//	@Failure		404		{object}	httperrors.ProblemDetail	"Usuário não encontrado"
-//	@Failure		409		{object}	httperrors.ProblemDetail	"Email já em uso"
-//	@Router			/api/v1/users/{id} [put]
-func (h *UserHandler) Update(w http.ResponseWriter, r *http.Request) {
-	start := time.Now()
-	ctx, span := h.o11y.Tracer().Start(r.Context(), "user_handler.update")
-	defer span.End()
-
-	correlationID := trace.SpanFromContext(ctx).SpanContext().TraceID().String()
-
-	id := chi.URLParam(r, "id")
-
-	h.o11y.Logger().Info(ctx, "request_received",
-		observability.String("operation", "UpdateUser"),
-		observability.String("layer", "handler"),
-		observability.String("entity", "user"),
-		observability.String("correlation_id", correlationID),
-		observability.String("user_id", id),
-	)
-
-	var input *dtos.UpdateUserInput
-	if err := json.NewDecoder(r.Body).Decode(&input); err != nil {
-		h.o11y.Logger().Error(ctx, "validation_failed",
-			observability.String("operation", "UpdateUser"),
-			observability.String("layer", "handler"),
-			observability.String("entity", "user"),
-			observability.String("correlation_id", correlationID),
-			observability.String("error_type", "validation"),
-			observability.String("error_code", "DECODE_BODY_FAILED"),
-			observability.Error(err),
-		)
-		h.fm.RecordHandlerFailure(ctx, "update_user", "user", "validation", time.Since(start))
-		h.errorHandler.HandleError(w, r, err)
-		return
-	}
-
-	output, err := h.updateUserUseCase.Execute(ctx, id, input)
-	if err != nil {
-		h.o11y.Logger().Error(ctx, "request_failed",
-			observability.String("operation", "UpdateUser"),
-			observability.String("layer", "handler"),
-			observability.String("entity", "user"),
-			observability.String("correlation_id", correlationID),
-			observability.String("error_type", "business"),
-			observability.String("error_code", "UPDATE_USER_FAILED"),
-			observability.Error(err),
-		)
-		h.fm.RecordHandlerFailure(ctx, "update_user", "user", "business", time.Since(start))
-		h.errorHandler.HandleError(w, r, err)
-		return
-	}
-
-	h.o11y.Logger().Info(ctx, "request_completed",
-		observability.String("operation", "UpdateUser"),
-		observability.String("layer", "handler"),
-		observability.String("entity", "user"),
-		observability.String("correlation_id", correlationID),
-		observability.String("user_id", id),
-	)
-
-	h.fm.RecordHandlerRequest(ctx, "update_user", "user", time.Since(start))
-	responses.JSON(w, http.StatusOK, output)
-}
-
-// Delete godoc
-//
-//	@Summary		Desativar usuário
-//	@Description	Realiza soft delete do usuário autenticado.
-//	@Tags			users
-//	@Security		BearerAuth
-//	@Param			id	path	string	true	"ID do usuário"
-//	@Success		204	"Usuário desativado com sucesso"
-//	@Failure		403	{object}	httperrors.ProblemDetail	"Acesso negado"
-//	@Failure		404	{object}	httperrors.ProblemDetail	"Usuário não encontrado"
-//	@Router			/api/v1/users/{id} [delete]
-func (h *UserHandler) Delete(w http.ResponseWriter, r *http.Request) {
-	start := time.Now()
-	ctx, span := h.o11y.Tracer().Start(r.Context(), "user_handler.delete")
-	defer span.End()
-
-	correlationID := trace.SpanFromContext(ctx).SpanContext().TraceID().String()
-
-	id := chi.URLParam(r, "id")
-
-	h.o11y.Logger().Info(ctx, "request_received",
-		observability.String("operation", "DeleteUser"),
-		observability.String("layer", "handler"),
-		observability.String("entity", "user"),
-		observability.String("correlation_id", correlationID),
-		observability.String("user_id", id),
-	)
-
-	if err := h.deleteUserUseCase.Execute(ctx, id); err != nil {
-		h.o11y.Logger().Error(ctx, "request_failed",
-			observability.String("operation", "DeleteUser"),
-			observability.String("layer", "handler"),
-			observability.String("entity", "user"),
-			observability.String("correlation_id", correlationID),
-			observability.String("error_type", "business"),
-			observability.String("error_code", "DELETE_USER_FAILED"),
-			observability.Error(err),
-		)
-		h.fm.RecordHandlerFailure(ctx, "delete_user", "user", "business", time.Since(start))
-		h.errorHandler.HandleError(w, r, err)
-		return
-	}
-
-	h.o11y.Logger().Info(ctx, "request_completed",
-		observability.String("operation", "DeleteUser"),
-		observability.String("layer", "handler"),
-		observability.String("entity", "user"),
-		observability.String("correlation_id", correlationID),
-		observability.String("user_id", id),
-	)
-
-	h.fm.RecordHandlerRequest(ctx, "delete_user", "user", time.Since(start))
-	w.WriteHeader(http.StatusNoContent)
 }

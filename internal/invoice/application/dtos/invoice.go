@@ -10,11 +10,11 @@ import (
 type PurchaseCreateInput struct {
 	CardID           string `json:"card_id"           example:"550e8400-e29b-41d4-a716-446655440000"`
 	CategoryID       string `json:"category_id"       example:"660e8400-e29b-41d4-a716-446655440001"`
-	PurchaseDate     string `json:"purchase_date"     example:"2025-01-15"`                              // YYYY-MM-DD
+	PurchaseDate     string `json:"purchase_date"     example:"2025-01-15"` // YYYY-MM-DD
 	Description      string `json:"description"       example:"iPhone 16 Pro"`
-	TotalAmount      string `json:"total_amount"      example:"9999.00"`                                  // String decimal (e.g., "1200.00")
-	Currency         string `json:"currency"          example:"BRL" enums:"BRL,USD,EUR"`                  // ISO 4217 (e.g., "BRL")
-	InstallmentTotal int    `json:"installment_total" example:"12"  minimum:"1" maximum:"48"`             // 1 para à vista
+	TotalAmount      string `json:"total_amount"      example:"9999.00"`                      // String decimal (e.g., "1200.00")
+	Currency         string `json:"currency"          example:"BRL" enums:"BRL,USD,EUR"`      // ISO 4217 (e.g., "BRL")
+	InstallmentTotal int    `json:"installment_total" example:"12"  minimum:"1" maximum:"48"` // 1 para à vista
 }
 
 // Validate valida os campos do input.
@@ -118,7 +118,7 @@ type InvoiceOutput struct {
 	ID             string              `json:"id"              example:"550e8400-e29b-41d4-a716-446655440000"`
 	UserID         string              `json:"user_id"         example:"660e8400-e29b-41d4-a716-446655440001"`
 	CardID         string              `json:"card_id"         example:"770e8400-e29b-41d4-a716-446655440002"`
-	ReferenceMonth string              `json:"reference_month" example:"2025-01"` // YYYY-MM
+	ReferenceMonth string              `json:"reference_month" example:"2025-01"`    // YYYY-MM
 	DueDate        string              `json:"due_date"        example:"2025-01-10"` // YYYY-MM-DD
 	TotalAmount    string              `json:"total_amount"    example:"9999.00"`
 	Currency       string              `json:"currency"        example:"BRL" enums:"BRL,USD,EUR"`
@@ -136,10 +136,10 @@ type InvoiceItemOutput struct {
 	PurchaseDate      string    `json:"purchase_date"      example:"2025-01-15"` // YYYY-MM-DD
 	Description       string    `json:"description"        example:"iPhone 16 Pro"`
 	TotalAmount       string    `json:"total_amount"       example:"9999.00"` // Valor total da compra original
-	InstallmentNumber int       `json:"installment_number" example:"3"` // 1 a N
-	InstallmentTotal  int       `json:"installment_total"  example:"12"` // Total de parcelas
-	InstallmentAmount string    `json:"installment_amount" example:"833.25"` // Valor desta parcela
-	InstallmentLabel  string    `json:"installment_label"  example:"3/12"` // Ex: "3/12" ou "À vista"
+	InstallmentNumber int       `json:"installment_number" example:"3"`       // 1 a N
+	InstallmentTotal  int       `json:"installment_total"  example:"12"`      // Total de parcelas
+	InstallmentAmount string    `json:"installment_amount" example:"833.25"`  // Valor desta parcela
+	InstallmentLabel  string    `json:"installment_label"  example:"3/12"`    // Ex: "3/12" ou "À vista"
 	CreatedAt         time.Time `json:"created_at"         example:"2025-01-01T00:00:00Z"`
 	UpdatedAt         time.Time `json:"updated_at,omitempty" example:"2025-01-20T08:00:00Z"`
 }

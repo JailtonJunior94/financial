@@ -28,18 +28,11 @@ func NewUserRouter(
 }
 
 func (r UserRouter) Register(router chi.Router) {
-	// Rotas públicas (sem auth)
 	router.Post("/api/v1/token", r.authHandler.Token)
 	router.Post("/api/v1/users", r.userHandler.Create)
-
-	// Rotas protegidas (auth)
 	router.Group(func(protected chi.Router) {
 		protected.Use(r.authMiddleware.Authorization)
-
-		// Listagem — qualquer autenticado
 		protected.Get("/api/v1/users", r.userHandler.List)
-
-		// Operações sobre recurso específico — requer ownership
 		protected.Group(func(owned chi.Router) {
 			owned.Use(r.ownershipMiddleware.Ownership("id"))
 			owned.Get("/api/v1/users/{id}", r.userHandler.GetByID)

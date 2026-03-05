@@ -16,9 +16,9 @@ import (
 )
 
 type categoryRepository struct {
-	db  database.DBTX
+	db   database.DBTX
 	o11y observability.Observability
-	fm  *metrics.FinancialMetrics
+	fm   *metrics.FinancialMetrics
 }
 
 func NewCategoryRepository(db database.DBTX, o11y observability.Observability, fm *metrics.FinancialMetrics) interfaces.CategoryRepository {

@@ -122,7 +122,7 @@ func (j *jwtAdapter) Validate(ctx context.Context, token string) (*Authenticated
 	// Valida claim "email"
 	email, ok := claims["email"].(string)
 	if !ok || email == "" {
-		span.AddEvent("invalid email claim", observability.Field{Key: "email", Value: claims["email"]})
+		span.AddEvent("invalid email claim")
 		j.obs.Logger().Error(ctx, "invalid email claim", observability.Error(customerrors.ErrInvalidTokenClaims))
 		return nil, customerrors.ErrInvalidTokenClaims
 	}

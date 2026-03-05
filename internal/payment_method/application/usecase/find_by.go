@@ -6,8 +6,8 @@ import (
 
 	"github.com/jailtonjunior94/financial/internal/payment_method/application/dtos"
 	"github.com/jailtonjunior94/financial/internal/payment_method/domain/interfaces"
-	"github.com/jailtonjunior94/financial/pkg/observability/metrics"
 	customErrors "github.com/jailtonjunior94/financial/pkg/custom_errors"
+	"github.com/jailtonjunior94/financial/pkg/observability/metrics"
 
 	"github.com/JailtonJunior94/devkit-go/pkg/observability"
 	"github.com/JailtonJunior94/devkit-go/pkg/vos"

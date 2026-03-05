@@ -93,3 +93,15 @@ Após fornecer o resumo e abordagem, **comece imediatamente a implementar a tare
 <critical>**VOCÊ DEVE** iniciar a implementação logo após o processo acima.</critical>
 <critical>Após completar a tarefa, marque como completa em tasks.md</critical>
 <critical>Você não pode finalizar a tarefa sem executar o agente `task-reviewer` (via Agent tool com subagent_type task-reviewer), caso ele não passe você deve resolver os problemas e analisar novamente</critical>
+
+## Mandatory Rules
+
+This command MUST follow the project rules defined in:
+
+`.claude/rules/`
+
+Rules are mandatory and non-negotiable.
+
+Before executing any task, the agent MUST consult the relevant rule files and comply with their constraints.
+
+If any instruction in this file conflicts with a rule, the rule takes precedence.
