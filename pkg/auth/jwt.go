@@ -52,10 +52,9 @@ func (j *jwtAdapter) GenerateToken(ctx context.Context, id, email string) (strin
 	if err != nil {
 		span.AddEvent(
 			"error trying to generate token",
-			observability.Field{Key: "e-mail", Value: email},
 			observability.Field{Key: "error", Value: err.Error()},
 		)
-		j.obs.Logger().Error(ctx, "error trying to generate token", observability.Error(err), observability.String("e-mail", email))
+		j.obs.Logger().Error(ctx, "error trying to generate token", observability.Error(err))
 		return "", ErrGenerateToken
 	}
 	return tokenSigned, nil
