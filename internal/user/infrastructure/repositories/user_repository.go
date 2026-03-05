@@ -84,7 +84,7 @@ func (r *userRepository) FindByEmail(ctx context.Context, email string) (*entiti
 	ctx, span := r.o11y.Tracer().Start(ctx, "user_repository.find_by_email")
 	defer span.End()
 
-	span.AddEvent("finding user by email", observability.String("email", email))
+	span.AddEvent("finding user by email")
 
 	query := `select
 				id,

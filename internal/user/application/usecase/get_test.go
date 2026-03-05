@@ -13,6 +13,7 @@ import (
 	"github.com/jailtonjunior94/financial/internal/user/domain/entities"
 	"github.com/jailtonjunior94/financial/internal/user/domain/vos"
 
+	"github.com/stretchr/testify/require"
 	"github.com/stretchr/testify/suite"
 )
 
@@ -33,10 +34,13 @@ func (s *GetUserUseCaseSuite) SetupTest() {
 
 func newTestUserEntity(t *testing.T) *entities.User {
 	t.Helper()
-	name, _ := vos.NewUserName("John Doe")
-	email, _ := vos.NewEmail("john@example.com")
-	user, _ := entities.NewUser(name, email)
-	_ = user.SetPassword("hashed_password_123456789")
+	name, err := vos.NewUserName("John Doe")
+	require.NoError(t, err)
+	email, err := vos.NewEmail("john@example.com")
+	require.NoError(t, err)
+	user, err := entities.NewUser(name, email)
+	require.NoError(t, err)
+	require.NoError(t, user.SetPassword("hashed_password_123456789"))
 	return user
 }
 

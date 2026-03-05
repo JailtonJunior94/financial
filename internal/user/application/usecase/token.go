@@ -46,9 +46,7 @@ func (u *tokenUseCase) Execute(ctx context.Context, input *dtos.AuthInput) (*dto
 	ctx, span := u.o11y.Tracer().Start(ctx, "token_usecase.execute")
 	defer span.End()
 
-	span.AddEvent("generating token",
-		observability.Field{Key: "user.email", Value: input.Email},
-	)
+	span.AddEvent("generating token")
 
 	// Validate input
 	if input.Email == "" {
