@@ -126,6 +126,6 @@ func (u *updateUserUseCase) Execute(ctx context.Context, id string, input *dtos.
 		Name:      updated.Name.String(),
 		Email:     updated.Email.String(),
 		CreatedAt: updated.CreatedAt,
-		UpdatedAt: updated.UpdatedAt.ValueOr(time.Time{}),
+		UpdatedAt: updated.UpdatedAt.Ptr(),
 	}, nil
 }

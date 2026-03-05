@@ -4,7 +4,7 @@ import "time"
 
 type AuthInput struct {
 	Email    string `json:"email"    form:"email"    example:"joao@email.com"`
-	Password string `json:"password" form:"password" example:"senhaSegura123"`
+	Password string `json:"password" form:"password" example:"senhaSegura123"` //nolint:gosec
 }
 
 type AuthOutput struct {

@@ -12,6 +12,7 @@ import (
 	"github.com/JailtonJunior94/devkit-go/pkg/observability"
 )
 
+
 type (
 	GetUserUseCase interface {
 		Execute(ctx context.Context, id string) (*dtos.UserOutput, error)
@@ -61,6 +62,6 @@ func (u *getUserUseCase) Execute(ctx context.Context, id string) (*dtos.UserOutp
 		Name:      user.Name.String(),
 		Email:     user.Email.String(),
 		CreatedAt: user.CreatedAt,
-		UpdatedAt: user.UpdatedAt.ValueOr(time.Time{}),
+		UpdatedAt: user.UpdatedAt.Ptr(),
 	}, nil
 }

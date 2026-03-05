@@ -70,7 +70,7 @@ func Run() error {
 	metricsMiddleware := middlewares.NewMetricsMiddleware(o11y)
 
 	jwtAdapter := auth.NewJwtAdapter(cfg, o11y)
-	userModule := user.NewUserModule(dbManager.DB(), cfg, o11y, jwtAdapter)
+	userModule := user.NewUserModule(dbManager.DB(), cfg, o11y, jwtAdapter, jwtAdapter)
 	cardModule := card.NewCardModule(dbManager.DB(), o11y, jwtAdapter)
 
 	categoryModule := category.NewCategoryModule(dbManager.DB(), o11y, jwtAdapter)

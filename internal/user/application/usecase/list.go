@@ -69,7 +69,7 @@ func (u *listUsersUseCase) Execute(ctx context.Context, input ListUsersInput) (*
 			Name:      user.Name.String(),
 			Email:     user.Email.String(),
 			CreatedAt: user.CreatedAt,
-			UpdatedAt: user.UpdatedAt.ValueOr(time.Time{}),
+			UpdatedAt: user.UpdatedAt.Ptr(),
 		}
 	}
 

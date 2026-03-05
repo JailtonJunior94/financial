@@ -14,7 +14,7 @@ type User struct {
 	entity.Base
 	Name     vos.UserName
 	Email    vos.Email
-	Password string
+	Password string //nolint:gosec
 }
 
 func NewUser(name vos.UserName, email vos.Email) (*User, error) {

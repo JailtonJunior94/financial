@@ -19,21 +19,24 @@ type UserModule struct {
 	UserRouter *http.UserRouter
 }
 
-func NewUserModule(db *sql.DB, cfg *configs.Config, o11y observability.Observability, jwtAdapter auth.JwtAdapter) UserModule {
+// NewUserModule follows the same pattern as other modules (auth.TokenValidator for the auth
+// middleware) while also accepting auth.TokenGenerator for the login token use case.
+// In practice both params are satisfied by the same auth.JwtAdapter from the caller.
+func NewUserModule(db *sql.DB, cfg *configs.Config, o11y observability.Observability, tokenGenerator auth.TokenGenerator, tokenValidator auth.TokenValidator) UserModule {
 	hash := encrypt.NewHashAdapter()
 	errorHandler := httperrors.NewErrorHandler(o11y)
 
 	financialMetrics := metrics.NewFinancialMetrics(o11y)
 	userRepository := repositories.NewUserRepository(db, o11y, financialMetrics)
 
-	authUseCase := usecase.NewTokenUseCase(cfg, o11y, hash, jwtAdapter, userRepository)
+	authUseCase := usecase.NewTokenUseCase(cfg, o11y, hash, tokenGenerator, userRepository)
 	createUserUseCase := usecase.NewCreateUserUseCase(o11y, hash, userRepository)
 	getUserUseCase := usecase.NewGetUserUseCase(o11y, financialMetrics, userRepository)
 	listUsersUseCase := usecase.NewListUsersUseCase(o11y, financialMetrics, userRepository)
 	updateUserUseCase := usecase.NewUpdateUserUseCase(o11y, financialMetrics, hash, userRepository)
 	deleteUserUseCase := usecase.NewDeleteUserUseCase(o11y, financialMetrics, userRepository)
 
-	authMiddleware := middlewares.NewAuthorization(jwtAdapter, o11y, errorHandler)
+	authMiddleware := middlewares.NewAuthorization(tokenValidator, o11y, errorHandler)
 	ownershipMiddleware := middlewares.NewResourceOwnership(o11y, errorHandler)
 
 	authHandler := http.NewAuthHandler(o11y, errorHandler, authUseCase)

@@ -19,7 +19,7 @@ type TokenUseCase interface {
 }
 
 type tokenUseCase struct {
-	jwt        auth.JwtAdapter
+	generator  auth.TokenGenerator
 	config     *configs.Config
 	hash       encrypt.HashAdapter
 	repository interfaces.UserRepository
@@ -30,13 +30,13 @@ func NewTokenUseCase(
 	config *configs.Config,
 	o11y observability.Observability,
 	hash encrypt.HashAdapter,
-	jwt auth.JwtAdapter,
+	generator auth.TokenGenerator,
 	repository interfaces.UserRepository,
 ) TokenUseCase {
 	return &tokenUseCase{
 		config:     config,
 		hash:       hash,
-		jwt:        jwt,
+		generator:  generator,
 		repository: repository,
 		o11y:       o11y,
 	}
@@ -76,7 +76,7 @@ func (u *tokenUseCase) Execute(ctx context.Context, input *dtos.AuthInput) (*dto
 		return nil, customErrors.ErrCheckHash
 	}
 
-	token, err := u.jwt.GenerateToken(ctx, user.ID.String(), user.Email.String())
+	token, err := u.generator.GenerateToken(ctx, user.ID.String(), user.Email.String())
 	if err != nil {
 		span.RecordError(err)
 		return nil, fmt.Errorf("generating token: %w", err)

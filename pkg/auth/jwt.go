@@ -20,9 +20,9 @@ var (
 
 type (
 	// JwtAdapter é responsável pela geração e validação de tokens JWT.
-	// Implementa a interface TokenValidator.
+	// Implementa as interfaces TokenGenerator e TokenValidator.
 	JwtAdapter interface {
-		GenerateToken(ctx context.Context, id, email string) (string, error)
+		TokenGenerator
 		TokenValidator
 	}
 

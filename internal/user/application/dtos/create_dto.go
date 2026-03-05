@@ -5,7 +5,7 @@ import "time"
 type CreateUserInput struct {
 	Name     string `json:"name"     example:"João Silva"`
 	Email    string `json:"email"    example:"joao@email.com"`
-	Password string `json:"password" example:"senhaSegura123"`
+	Password string `json:"password" example:"senhaSegura123"` //nolint:gosec
 }
 
 type CreateUserOutput struct {
