@@ -17,12 +17,14 @@ import (
 	"github.com/jailtonjunior94/financial/internal/card"
 	"github.com/jailtonjunior94/financial/internal/category"
 	"github.com/jailtonjunior94/financial/internal/invoice"
+	invoiceRepositories "github.com/jailtonjunior94/financial/internal/invoice/infrastructure/repositories"
 	"github.com/jailtonjunior94/financial/internal/payment_method"
 	"github.com/jailtonjunior94/financial/internal/transaction"
 	"github.com/jailtonjunior94/financial/internal/user"
 	"github.com/jailtonjunior94/financial/pkg/api/middlewares"
 	"github.com/jailtonjunior94/financial/pkg/auth"
 	"github.com/jailtonjunior94/financial/pkg/database"
+	"github.com/jailtonjunior94/financial/pkg/observability/metrics"
 	"github.com/jailtonjunior94/financial/pkg/outbox"
 )
 
@@ -71,9 +73,15 @@ func Run() error {
 
 	jwtAdapter := auth.NewJwtAdapter(cfg, o11y)
 	userModule := user.NewUserModule(dbManager.DB(), cfg, o11y, jwtAdapter, jwtAdapter)
-	cardModule := card.NewCardModule(dbManager.DB(), o11y, jwtAdapter)
 
-	categoryModule := category.NewCategoryModule(dbManager.DB(), o11y, jwtAdapter)
+	invoiceFinancialMetrics := metrics.NewFinancialMetrics(o11y)
+	invoiceRepository := invoiceRepositories.NewInvoiceRepository(dbManager.DB(), o11y, invoiceFinancialMetrics)
+	cardModule := card.NewCardModule(dbManager.DB(), o11y, jwtAdapter, invoiceRepository)
+
+	categoryModule, err := category.NewCategoryModule(dbManager.DB(), o11y, jwtAdapter)
+	if err != nil {
+		return fmt.Errorf("run: failed to create category module: %v", err)
+	}
 	paymentMethodModule := payment_method.NewPaymentMethodModule(dbManager.DB(), o11y)
 
 	// Create outbox service for transactional event persistence

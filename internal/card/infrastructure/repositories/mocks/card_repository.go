@@ -114,6 +114,71 @@ func (_c *CardRepository_FindByID_Call) RunAndReturn(run func(ctx context.Contex
 	return _c
 }
 
+// FindByIDOnly provides a mock function for the type CardRepository
+func (_mock *CardRepository) FindByIDOnly(ctx context.Context, id vos.UUID) (*entities.Card, error) {
+	ret := _mock.Called(ctx, id)
+
+	if len(ret) == 0 {
+		panic("no return value specified for FindByIDOnly")
+	}
+
+	var r0 *entities.Card
+	var r1 error
+	if returnFunc, ok := ret.Get(0).(func(context.Context, vos.UUID) (*entities.Card, error)); ok {
+		return returnFunc(ctx, id)
+	}
+	if returnFunc, ok := ret.Get(0).(func(context.Context, vos.UUID) *entities.Card); ok {
+		r0 = returnFunc(ctx, id)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).(*entities.Card)
+		}
+	}
+	if returnFunc, ok := ret.Get(1).(func(context.Context, vos.UUID) error); ok {
+		r1 = returnFunc(ctx, id)
+	} else {
+		r1 = ret.Error(1)
+	}
+	return r0, r1
+}
+
+// CardRepository_FindByIDOnly_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'FindByIDOnly'
+type CardRepository_FindByIDOnly_Call struct {
+	*mock.Call
+}
+
+// FindByIDOnly is a helper method to define mock.On call
+//   - ctx context.Context
+//   - id vos.UUID
+func (_e *CardRepository_Expecter) FindByIDOnly(ctx interface{}, id interface{}) *CardRepository_FindByIDOnly_Call {
+	return &CardRepository_FindByIDOnly_Call{Call: _e.mock.On("FindByIDOnly", ctx, id)}
+}
+
+func (_c *CardRepository_FindByIDOnly_Call) Run(run func(ctx context.Context, id vos.UUID)) *CardRepository_FindByIDOnly_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		var arg0 context.Context
+		if args[0] != nil {
+			arg0 = args[0].(context.Context)
+		}
+		var arg1 vos.UUID
+		if args[1] != nil {
+			arg1 = args[1].(vos.UUID)
+		}
+		run(arg0, arg1)
+	})
+	return _c
+}
+
+func (_c *CardRepository_FindByIDOnly_Call) Return(card *entities.Card, err error) *CardRepository_FindByIDOnly_Call {
+	_c.Call.Return(card, err)
+	return _c
+}
+
+func (_c *CardRepository_FindByIDOnly_Call) RunAndReturn(run func(ctx context.Context, id vos.UUID) (*entities.Card, error)) *CardRepository_FindByIDOnly_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
 // List provides a mock function for the type CardRepository
 func (_mock *CardRepository) List(ctx context.Context, userID vos.UUID) ([]*entities.Card, error) {
 	ret := _mock.Called(ctx, userID)

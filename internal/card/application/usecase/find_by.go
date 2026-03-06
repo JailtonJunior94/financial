@@ -47,13 +47,10 @@ func (u *findCardByUseCase) Execute(ctx context.Context, userID, id string) (*dt
 	if err != nil {
 		duration := time.Since(start)
 		u.metrics.RecordOperationFailure(ctx, metrics.OperationFindBy, duration, metrics.ClassifyError(err))
-
-		span.AddEvent(
-			"error parsing user id",
+		span.AddEvent("error parsing user id",
 			observability.String("user_id", userID),
 			observability.Error(err),
 		)
-
 		return nil, err
 	}
 
@@ -61,58 +58,76 @@ func (u *findCardByUseCase) Execute(ctx context.Context, userID, id string) (*dt
 	if err != nil {
 		duration := time.Since(start)
 		u.metrics.RecordOperationFailure(ctx, metrics.OperationFindBy, duration, metrics.ClassifyError(err))
-
-		span.AddEvent(
-			"error parsing card id",
+		span.AddEvent("error parsing card id",
 			observability.String("card_id", id),
 			observability.Error(err),
 		)
-
 		return nil, err
 	}
 
-	card, err := u.repository.FindByID(ctx, user, cardID)
+	card, err := u.repository.FindByIDOnly(ctx, cardID)
 	if err != nil {
 		duration := time.Since(start)
 		u.metrics.RecordOperationFailure(ctx, metrics.OperationFindBy, duration, metrics.ClassifyError(err))
-
-		span.AddEvent(
-			"error finding card by id",
+		span.RecordError(err)
+		u.o11y.Logger().Error(ctx, "query_failed",
+			observability.String("operation", "FindCardBy"),
+			observability.String("layer", "usecase"),
+			observability.String("entity", "card"),
 			observability.String("user_id", userID),
 			observability.String("card_id", id),
 			observability.Error(err),
-		)
-		u.o11y.Logger().Error(ctx, "error finding card by id",
-			observability.Error(err),
-			observability.String("user_id", userID),
-			observability.String("card_id", id),
 		)
 		return nil, err
 	}
 
 	if card == nil {
 		duration := time.Since(start)
-		u.metrics.RecordOperationFailure(ctx, metrics.OperationFindBy, duration, metrics.ClassifyError(err))
-
-		span.AddEvent(
-			"card not found",
+		u.metrics.RecordOperationFailure(ctx, metrics.OperationFindBy, duration, metrics.ErrorTypeNotFound)
+		span.AddEvent("card not found",
 			observability.String("user_id", userID),
 			observability.String("card_id", id),
 		)
-		u.o11y.Logger().Error(ctx, "card not found",
-			observability.Error(customErrors.ErrCardNotFound),
+		u.o11y.Logger().Warn(ctx, "card not found",
+			observability.String("operation", "FindCardBy"),
+			observability.String("layer", "usecase"),
+			observability.String("entity", "card"),
 			observability.String("user_id", userID),
 			observability.String("card_id", id),
 		)
 		return nil, customErrors.ErrCardNotFound
 	}
 
+	if card.UserID.String() != user.String() {
+		duration := time.Since(start)
+		u.metrics.RecordOperationFailure(ctx, metrics.OperationFindBy, duration, "authorization")
+		span.AddEvent("card ownership mismatch",
+			observability.String("user_id", userID),
+			observability.String("card_id", id),
+		)
+		u.o11y.Logger().Warn(ctx, "card ownership mismatch",
+			observability.String("operation", "FindCardBy"),
+			observability.String("layer", "usecase"),
+			observability.String("entity", "card"),
+			observability.String("user_id", userID),
+			observability.String("card_id", id),
+		)
+		return nil, customErrors.ErrForbidden
+	}
+
 	output := &dtos.CardOutput{
-		ID:                card.ID.String(),
-		Name:              card.Name.String(),
-		DueDay:            card.DueDay.Int(),
-		ClosingOffsetDays: card.ClosingOffsetDays.Int(),
-		CreatedAt:         card.CreatedAt.ValueOr(time.Time{}),
+		ID:             card.ID.String(),
+		Name:           card.Name.String(),
+		Type:           card.Type.Value,
+		Flag:           card.Flag.Value,
+		LastFourDigits: card.LastFourDigits.Value,
+		CreatedAt:      card.CreatedAt.ValueOr(time.Time{}),
+	}
+	if card.Type.IsCredit() {
+		dueDay := card.DueDay.Int()
+		output.DueDay = &dueDay
+		offset := card.ClosingOffsetDays.Int()
+		output.ClosingOffsetDays = &offset
 	}
 	if !card.UpdatedAt.ValueOr(time.Time{}).IsZero() {
 		output.UpdatedAt = card.UpdatedAt.ValueOr(time.Time{})
@@ -120,6 +135,5 @@ func (u *findCardByUseCase) Execute(ctx context.Context, userID, id string) (*dt
 
 	duration := time.Since(start)
 	u.metrics.RecordOperation(ctx, metrics.OperationFindBy, duration)
-
 	return output, nil
 }

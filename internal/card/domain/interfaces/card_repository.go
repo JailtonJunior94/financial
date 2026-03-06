@@ -20,6 +20,7 @@ type CardRepository interface {
 	List(ctx context.Context, userID vos.UUID) ([]*entities.Card, error)
 	ListPaginated(ctx context.Context, params ListCardsParams) ([]*entities.Card, error)
 	FindByID(ctx context.Context, userID, id vos.UUID) (*entities.Card, error)
+	FindByIDOnly(ctx context.Context, id vos.UUID) (*entities.Card, error)
 	Save(ctx context.Context, card *entities.Card) error
 	Update(ctx context.Context, card *entities.Card) error
 }

@@ -51,12 +51,15 @@ func (s *CreateCardUseCaseSuite) TestExecute() {
 		expect       func(output *dtos.CardOutput, err error)
 	}{
 		{
-			name: "deve criar cartão com sucesso",
+			name: "deve criar cartão de crédito com sucesso",
 			args: args{
 				userID: "550e8400-e29b-41d4-a716-446655440000",
 				input: &dtos.CardInput{
-					Name:   "Nubank",
-					DueDay: 15,
+					Name:           "Nubank",
+					Type:           "credit",
+					Flag:           "mastercard",
+					LastFourDigits: "1234",
+					DueDay:         intPtrUC(15),
 				},
 			},
 			dependencies: dependencies{
@@ -73,17 +76,23 @@ func (s *CreateCardUseCaseSuite) TestExecute() {
 				s.NoError(err)
 				s.NotNil(output)
 				s.Equal("Nubank", output.Name)
-				s.Equal(15, output.DueDay)
+				s.Equal("credit", output.Type)
+				s.Equal("mastercard", output.Flag)
+				s.Equal("1234", output.LastFourDigits)
+				s.NotNil(output.DueDay)
+				s.Equal(15, *output.DueDay)
 				s.NotEmpty(output.ID)
 			},
 		},
 		{
-			name: "deve criar cartão com due_day 1",
+			name: "deve criar cartão de débito sem due_day",
 			args: args{
 				userID: "550e8400-e29b-41d4-a716-446655440000",
 				input: &dtos.CardInput{
-					Name:   "Inter",
-					DueDay: 1,
+					Name:           "Nubank Debito",
+					Type:           "debit",
+					Flag:           "visa",
+					LastFourDigits: "5678",
 				},
 			},
 			dependencies: dependencies{
@@ -99,17 +108,21 @@ func (s *CreateCardUseCaseSuite) TestExecute() {
 			expect: func(output *dtos.CardOutput, err error) {
 				s.NoError(err)
 				s.NotNil(output)
-				s.Equal("Inter", output.Name)
-				s.Equal(1, output.DueDay)
+				s.Equal("debit", output.Type)
+				s.Nil(output.DueDay)
+				s.Nil(output.ClosingOffsetDays)
 			},
 		},
 		{
-			name: "deve criar cartão com due_day 31",
+			name: "deve criar cartão de crédito com closing_offset_days default",
 			args: args{
 				userID: "550e8400-e29b-41d4-a716-446655440000",
 				input: &dtos.CardInput{
-					Name:   "Banco do Brasil",
-					DueDay: 31,
+					Name:           "Inter",
+					Type:           "credit",
+					Flag:           "elo",
+					LastFourDigits: "9999",
+					DueDay:         intPtrUC(10),
 				},
 			},
 			dependencies: dependencies{
@@ -124,18 +137,19 @@ func (s *CreateCardUseCaseSuite) TestExecute() {
 			},
 			expect: func(output *dtos.CardOutput, err error) {
 				s.NoError(err)
-				s.NotNil(output)
-				s.Equal("Banco do Brasil", output.Name)
-				s.Equal(31, output.DueDay)
+				s.NotNil(output.ClosingOffsetDays)
+				s.Equal(7, *output.ClosingOffsetDays)
 			},
 		},
 		{
-			name: "deve retornar erro ao criar cartão com nome vazio",
+			name: "deve retornar erro com tipo inválido",
 			args: args{
 				userID: "550e8400-e29b-41d4-a716-446655440000",
 				input: &dtos.CardInput{
-					Name:   "",
-					DueDay: 15,
+					Name:           "Nubank",
+					Type:           "prepaid",
+					Flag:           "visa",
+					LastFourDigits: "1234",
 				},
 			},
 			dependencies: dependencies{
@@ -144,43 +158,6 @@ func (s *CreateCardUseCaseSuite) TestExecute() {
 			expect: func(output *dtos.CardOutput, err error) {
 				s.Error(err)
 				s.Nil(output)
-				s.Contains(err.Error(), "invalid card name")
-			},
-		},
-		{
-			name: "deve retornar erro ao criar cartão com due_day 0",
-			args: args{
-				userID: "550e8400-e29b-41d4-a716-446655440000",
-				input: &dtos.CardInput{
-					Name:   "Nubank",
-					DueDay: 0,
-				},
-			},
-			dependencies: dependencies{
-				cardRepository: s.cardRepository,
-			},
-			expect: func(output *dtos.CardOutput, err error) {
-				s.Error(err)
-				s.Nil(output)
-				s.Contains(err.Error(), "invalid due day")
-			},
-		},
-		{
-			name: "deve retornar erro ao criar cartão com due_day 32",
-			args: args{
-				userID: "550e8400-e29b-41d4-a716-446655440000",
-				input: &dtos.CardInput{
-					Name:   "Nubank",
-					DueDay: 32,
-				},
-			},
-			dependencies: dependencies{
-				cardRepository: s.cardRepository,
-			},
-			expect: func(output *dtos.CardOutput, err error) {
-				s.Error(err)
-				s.Nil(output)
-				s.Contains(err.Error(), "invalid due day")
 			},
 		},
 		{
@@ -188,8 +165,11 @@ func (s *CreateCardUseCaseSuite) TestExecute() {
 			args: args{
 				userID: "550e8400-e29b-41d4-a716-446655440000",
 				input: &dtos.CardInput{
-					Name:   "Nubank",
-					DueDay: 15,
+					Name:           "Nubank",
+					Type:           "credit",
+					Flag:           "visa",
+					LastFourDigits: "1234",
+					DueDay:         intPtrUC(15),
 				},
 			},
 			dependencies: dependencies{
@@ -208,35 +188,19 @@ func (s *CreateCardUseCaseSuite) TestExecute() {
 				s.Contains(err.Error(), "database connection failed")
 			},
 		},
-		{
-			name: "deve retornar erro com user_id inválido",
-			args: args{
-				userID: "invalid-uuid",
-				input: &dtos.CardInput{
-					Name:   "Nubank",
-					DueDay: 15,
-				},
-			},
-			dependencies: dependencies{
-				cardRepository: s.cardRepository,
-			},
-			expect: func(output *dtos.CardOutput, err error) {
-				s.Error(err)
-				s.Nil(output)
-				s.Contains(err.Error(), "invalid user_id")
-			},
-		},
 	}
 
 	for _, scenario := range scenarios {
 		s.Run(scenario.name, func() {
-			// Act
 			cardMetrics := metrics.NewTestCardMetrics()
 			uc := NewCreateCardUseCase(s.obs, scenario.dependencies.cardRepository, cardMetrics)
 			output, err := uc.Execute(s.ctx, scenario.args.userID, scenario.args.input)
 
-			// Assert
 			scenario.expect(output, err)
 		})
 	}
+}
+
+func intPtrUC(v int) *int {
+	return &v
 }

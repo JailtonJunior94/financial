@@ -243,6 +243,7 @@ func (h *CardHandler) Find(w http.ResponseWriter, r *http.Request) {
 //	@Param			id	path		string					true	"ID do cartão"	format(uuid)
 //	@Success		200	{object}	dtos.CardOutput			"Dados do cartão"
 //	@Failure		401	{object}	httperrors.ProblemDetail	"Não autenticado"
+//	@Failure		403	{object}	httperrors.ProblemDetail	"Sem permissão"
 //	@Failure		404	{object}	httperrors.ProblemDetail	"Cartão não encontrado"
 //	@Failure		500	{object}	httperrors.ProblemDetail	"Erro interno"
 //	@Router			/api/v1/cards/{id} [get]
@@ -306,11 +307,12 @@ func (h *CardHandler) FindBy(w http.ResponseWriter, r *http.Request) {
 //	@Accept			json
 //	@Produce		json
 //	@Security		BearerAuth
-//	@Param			id		path		string					true	"ID do cartão"	format(uuid)
-//	@Param			request	body		dtos.CardInput			true	"Dados atualizados do cartão"
-//	@Success		200		{object}	dtos.CardOutput			"Cartão atualizado com sucesso"
+//	@Param			id		path		string						true	"ID do cartão"	format(uuid)
+//	@Param			request	body		dtos.CardUpdateInput		true	"Dados atualizados do cartão"
+//	@Success		200		{object}	dtos.CardOutput				"Cartão atualizado com sucesso"
 //	@Failure		400		{object}	httperrors.ProblemDetail	"Dados inválidos"
 //	@Failure		401		{object}	httperrors.ProblemDetail	"Não autenticado"
+//	@Failure		403		{object}	httperrors.ProblemDetail	"Sem permissão"
 //	@Failure		404		{object}	httperrors.ProblemDetail	"Cartão não encontrado"
 //	@Failure		500		{object}	httperrors.ProblemDetail	"Erro interno"
 //	@Router			/api/v1/cards/{id} [put]
@@ -337,7 +339,7 @@ func (h *CardHandler) Update(w http.ResponseWriter, r *http.Request) {
 		observability.String("card_id", cardID),
 	)
 
-	var input *dtos.CardInput
+	var input *dtos.CardUpdateInput
 	if err = json.NewDecoder(r.Body).Decode(&input); err != nil {
 		h.o11y.Logger().Error(ctx, "validation_failed",
 			observability.String("operation", "UpdateCard"),
@@ -407,6 +409,7 @@ func (h *CardHandler) Update(w http.ResponseWriter, r *http.Request) {
 //	@Success		204	"Cartão removido com sucesso"
 //	@Failure		401	{object}	httperrors.ProblemDetail	"Não autenticado"
 //	@Failure		404	{object}	httperrors.ProblemDetail	"Cartão não encontrado"
+//	@Failure		422	{object}	httperrors.ProblemDetail	"Cartão com faturas em aberto"
 //	@Failure		500	{object}	httperrors.ProblemDetail	"Erro interno"
 //	@Router			/api/v1/cards/{id} [delete]
 func (h *CardHandler) Delete(w http.ResponseWriter, r *http.Request) {

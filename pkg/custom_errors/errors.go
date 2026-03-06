@@ -33,6 +33,7 @@ var (
 	ErrCategoryCycle         = errors.New("category cannot be its own parent or create a cycle")
 	ErrBudgetInvalidTotal    = errors.New("sum of budget item percentages must equal 100%")
 	ErrInvalidParentCategory = errors.New("parent category not found or belongs to different user")
+	ErrSubcategoryNotFound   = errors.New("subcategory not found")
 
 	// Authorization errors.
 	ErrForbidden = errors.New("you do not have permission to access this resource")

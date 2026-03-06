@@ -1,31 +1,44 @@
 package http
 
 import (
-	"github.com/go-chi/chi/v5"
-	"github.com/jailtonjunior94/financial/pkg/api/middlewares"
+"github.com/jailtonjunior94/financial/pkg/api/middlewares"
+"github.com/go-chi/chi/v5"
 )
 
 type CategoryRouter struct {
-	handlers       *CategoryHandler
-	authMiddleware middlewares.Authorization
+categoryHandler    *CategoryHandler
+subcategoryHandler *SubcategoryHandler
+authMiddleware     middlewares.Authorization
 }
 
-func NewCategoryRouter(handlers *CategoryHandler, authMiddleware middlewares.Authorization) *CategoryRouter {
-	return &CategoryRouter{
-		handlers:       handlers,
-		authMiddleware: authMiddleware,
-	}
+func NewCategoryRouter(
+categoryHandler *CategoryHandler,
+subcategoryHandler *SubcategoryHandler,
+authMiddleware middlewares.Authorization,
+) *CategoryRouter {
+return &CategoryRouter{
+categoryHandler:    categoryHandler,
+subcategoryHandler: subcategoryHandler,
+authMiddleware:     authMiddleware,
+}
 }
 
 func (r CategoryRouter) Register(router chi.Router) {
-	// Aplica middleware de autenticação APENAS nas rotas de categorias
-	router.Group(func(protected chi.Router) {
-		protected.Use(r.authMiddleware.Authorization)
+router.Group(func(protected chi.Router) {
+protected.Use(r.authMiddleware.Authorization)
 
-		protected.Get("/api/v1/categories", r.handlers.Find)
-		protected.Get("/api/v1/categories/{id}", r.handlers.FindBy)
-		protected.Post("/api/v1/categories", r.handlers.Create)
-		protected.Put("/api/v1/categories/{id}", r.handlers.Update)
-		protected.Delete("/api/v1/categories/{id}", r.handlers.Delete)
-	})
+protected.Get("/api/v1/categories", r.categoryHandler.Find)
+protected.Post("/api/v1/categories", r.categoryHandler.Create)
+protected.Get("/api/v1/categories/{id}", r.categoryHandler.FindBy)
+protected.Put("/api/v1/categories/{id}", r.categoryHandler.Update)
+protected.Delete("/api/v1/categories/{id}", r.categoryHandler.Delete)
+
+protected.Route("/api/v1/categories/{categoryId}/subcategories", func(sub chi.Router) {
+sub.Get("/", r.subcategoryHandler.List)
+sub.Post("/", r.subcategoryHandler.Create)
+sub.Get("/{id}", r.subcategoryHandler.FindBy)
+sub.Put("/{id}", r.subcategoryHandler.Update)
+sub.Delete("/{id}", r.subcategoryHandler.Delete)
+})
+})
 }

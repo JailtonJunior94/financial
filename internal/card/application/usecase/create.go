@@ -42,7 +42,25 @@ func (u *createCardUseCase) Execute(ctx context.Context, userID string, input *d
 
 	start := time.Now()
 
-	card, err := factories.CreateCard(userID, input.Name, input.DueDay)
+	dueDay := 0
+	if input.DueDay != nil {
+		dueDay = *input.DueDay
+	}
+
+	closingOffsetDays := 0
+	if input.ClosingOffsetDays != nil {
+		closingOffsetDays = *input.ClosingOffsetDays
+	}
+
+	card, err := factories.CreateCard(factories.CreateCardParams{
+		UserID:            userID,
+		Name:              input.Name,
+		Type:              input.Type,
+		Flag:              input.Flag,
+		LastFourDigits:    input.LastFourDigits,
+		DueDay:            dueDay,
+		ClosingOffsetDays: closingOffsetDays,
+	})
 	if err != nil {
 		duration := time.Since(start)
 		u.metrics.RecordOperationFailure(ctx, metrics.OperationCreate, duration, metrics.ClassifyError(err))
@@ -73,11 +91,20 @@ func (u *createCardUseCase) Execute(ctx context.Context, userID string, input *d
 	u.metrics.RecordOperation(ctx, metrics.OperationCreate, duration)
 	u.metrics.IncActiveCards(ctx)
 
-	return &dtos.CardOutput{
-		ID:                card.ID.String(),
-		Name:              card.Name.String(),
-		DueDay:            card.DueDay.Int(),
-		ClosingOffsetDays: card.ClosingOffsetDays.Int(),
-		CreatedAt:         card.CreatedAt.ValueOr(time.Time{}),
-	}, nil
+	output := &dtos.CardOutput{
+		ID:             card.ID.String(),
+		Name:           card.Name.String(),
+		Type:           card.Type.Value,
+		Flag:           card.Flag.Value,
+		LastFourDigits: card.LastFourDigits.Value,
+		CreatedAt:      card.CreatedAt.ValueOr(time.Time{}),
+	}
+	if card.Type.IsCredit() {
+		dueDay := card.DueDay.Int()
+		output.DueDay = &dueDay
+		offset := card.ClosingOffsetDays.Int()
+		output.ClosingOffsetDays = &offset
+	}
+
+	return output, nil
 }

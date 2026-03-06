@@ -62,7 +62,6 @@ func (u *findCardPaginatedUseCase) Execute(
 
 	start := time.Now()
 
-	// Parse user ID
 	userID, err := vos.NewUUIDFromString(input.UserID)
 	if err != nil {
 		duration := time.Since(start)
@@ -77,7 +76,6 @@ func (u *findCardPaginatedUseCase) Execute(
 		return nil, err
 	}
 
-	// Decode cursor
 	cursor, err := pagination.DecodeCursor(input.Cursor)
 	if err != nil {
 		duration := time.Since(start)
@@ -92,10 +90,9 @@ func (u *findCardPaginatedUseCase) Execute(
 		return nil, err
 	}
 
-	// List cards (paginado)
 	cards, err := u.repository.ListPaginated(ctx, interfaces.ListCardsParams{
 		UserID: userID,
-		Limit:  input.Limit + 1, // +1 para detectar has_next
+		Limit:  input.Limit + 1,
 		Cursor: cursor,
 	})
 	if err != nil {
@@ -111,13 +108,11 @@ func (u *findCardPaginatedUseCase) Execute(
 		return nil, err
 	}
 
-	// Determinar se há próxima página
 	hasNext := len(cards) > input.Limit
 	if hasNext {
-		cards = cards[:input.Limit] // Remover o item extra
+		cards = cards[:input.Limit]
 	}
 
-	// Construir cursor para próxima página
 	var nextCursor *string
 	if hasNext && len(cards) > 0 {
 		lastCard := cards[len(cards)-1]
@@ -145,19 +140,26 @@ func (u *findCardPaginatedUseCase) Execute(
 		nextCursor = &encoded
 	}
 
-	// Converter para DTOs
 	output := make([]*dtos.CardOutput, len(cards))
 	for i, card := range cards {
-		output[i] = &dtos.CardOutput{
-			ID:                card.ID.String(),
-			Name:              card.Name.String(),
-			DueDay:            card.DueDay.Int(),
-			ClosingOffsetDays: card.ClosingOffsetDays.Int(),
-			CreatedAt:         card.CreatedAt.ValueOr(time.Time{}),
+		cardOutput := &dtos.CardOutput{
+			ID:             card.ID.String(),
+			Name:           card.Name.String(),
+			Type:           card.Type.Value,
+			Flag:           card.Flag.Value,
+			LastFourDigits: card.LastFourDigits.Value,
+			CreatedAt:      card.CreatedAt.ValueOr(time.Time{}),
+		}
+		if card.Type.IsCredit() {
+			dueDay := card.DueDay.Int()
+			cardOutput.DueDay = &dueDay
+			offset := card.ClosingOffsetDays.Int()
+			cardOutput.ClosingOffsetDays = &offset
 		}
 		if !card.UpdatedAt.ValueOr(time.Time{}).IsZero() {
-			output[i].UpdatedAt = card.UpdatedAt.ValueOr(time.Time{})
+			cardOutput.UpdatedAt = card.UpdatedAt.ValueOr(time.Time{})
 		}
+		output[i] = cardOutput
 	}
 
 	duration := time.Since(start)

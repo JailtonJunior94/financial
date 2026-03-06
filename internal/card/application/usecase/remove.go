@@ -4,6 +4,7 @@ import (
 	"context"
 	"time"
 
+	domain "github.com/jailtonjunior94/financial/internal/card/domain"
 	"github.com/jailtonjunior94/financial/internal/card/domain/interfaces"
 	customErrors "github.com/jailtonjunior94/financial/pkg/custom_errors"
 	"github.com/jailtonjunior94/financial/pkg/observability/metrics"
@@ -18,21 +19,24 @@ type (
 	}
 
 	removeCardUseCase struct {
-		o11y       observability.Observability
-		repository interfaces.CardRepository
-		metrics    *metrics.CardMetrics
+		o11y           observability.Observability
+		repository     interfaces.CardRepository
+		invoiceChecker interfaces.InvoiceChecker
+		metrics        *metrics.CardMetrics
 	}
 )
 
 func NewRemoveCardUseCase(
 	o11y observability.Observability,
 	repository interfaces.CardRepository,
+	invoiceChecker interfaces.InvoiceChecker,
 	metrics *metrics.CardMetrics,
 ) RemoveCardUseCase {
 	return &removeCardUseCase{
-		o11y:       o11y,
-		repository: repository,
-		metrics:    metrics,
+		o11y:           o11y,
+		repository:     repository,
+		invoiceChecker: invoiceChecker,
+		metrics:        metrics,
 	}
 }
 
@@ -70,7 +74,7 @@ func (u *removeCardUseCase) Execute(ctx context.Context, userID, id string) erro
 		return err
 	}
 
-	card, err := u.repository.FindByID(ctx, user, cardID)
+	card, err := u.repository.FindByIDOnly(ctx, cardID)
 	if err != nil {
 		duration := time.Since(start)
 		u.metrics.RecordOperationFailure(ctx, metrics.OperationDelete, duration, metrics.ClassifyError(err))
@@ -81,10 +85,13 @@ func (u *removeCardUseCase) Execute(ctx context.Context, userID, id string) erro
 			observability.String("card_id", id),
 			observability.Error(err),
 		)
-		u.o11y.Logger().Error(ctx, "error finding card by id",
-			observability.Error(err),
+		u.o11y.Logger().Error(ctx, "query_failed",
+			observability.String("operation", "RemoveCard"),
+			observability.String("layer", "usecase"),
+			observability.String("entity", "card"),
 			observability.String("user_id", userID),
 			observability.String("card_id", id),
+			observability.Error(err),
 		)
 		return err
 	}
@@ -98,14 +105,71 @@ func (u *removeCardUseCase) Execute(ctx context.Context, userID, id string) erro
 			observability.String("user_id", userID),
 			observability.String("card_id", id),
 		)
-		u.o11y.Logger().Error(
-			ctx,
-			"card not found",
-			observability.Error(customErrors.ErrCardNotFound),
+		u.o11y.Logger().Warn(ctx, "card not found",
+			observability.String("operation", "RemoveCard"),
+			observability.String("layer", "usecase"),
+			observability.String("entity", "card"),
 			observability.String("user_id", userID),
 			observability.String("card_id", id),
 		)
 		return customErrors.ErrCardNotFound
+	}
+
+	if card.UserID.String() != user.String() {
+		duration := time.Since(start)
+		u.metrics.RecordOperationFailure(ctx, metrics.OperationDelete, duration, "authorization")
+
+		span.AddEvent(
+			"card ownership mismatch",
+			observability.String("user_id", userID),
+			observability.String("card_id", id),
+		)
+		u.o11y.Logger().Warn(ctx, "card ownership mismatch",
+			observability.String("operation", "RemoveCard"),
+			observability.String("layer", "usecase"),
+			observability.String("entity", "card"),
+			observability.String("user_id", userID),
+			observability.String("card_id", id),
+		)
+		return customErrors.ErrForbidden
+	}
+
+	if card.Type.IsCredit() {
+		hasOpen, err := u.invoiceChecker.HasOpenInvoices(ctx, card.ID)
+		if err != nil {
+			duration := time.Since(start)
+			u.metrics.RecordOperationFailure(ctx, metrics.OperationDelete, duration, metrics.ClassifyError(err))
+
+			span.AddEvent(
+				"error checking open invoices",
+				observability.String("user_id", userID),
+				observability.String("card_id", id),
+				observability.Error(err),
+			)
+			u.o11y.Logger().Error(ctx, "invoice_check_failed",
+				observability.String("operation", "RemoveCard"),
+				observability.String("layer", "usecase"),
+				observability.String("entity", "card"),
+				observability.String("user_id", userID),
+				observability.String("card_id", id),
+				observability.Error(err),
+			)
+			return err
+		}
+
+		if hasOpen {
+			duration := time.Since(start)
+			u.metrics.RecordOperationFailure(ctx, metrics.OperationDelete, duration, "business")
+
+			u.o11y.Logger().Warn(ctx, "card_has_open_invoices",
+				observability.String("operation", "RemoveCard"),
+				observability.String("layer", "usecase"),
+				observability.String("entity", "card"),
+				observability.String("user_id", userID),
+				observability.String("card_id", id),
+			)
+			return domain.ErrCardHasOpenInvoices
+		}
 	}
 
 	if err := u.repository.Update(ctx, card.Delete()); err != nil {
@@ -118,12 +182,13 @@ func (u *removeCardUseCase) Execute(ctx context.Context, userID, id string) erro
 			observability.String("card_id", id),
 			observability.Error(err),
 		)
-		u.o11y.Logger().Error(
-			ctx,
-			"error deleting card in repository",
-			observability.Error(err),
+		u.o11y.Logger().Error(ctx, "query_failed",
+			observability.String("operation", "RemoveCard"),
+			observability.String("layer", "usecase"),
+			observability.String("entity", "card"),
 			observability.String("user_id", userID),
 			observability.String("card_id", id),
+			observability.Error(err),
 		)
 		return err
 	}

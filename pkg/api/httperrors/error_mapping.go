@@ -155,6 +155,10 @@ func buildDomainErrorMappings() map[error]ErrorMapping {
 			Status:  http.StatusNotFound,
 			Message: "Category not found",
 		},
+		customerrors.ErrSubcategoryNotFound: {
+			Status:  http.StatusNotFound,
+			Message: "Subcategory not found",
+		},
 		customerrors.ErrPaymentMethodNotFound: {
 			Status:  http.StatusNotFound,
 			Message: "Payment method not found",

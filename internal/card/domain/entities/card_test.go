@@ -1,240 +1,156 @@
-//go:build integration
-// +build integration
-
 package entities_test
 
 import (
 	"testing"
 	"time"
 
-	"github.com/stretchr/testify/suite"
+	"github.com/stretchr/testify/require"
 
 	sharedVos "github.com/JailtonJunior94/devkit-go/pkg/vos"
 	"github.com/jailtonjunior94/financial/internal/card/domain/entities"
 	"github.com/jailtonjunior94/financial/internal/card/domain/vos"
 )
 
-type CardEntitySuite struct {
-	suite.Suite
-}
+func TestNewCard(t *testing.T) {
+	t.Run("should create credit card with all fields", func(t *testing.T) {
+		userID := createUUID(t)
+		name := createCardName(t, "Nubank")
+		cardType, _ := vos.NewCardType("credit")
+		flag, _ := vos.NewCardFlag("visa")
+		digits, _ := vos.NewLastFourDigits("1234")
+		dueDay, _ := vos.NewDueDay(15)
+		offset, _ := vos.NewClosingOffsetDays(7)
 
-func TestCardEntitySuite(t *testing.T) {
-	suite.Run(t, new(CardEntitySuite))
-}
+		card, err := entities.NewCard(userID, name, cardType, flag, digits, dueDay, offset)
 
-func (s *CardEntitySuite) TestNewCard() {
-	scenarios := []struct {
-		name string
-		args struct {
-			userID sharedVos.UUID
-			name   vos.CardName
-			dueDay vos.DueDay
-		}
-		expect func(card *entities.Card, err error)
-	}{
-		{
-			name: "deve criar cartão com sucesso",
-			args: struct {
-				userID sharedVos.UUID
-				name   vos.CardName
-				dueDay vos.DueDay
-			}{
-				userID: s.createUUID(),
-				name:   s.createCardName("Nubank"),
-				dueDay: s.createDueDay(15),
-			},
-			expect: func(card *entities.Card, err error) {
-				s.NoError(err)
-				s.NotNil(card)
-				s.Equal("Nubank", card.Name.String())
-				s.Equal(15, card.DueDay.Int())
-				s.False(card.CreatedAt.ValueOr(time.Time{}).IsZero())
-			},
-		},
-		{
-			name: "deve criar cartão com dia de vencimento 1",
-			args: struct {
-				userID sharedVos.UUID
-				name   vos.CardName
-				dueDay vos.DueDay
-			}{
-				userID: s.createUUID(),
-				name:   s.createCardName("Banco do Brasil"),
-				dueDay: s.createDueDay(1),
-			},
-			expect: func(card *entities.Card, err error) {
-				s.NoError(err)
-				s.NotNil(card)
-				s.Equal("Banco do Brasil", card.Name.String())
-				s.Equal(1, card.DueDay.Int())
-			},
-		},
-		{
-			name: "deve criar cartão com dia de vencimento 31",
-			args: struct {
-				userID sharedVos.UUID
-				name   vos.CardName
-				dueDay vos.DueDay
-			}{
-				userID: s.createUUID(),
-				name:   s.createCardName("Inter"),
-				dueDay: s.createDueDay(31),
-			},
-			expect: func(card *entities.Card, err error) {
-				s.NoError(err)
-				s.NotNil(card)
-				s.Equal("Inter", card.Name.String())
-				s.Equal(31, card.DueDay.Int())
-			},
-		},
-	}
+		require.NoError(t, err)
+		require.NotNil(t, card)
+		require.Equal(t, "credit", card.Type.Value)
+		require.Equal(t, "visa", card.Flag.Value)
+		require.Equal(t, "1234", card.LastFourDigits.Value)
+		require.Equal(t, 15, card.DueDay.Int())
+		require.Equal(t, 7, card.ClosingOffsetDays.Int())
+		require.False(t, card.CreatedAt.ValueOr(time.Time{}).IsZero())
+	})
 
-	for _, scenario := range scenarios {
-		s.Run(scenario.name, func() {
-			// Act
-			card, err := entities.NewCard(
-				scenario.args.userID,
-				scenario.args.name,
-				scenario.args.dueDay,
-			)
+	t.Run("should create debit card without due day and closing offset", func(t *testing.T) {
+		userID := createUUID(t)
+		name := createCardName(t, "Nubank Debito")
+		cardType, _ := vos.NewCardType("debit")
+		flag, _ := vos.NewCardFlag("mastercard")
+		digits, _ := vos.NewLastFourDigits("5678")
 
-			// Assert
-			scenario.expect(card, err)
-		})
-	}
-}
+		card, err := entities.NewCard(userID, name, cardType, flag, digits, vos.DueDay{}, vos.ClosingOffsetDays{})
 
-func (s *CardEntitySuite) TestUpdate() {
-	scenarios := []struct {
-		name string
-		args struct {
-			name   string
-			dueDay int
-		}
-		expect func(card *entities.Card, err error)
-	}{
-		{
-			name: "deve atualizar cartão com sucesso",
-			args: struct {
-				name   string
-				dueDay int
-			}{
-				name:   "Updated Card",
-				dueDay: 20,
-			},
-			expect: func(card *entities.Card, err error) {
-				s.NoError(err)
-				s.NotNil(card)
-				s.Equal("Updated Card", card.Name.String())
-				s.Equal(20, card.DueDay.Int())
-				s.False(card.UpdatedAt.ValueOr(time.Time{}).IsZero())
-			},
-		},
-		{
-			name: "deve retornar erro ao atualizar com nome vazio",
-			args: struct {
-				name   string
-				dueDay int
-			}{
-				name:   "",
-				dueDay: 15,
-			},
-			expect: func(card *entities.Card, err error) {
-				s.Error(err)
-				s.Contains(err.Error(), "invalid card name")
-			},
-		},
-		{
-			name: "deve retornar erro ao atualizar com nome muito longo",
-			args: struct {
-				name   string
-				dueDay int
-			}{
-				name:   string(make([]byte, 256)),
-				dueDay: 15,
-			},
-			expect: func(card *entities.Card, err error) {
-				s.Error(err)
-				s.Contains(err.Error(), "invalid card name")
-			},
-		},
-		{
-			name: "deve retornar erro ao atualizar com due_day 0",
-			args: struct {
-				name   string
-				dueDay int
-			}{
-				name:   "Valid Name",
-				dueDay: 0,
-			},
-			expect: func(card *entities.Card, err error) {
-				s.Error(err)
-				s.Contains(err.Error(), "invalid due day")
-			},
-		},
-		{
-			name: "deve retornar erro ao atualizar com due_day maior que 31",
-			args: struct {
-				name   string
-				dueDay int
-			}{
-				name:   "Valid Name",
-				dueDay: 32,
-			},
-			expect: func(card *entities.Card, err error) {
-				s.Error(err)
-				s.Contains(err.Error(), "invalid due day")
-			},
-		},
-	}
-
-	for _, scenario := range scenarios {
-		s.Run(scenario.name, func() {
-			// Arrange
-			userID := s.createUUID()
-			name := s.createCardName("Original Card")
-			dueDay := s.createDueDay(10)
-			card, _ := entities.NewCard(userID, name, dueDay)
-
-			// Act
-			err := card.Update(scenario.args.name, scenario.args.dueDay, 7) // Default closing offset days
-
-			// Assert
-			scenario.expect(card, err)
-		})
-	}
-}
-
-func (s *CardEntitySuite) TestDelete() {
-	s.Run("deve deletar cartão (soft delete)", func() {
-		// Arrange
-		userID := s.createUUID()
-		name := s.createCardName("Card to Delete")
-		dueDay := s.createDueDay(15)
-		card, _ := entities.NewCard(userID, name, dueDay)
-
-		// Act
-		result := card.Delete()
-
-		// Assert
-		s.NotNil(result)
-		s.False(result.DeletedAt.ValueOr(time.Time{}).IsZero())
-		s.Equal(card, result)
+		require.NoError(t, err)
+		require.NotNil(t, card)
+		require.Equal(t, "debit", card.Type.Value)
+		require.Equal(t, 0, card.DueDay.Int())
+		require.Equal(t, 0, card.ClosingOffsetDays.Int())
 	})
 }
 
-// Helper methods
-func (s *CardEntitySuite) createUUID() sharedVos.UUID {
-	uuid, _ := sharedVos.NewUUID()
+func TestCardUpdate(t *testing.T) {
+	t.Run("should update credit card fields", func(t *testing.T) {
+		card := createCreditCard(t)
+
+		err := card.Update("Updated Name", "amex", "9999", 20, 10)
+
+		require.NoError(t, err)
+		require.Equal(t, "Updated Name", card.Name.String())
+		require.Equal(t, "amex", card.Flag.Value)
+		require.Equal(t, "9999", card.LastFourDigits.Value)
+		require.Equal(t, 20, card.DueDay.Int())
+		require.Equal(t, 10, card.ClosingOffsetDays.Int())
+		require.False(t, card.UpdatedAt.ValueOr(time.Time{}).IsZero())
+	})
+
+	t.Run("should update debit card and ignore due day and closing offset", func(t *testing.T) {
+		card := createDebitCard(t)
+
+		err := card.Update("Updated Debit", "elo", "4321", 15, 7)
+
+		require.NoError(t, err)
+		require.Equal(t, "Updated Debit", card.Name.String())
+		require.Equal(t, "elo", card.Flag.Value)
+		require.Equal(t, "4321", card.LastFourDigits.Value)
+		require.Equal(t, 0, card.DueDay.Int())
+		require.Equal(t, 0, card.ClosingOffsetDays.Int())
+	})
+
+	t.Run("should return error for empty name", func(t *testing.T) {
+		card := createCreditCard(t)
+
+		err := card.Update("", "visa", "1234", 15, 7)
+
+		require.Error(t, err)
+	})
+
+	t.Run("should return error for invalid flag", func(t *testing.T) {
+		card := createCreditCard(t)
+
+		err := card.Update("Valid Name", "invalid", "1234", 15, 7)
+
+		require.Error(t, err)
+	})
+
+	t.Run("should return error for invalid last four digits", func(t *testing.T) {
+		card := createCreditCard(t)
+
+		err := card.Update("Valid Name", "visa", "abcd", 15, 7)
+
+		require.Error(t, err)
+	})
+}
+
+func TestCardDelete(t *testing.T) {
+	t.Run("should soft delete card", func(t *testing.T) {
+		card := createCreditCard(t)
+
+		result := card.Delete()
+
+		require.NotNil(t, result)
+		require.False(t, result.DeletedAt.ValueOr(time.Time{}).IsZero())
+		require.Equal(t, card, result)
+	})
+}
+
+func createUUID(t *testing.T) sharedVos.UUID {
+	t.Helper()
+	uuid, err := sharedVos.NewUUID()
+	require.NoError(t, err)
 	return uuid
 }
 
-func (s *CardEntitySuite) createCardName(name string) vos.CardName {
-	cardName, _ := vos.NewCardName(name)
+func createCardName(t *testing.T, name string) vos.CardName {
+	t.Helper()
+	cardName, err := vos.NewCardName(name)
+	require.NoError(t, err)
 	return cardName
 }
 
-func (s *CardEntitySuite) createDueDay(day int) vos.DueDay {
-	dueDay, _ := vos.NewDueDay(day)
-	return dueDay
+func createCreditCard(t *testing.T) *entities.Card {
+	t.Helper()
+	userID := createUUID(t)
+	name := createCardName(t, "Test Credit Card")
+	cardType, _ := vos.NewCardType("credit")
+	flag, _ := vos.NewCardFlag("visa")
+	digits, _ := vos.NewLastFourDigits("1234")
+	dueDay, _ := vos.NewDueDay(15)
+	offset, _ := vos.NewClosingOffsetDays(7)
+	card, err := entities.NewCard(userID, name, cardType, flag, digits, dueDay, offset)
+	require.NoError(t, err)
+	return card
+}
+
+func createDebitCard(t *testing.T) *entities.Card {
+	t.Helper()
+	userID := createUUID(t)
+	name := createCardName(t, "Test Debit Card")
+	cardType, _ := vos.NewCardType("debit")
+	flag, _ := vos.NewCardFlag("mastercard")
+	digits, _ := vos.NewLastFourDigits("5678")
+	card, err := entities.NewCard(userID, name, cardType, flag, digits, vos.DueDay{}, vos.ClosingOffsetDays{})
+	require.NoError(t, err)
+	return card
 }

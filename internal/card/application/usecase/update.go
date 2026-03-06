@@ -15,7 +15,7 @@ import (
 
 type (
 	UpdateCardUseCase interface {
-		Execute(ctx context.Context, userID, id string, input *dtos.CardInput) (*dtos.CardOutput, error)
+		Execute(ctx context.Context, userID, id string, input *dtos.CardUpdateInput) (*dtos.CardOutput, error)
 	}
 
 	updateCardUseCase struct {
@@ -37,7 +37,7 @@ func NewUpdateCardUseCase(
 	}
 }
 
-func (u *updateCardUseCase) Execute(ctx context.Context, userID, id string, input *dtos.CardInput) (*dtos.CardOutput, error) {
+func (u *updateCardUseCase) Execute(ctx context.Context, userID, id string, input *dtos.CardUpdateInput) (*dtos.CardOutput, error) {
 	ctx, span := u.o11y.Tracer().Start(ctx, "update_card_usecase.execute")
 	defer span.End()
 
@@ -47,13 +47,10 @@ func (u *updateCardUseCase) Execute(ctx context.Context, userID, id string, inpu
 	if err != nil {
 		duration := time.Since(start)
 		u.metrics.RecordOperationFailure(ctx, metrics.OperationUpdate, duration, metrics.ClassifyError(err))
-
-		span.AddEvent(
-			"error parsing user id",
+		span.AddEvent("error parsing user id",
 			observability.String("user_id", userID),
 			observability.Error(err),
 		)
-
 		return nil, err
 	}
 
@@ -61,78 +58,84 @@ func (u *updateCardUseCase) Execute(ctx context.Context, userID, id string, inpu
 	if err != nil {
 		duration := time.Since(start)
 		u.metrics.RecordOperationFailure(ctx, metrics.OperationUpdate, duration, metrics.ClassifyError(err))
-
-		span.AddEvent(
-			"error parsing card id",
+		span.AddEvent("error parsing card id",
 			observability.String("card_id", id),
 			observability.Error(err),
 		)
-
 		return nil, err
 	}
 
-	card, err := u.repository.FindByID(ctx, user, cardID)
+	card, err := u.repository.FindByIDOnly(ctx, cardID)
 	if err != nil {
 		duration := time.Since(start)
 		u.metrics.RecordOperationFailure(ctx, metrics.OperationUpdate, duration, metrics.ClassifyError(err))
-
-		span.AddEvent(
-			"error finding card by id",
+		span.RecordError(err)
+		u.o11y.Logger().Error(ctx, "query_failed",
+			observability.String("operation", "UpdateCard"),
+			observability.String("layer", "usecase"),
+			observability.String("entity", "card"),
 			observability.String("user_id", userID),
 			observability.String("card_id", id),
 			observability.Error(err),
-		)
-		u.o11y.Logger().Error(
-			ctx,
-			"error finding card by id",
-			observability.Error(err),
-			observability.String("user_id", userID),
-			observability.String("card_id", id),
 		)
 		return nil, err
 	}
 
 	if card == nil {
 		duration := time.Since(start)
-		u.metrics.RecordOperationFailure(ctx, metrics.OperationUpdate, duration, metrics.ClassifyError(err))
-
-		span.AddEvent(
-			"card not found",
+		u.metrics.RecordOperationFailure(ctx, metrics.OperationUpdate, duration, metrics.ErrorTypeNotFound)
+		span.AddEvent("card not found",
 			observability.String("user_id", userID),
 			observability.String("card_id", id),
 		)
-		u.o11y.Logger().Error(
-			ctx,
-			"card not found",
-			observability.Error(customErrors.ErrCardNotFound),
+		u.o11y.Logger().Warn(ctx, "card not found",
+			observability.String("operation", "UpdateCard"),
+			observability.String("layer", "usecase"),
+			observability.String("entity", "card"),
 			observability.String("user_id", userID),
 			observability.String("card_id", id),
 		)
 		return nil, customErrors.ErrCardNotFound
 	}
 
-	// Se não fornecido, mantém o valor atual
-	closingOffsetDays := input.ClosingOffsetDays
-	if closingOffsetDays == 0 {
-		closingOffsetDays = card.ClosingOffsetDays.Int()
+	if card.UserID.String() != user.String() {
+		duration := time.Since(start)
+		u.metrics.RecordOperationFailure(ctx, metrics.OperationUpdate, duration, "authorization")
+		span.AddEvent("card ownership mismatch",
+			observability.String("user_id", userID),
+			observability.String("card_id", id),
+		)
+		u.o11y.Logger().Warn(ctx, "card ownership mismatch",
+			observability.String("operation", "UpdateCard"),
+			observability.String("layer", "usecase"),
+			observability.String("entity", "card"),
+			observability.String("user_id", userID),
+			observability.String("card_id", id),
+		)
+		return nil, customErrors.ErrForbidden
 	}
 
-	if err := card.Update(input.Name, input.DueDay, closingOffsetDays); err != nil {
+	dueDay := card.DueDay.Int()
+	if input.DueDay != nil {
+		dueDay = *input.DueDay
+	}
+
+	closingOffsetDays := card.ClosingOffsetDays.Int()
+	if input.ClosingOffsetDays != nil {
+		closingOffsetDays = *input.ClosingOffsetDays
+	}
+
+	if err := card.Update(input.Name, input.Flag, input.LastFourDigits, dueDay, closingOffsetDays); err != nil {
 		duration := time.Since(start)
 		u.metrics.RecordOperationFailure(ctx, metrics.OperationUpdate, duration, metrics.ClassifyError(err))
-
-		span.AddEvent(
-			"error validating card update",
+		span.RecordError(err)
+		u.o11y.Logger().Error(ctx, "validation_failed",
+			observability.String("operation", "UpdateCard"),
+			observability.String("layer", "usecase"),
+			observability.String("entity", "card"),
 			observability.String("user_id", userID),
 			observability.String("card_id", id),
 			observability.Error(err),
-		)
-		u.o11y.Logger().Error(
-			ctx,
-			"error validating card update",
-			observability.Error(err),
-			observability.String("user_id", userID),
-			observability.String("card_id", id),
 		)
 		return nil, err
 	}
@@ -140,19 +143,14 @@ func (u *updateCardUseCase) Execute(ctx context.Context, userID, id string, inpu
 	if err := u.repository.Update(ctx, card); err != nil {
 		duration := time.Since(start)
 		u.metrics.RecordOperationFailure(ctx, metrics.OperationUpdate, duration, metrics.ClassifyError(err))
-
-		span.AddEvent(
-			"error updating card in repository",
+		span.RecordError(err)
+		u.o11y.Logger().Error(ctx, "query_failed",
+			observability.String("operation", "UpdateCard"),
+			observability.String("layer", "usecase"),
+			observability.String("entity", "card"),
 			observability.String("user_id", userID),
 			observability.String("card_id", id),
 			observability.Error(err),
-		)
-		u.o11y.Logger().Error(
-			ctx,
-			"error updating card in repository",
-			observability.Error(err),
-			observability.String("user_id", userID),
-			observability.String("card_id", id),
 		)
 		return nil, err
 	}
@@ -161,10 +159,18 @@ func (u *updateCardUseCase) Execute(ctx context.Context, userID, id string, inpu
 	u.metrics.RecordOperation(ctx, metrics.OperationUpdate, duration)
 
 	output := &dtos.CardOutput{
-		ID:                card.ID.String(),
-		Name:              card.Name.String(),
-		DueDay:            card.DueDay.Int(),
-		ClosingOffsetDays: card.ClosingOffsetDays.Int(),
+		ID:             card.ID.String(),
+		Name:           card.Name.String(),
+		Type:           card.Type.Value,
+		Flag:           card.Flag.Value,
+		LastFourDigits: card.LastFourDigits.Value,
+		CreatedAt:      card.CreatedAt.ValueOr(time.Time{}),
+	}
+	if card.Type.IsCredit() {
+		dueDay := card.DueDay.Int()
+		output.DueDay = &dueDay
+		offset := card.ClosingOffsetDays.Int()
+		output.ClosingOffsetDays = &offset
 	}
 	if !card.UpdatedAt.ValueOr(time.Time{}).IsZero() {
 		output.UpdatedAt = card.UpdatedAt.ValueOr(time.Time{})

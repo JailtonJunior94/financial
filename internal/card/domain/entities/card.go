@@ -11,6 +11,9 @@ type Card struct {
 	ID                sharedVos.UUID
 	UserID            sharedVos.UUID
 	Name              vos.CardName
+	Type              vos.CardType
+	Flag              vos.CardFlag
+	LastFourDigits    vos.LastFourDigits
 	DueDay            vos.DueDay
 	ClosingOffsetDays vos.ClosingOffsetDays
 	CreatedAt         sharedVos.NullableTime
@@ -18,38 +21,59 @@ type Card struct {
 	DeletedAt         sharedVos.NullableTime
 }
 
-func NewCard(userID sharedVos.UUID, name vos.CardName, dueDay vos.DueDay) (*Card, error) {
+func NewCard(
+	userID sharedVos.UUID,
+	name vos.CardName,
+	cardType vos.CardType,
+	flag vos.CardFlag,
+	lastFourDigits vos.LastFourDigits,
+	dueDay vos.DueDay,
+	closingOffsetDays vos.ClosingOffsetDays,
+) (*Card, error) {
 	card := &Card{
-		Name:              name,
-		UserID:            userID,
-		DueDay:            dueDay,
-		ClosingOffsetDays: vos.NewDefaultClosingOffsetDays(), // Padrão brasileiro: 7 dias
-		CreatedAt:         sharedVos.NewNullableTime(time.Now()),
+		UserID:         userID,
+		Name:           name,
+		Type:           cardType,
+		Flag:           flag,
+		LastFourDigits: lastFourDigits,
+		CreatedAt:      sharedVos.NewNullableTime(time.Now()),
+	}
+	if cardType.IsCredit() {
+		card.DueDay = dueDay
+		card.ClosingOffsetDays = closingOffsetDays
 	}
 	return card, nil
 }
 
-func (c *Card) Update(name string, dueDay int, closingOffsetDays int) error {
+func (c *Card) Update(name, flag, lastFourDigits string, dueDay, closingOffsetDays int) error {
 	cardName, err := vos.NewCardName(name)
 	if err != nil {
 		return err
 	}
-
-	cardDueDay, err := vos.NewDueDay(dueDay)
+	cardFlag, err := vos.NewCardFlag(flag)
 	if err != nil {
 		return err
 	}
-
-	offset, err := vos.NewClosingOffsetDays(closingOffsetDays)
+	digits, err := vos.NewLastFourDigits(lastFourDigits)
 	if err != nil {
 		return err
 	}
-
 	c.Name = cardName
-	c.DueDay = cardDueDay
-	c.ClosingOffsetDays = offset
+	c.Flag = cardFlag
+	c.LastFourDigits = digits
+	if c.Type.IsCredit() {
+		cardDueDay, err := vos.NewDueDay(dueDay)
+		if err != nil {
+			return err
+		}
+		offset, err := vos.NewClosingOffsetDays(closingOffsetDays)
+		if err != nil {
+			return err
+		}
+		c.DueDay = cardDueDay
+		c.ClosingOffsetDays = offset
+	}
 	c.UpdatedAt = sharedVos.NewNullableTime(time.Now())
-
 	return nil
 }
 

@@ -3,7 +3,6 @@ package repositories
 import (
 	"context"
 	"database/sql"
-	"errors"
 	"fmt"
 	"time"
 
@@ -35,10 +34,20 @@ func (r *cardRepository) List(ctx context.Context, userID vos.UUID) ([]*entities
 	ctx, span := r.o11y.Tracer().Start(ctx, "card_repository.list")
 	defer span.End()
 
+	r.o11y.Logger().Debug(ctx, "query_started",
+		observability.String("operation", "list"),
+		observability.String("layer", "repository"),
+		observability.String("entity", "card"),
+		observability.String("user_id", userID.String()),
+	)
+
 	query := `select
 				id,
 				user_id,
 				name,
+				type,
+				flag,
+				last_four_digits,
 				due_day,
 				closing_offset_days,
 				created_at,
@@ -55,6 +64,13 @@ func (r *cardRepository) List(ctx context.Context, userID vos.UUID) ([]*entities
 	rows, err := r.db.QueryContext(ctx, query, userID.String())
 	if err != nil {
 		span.RecordError(err)
+		r.o11y.Logger().Error(ctx, "query_failed",
+			observability.String("operation", "list"),
+			observability.String("layer", "repository"),
+			observability.String("entity", "card"),
+			observability.String("user_id", userID.String()),
+			observability.Error(err),
+		)
 		r.fm.RecordRepositoryFailure(ctx, "list", "card", "infra", time.Since(start))
 		return nil, err
 	}
@@ -67,42 +83,85 @@ func (r *cardRepository) List(ctx context.Context, userID vos.UUID) ([]*entities
 	var cards []*entities.Card
 	for rows.Next() {
 		var card entities.Card
+		var dueDayNull sql.NullInt32
+		var closingOffsetNull sql.NullInt32
+
 		err := rows.Scan(
 			&card.ID.Value,
 			&card.UserID.Value,
 			&card.Name.Value,
-			&card.DueDay.Value,
-			&card.ClosingOffsetDays.Value,
+			&card.Type.Value,
+			&card.Flag.Value,
+			&card.LastFourDigits.Value,
+			&dueDayNull,
+			&closingOffsetNull,
 			&card.CreatedAt,
 			&card.UpdatedAt,
 			&card.DeletedAt,
 		)
 		if err != nil {
 			span.RecordError(err)
+			r.o11y.Logger().Error(ctx, "query_failed",
+				observability.String("operation", "list"),
+				observability.String("layer", "repository"),
+				observability.String("entity", "card"),
+				observability.String("user_id", userID.String()),
+				observability.Error(err),
+			)
 			r.fm.RecordRepositoryFailure(ctx, "list", "card", "infra", time.Since(start))
 			return nil, err
 		}
+		if dueDayNull.Valid {
+			card.DueDay.Value = int(dueDayNull.Int32)
+		}
+		if closingOffsetNull.Valid {
+			card.ClosingOffsetDays.Value = int(closingOffsetNull.Int32)
+		}
 		cards = append(cards, &card)
 	}
+
+	if err := rows.Err(); err != nil {
+		span.RecordError(err)
+		r.o11y.Logger().Error(ctx, "query_failed",
+			observability.String("operation", "list"),
+			observability.String("layer", "repository"),
+			observability.String("entity", "card"),
+			observability.String("user_id", userID.String()),
+			observability.Error(err),
+		)
+		r.fm.RecordRepositoryFailure(ctx, "list", "card", "infra", time.Since(start))
+		return nil, err
+	}
+
+	r.o11y.Logger().Debug(ctx, "query_completed",
+		observability.String("operation", "list"),
+		observability.String("layer", "repository"),
+		observability.String("entity", "card"),
+		observability.String("user_id", userID.String()),
+	)
 	r.fm.RecordRepositoryQuery(ctx, "list", "card", time.Since(start))
 	return cards, nil
 }
 
-// ListPaginated lista cards de um usuário com paginação cursor-based.
 func (r *cardRepository) ListPaginated(ctx context.Context, params interfaces.ListCardsParams) ([]*entities.Card, error) {
 	start := time.Now()
 	ctx, span := r.o11y.Tracer().Start(ctx, "card_repository.list_paginated")
 	defer span.End()
 
-	// Build WHERE clause with cursor
+	r.o11y.Logger().Debug(ctx, "query_started",
+		observability.String("operation", "list_paginated"),
+		observability.String("layer", "repository"),
+		observability.String("entity", "card"),
+		observability.String("user_id", params.UserID.String()),
+	)
+
 	whereClause := "user_id = $1 AND deleted_at IS NULL"
-	args := []interface{}{params.UserID.String()}
+	args := []any{params.UserID.String()}
 
 	cursorName, hasName := params.Cursor.GetString("name")
 	cursorID, hasID := params.Cursor.GetString("id")
 
 	if hasName && hasID && cursorName != "" && cursorID != "" {
-		// Keyset pagination: WHERE (name, id) > (cursor_name, cursor_id)
 		whereClause += ` AND (
 			name > $2
 			OR (name = $2 AND id > $3)
@@ -115,6 +174,9 @@ func (r *cardRepository) ListPaginated(ctx context.Context, params interfaces.Li
 			id,
 			user_id,
 			name,
+			type,
+			flag,
+			last_four_digits,
 			due_day,
 			closing_offset_days,
 			created_at,
@@ -130,6 +192,13 @@ func (r *cardRepository) ListPaginated(ctx context.Context, params interfaces.Li
 	rows, err := r.db.QueryContext(ctx, query, args...)
 	if err != nil {
 		span.RecordError(err)
+		r.o11y.Logger().Error(ctx, "query_failed",
+			observability.String("operation", "list_paginated"),
+			observability.String("layer", "repository"),
+			observability.String("entity", "card"),
+			observability.String("user_id", params.UserID.String()),
+			observability.Error(err),
+		)
 		r.fm.RecordRepositoryFailure(ctx, "list_paginated", "card", "infra", time.Since(start))
 		return nil, err
 	}
@@ -142,187 +211,62 @@ func (r *cardRepository) ListPaginated(ctx context.Context, params interfaces.Li
 	cards := make([]*entities.Card, 0)
 	for rows.Next() {
 		var card entities.Card
+		var dueDayNull sql.NullInt32
+		var closingOffsetNull sql.NullInt32
+
 		err := rows.Scan(
 			&card.ID.Value,
 			&card.UserID.Value,
 			&card.Name.Value,
-			&card.DueDay.Value,
-			&card.ClosingOffsetDays.Value,
+			&card.Type.Value,
+			&card.Flag.Value,
+			&card.LastFourDigits.Value,
+			&dueDayNull,
+			&closingOffsetNull,
 			&card.CreatedAt,
 			&card.UpdatedAt,
 			&card.DeletedAt,
 		)
 		if err != nil {
 			span.RecordError(err)
+			r.o11y.Logger().Error(ctx, "query_failed",
+				observability.String("operation", "list_paginated"),
+				observability.String("layer", "repository"),
+				observability.String("entity", "card"),
+				observability.String("user_id", params.UserID.String()),
+				observability.Error(err),
+			)
 			r.fm.RecordRepositoryFailure(ctx, "list_paginated", "card", "infra", time.Since(start))
 			return nil, err
+		}
+		if dueDayNull.Valid {
+			card.DueDay.Value = int(dueDayNull.Int32)
+		}
+		if closingOffsetNull.Valid {
+			card.ClosingOffsetDays.Value = int(closingOffsetNull.Int32)
 		}
 		cards = append(cards, &card)
 	}
 
-	r.fm.RecordRepositoryQuery(ctx, "list_paginated", "card", time.Since(start))
-	return cards, nil
-}
-
-func (r *cardRepository) FindByID(ctx context.Context, userID, id vos.UUID) (*entities.Card, error) {
-	start := time.Now()
-	ctx, span := r.o11y.Tracer().Start(ctx, "card_repository.find_by_id")
-	defer span.End()
-
-	query := `select
-				id,
-				user_id,
-				name,
-				due_day,
-				closing_offset_days,
-				created_at,
-				updated_at,
-				deleted_at
-			from
-				cards
-			where
-				user_id = $1
-				and deleted_at is null
-				and id = $2;`
-
-	var card entities.Card
-	err := r.db.QueryRowContext(ctx, query, userID.String(), id.String()).Scan(
-		&card.ID.Value,
-		&card.UserID.Value,
-		&card.Name.Value,
-		&card.DueDay.Value,
-		&card.ClosingOffsetDays.Value,
-		&card.CreatedAt,
-		&card.UpdatedAt,
-		&card.DeletedAt,
-	)
-
-	if err != nil {
-		if errors.Is(err, sql.ErrNoRows) {
-			r.fm.RecordRepositoryQuery(ctx, "find_by_id", "card", time.Since(start))
-			return nil, nil
-		}
+	if err := rows.Err(); err != nil {
 		span.RecordError(err)
-		r.fm.RecordRepositoryFailure(ctx, "find_by_id", "card", "infra", time.Since(start))
+		r.o11y.Logger().Error(ctx, "query_failed",
+			observability.String("operation", "list_paginated"),
+			observability.String("layer", "repository"),
+			observability.String("entity", "card"),
+			observability.String("user_id", params.UserID.String()),
+			observability.Error(err),
+		)
+		r.fm.RecordRepositoryFailure(ctx, "list_paginated", "card", "infra", time.Since(start))
 		return nil, err
 	}
 
-	r.fm.RecordRepositoryQuery(ctx, "find_by_id", "card", time.Since(start))
-	return &card, nil
-}
-
-func (r *cardRepository) Save(ctx context.Context, card *entities.Card) error {
-	start := time.Now()
-	ctx, span := r.o11y.Tracer().Start(ctx, "card_repository.save")
-	defer span.End()
-
-	query := `insert into
-				cards (
-					id,
-					user_id,
-					name,
-					due_day,
-					closing_offset_days,
-					created_at,
-					updated_at,
-					deleted_at
-				)
-				values
-					($1, $2, $3, $4, $5, $6, $7, $8)`
-
-	stmt, err := r.db.PrepareContext(ctx, query)
-	if err != nil {
-		span.AddEvent(
-			"error preparing insert card",
-			observability.String("user_id", card.UserID.String()),
-			observability.Error(err),
-		)
-		r.fm.RecordRepositoryFailure(ctx, "save", "card", "infra", time.Since(start))
-		return err
-	}
-	defer func() {
-		if closeErr := stmt.Close(); closeErr != nil {
-			span.RecordError(closeErr)
-		}
-	}()
-
-	_, err = stmt.ExecContext(
-		ctx,
-		card.ID.Value,
-		card.UserID.Value,
-		card.Name.Value,
-		card.DueDay.Value,
-		card.ClosingOffsetDays.Value,
-		card.CreatedAt.Ptr(),
-		card.UpdatedAt.Ptr(),
-		card.DeletedAt.Ptr(),
+	r.o11y.Logger().Debug(ctx, "query_completed",
+		observability.String("operation", "list_paginated"),
+		observability.String("layer", "repository"),
+		observability.String("entity", "card"),
+		observability.String("user_id", params.UserID.String()),
 	)
-	if err != nil {
-		span.AddEvent(
-			"error inserting card",
-			observability.Error(err),
-			observability.String("user_id", card.UserID.String()),
-		)
-		r.fm.RecordRepositoryFailure(ctx, "save", "card", "infra", time.Since(start))
-		return err
-	}
-	r.fm.RecordRepositoryQuery(ctx, "save", "card", time.Since(start))
-	return nil
-}
-
-func (r *cardRepository) Update(ctx context.Context, card *entities.Card) error {
-	start := time.Now()
-	ctx, span := r.o11y.Tracer().Start(ctx, "card_repository.update")
-	defer span.End()
-
-	query := `update
-				cards
-			set
-				name = $1,
-				due_day = $2,
-				closing_offset_days = $3,
-				updated_at = $4,
-				deleted_at = $5
-			where
-				id = $6
-				and user_id = $7`
-
-	stmt, err := r.db.PrepareContext(ctx, query)
-	if err != nil {
-		span.AddEvent(
-			"error preparing update card",
-			observability.String("user_id", card.UserID.String()),
-			observability.Error(err),
-		)
-		r.fm.RecordRepositoryFailure(ctx, "update", "card", "infra", time.Since(start))
-		return err
-	}
-	defer func() {
-		if closeErr := stmt.Close(); closeErr != nil {
-			span.RecordError(closeErr)
-		}
-	}()
-
-	_, err = stmt.ExecContext(
-		ctx,
-		card.Name.Value,
-		card.DueDay.Value,
-		card.ClosingOffsetDays.Value,
-		card.UpdatedAt.Ptr(),
-		card.DeletedAt.Ptr(),
-		card.ID.Value,
-		card.UserID.Value,
-	)
-	if err != nil {
-		span.AddEvent(
-			"error updating card",
-			observability.String("user_id", card.UserID.String()),
-			observability.Error(err),
-		)
-		r.fm.RecordRepositoryFailure(ctx, "update", "card", "infra", time.Since(start))
-		return err
-	}
-
-	r.fm.RecordRepositoryQuery(ctx, "update", "card", time.Since(start))
-	return nil
+	r.fm.RecordRepositoryQuery(ctx, "list_paginated", "card", time.Since(start))
+	return cards, nil
 }

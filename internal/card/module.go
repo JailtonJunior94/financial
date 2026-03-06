@@ -4,6 +4,7 @@ import (
 	"database/sql"
 
 	"github.com/jailtonjunior94/financial/internal/card/application/usecase"
+	cardDomain "github.com/jailtonjunior94/financial/internal/card/domain"
 	"github.com/jailtonjunior94/financial/internal/card/infrastructure/adapters"
 	"github.com/jailtonjunior94/financial/internal/card/infrastructure/http"
 	"github.com/jailtonjunior94/financial/internal/card/infrastructure/repositories"
@@ -21,19 +22,26 @@ type CardModule struct {
 	CardProvider invoiceInterfaces.CardProvider
 }
 
-func NewCardModule(db *sql.DB, o11y observability.Observability, tokenValidator auth.TokenValidator) CardModule {
-	errorHandler := httperrors.NewErrorHandler(o11y)
+func NewCardModule(
+	db *sql.DB,
+	o11y observability.Observability,
+	tokenValidator auth.TokenValidator,
+	invoiceRepo invoiceInterfaces.InvoiceRepository,
+) CardModule {
+	errorHandler := httperrors.NewErrorHandler(o11y, cardDomain.ErrorMappings())
 	authMiddleware := middlewares.NewAuthorization(tokenValidator, o11y, errorHandler)
 
 	cardMetrics := metrics.NewCardMetrics(o11y)
 	financialMetrics := metrics.NewFinancialMetrics(o11y)
 
 	cardRepository := repositories.NewCardRepository(db, o11y, financialMetrics)
+	invoiceChecker := adapters.NewInvoiceCheckerAdapter(invoiceRepo, o11y)
+
 	findCardPaginatedUsecase := usecase.NewFindCardPaginatedUseCase(o11y, cardRepository, cardMetrics)
 	findCardByUsecase := usecase.NewFindCardByUseCase(o11y, cardRepository, cardMetrics)
 	createCardUsecase := usecase.NewCreateCardUseCase(o11y, cardRepository, cardMetrics)
 	updateCardUsecase := usecase.NewUpdateCardUseCase(o11y, cardRepository, cardMetrics)
-	removeCardUsecase := usecase.NewRemoveCardUseCase(o11y, cardRepository, cardMetrics)
+	removeCardUsecase := usecase.NewRemoveCardUseCase(o11y, cardRepository, invoiceChecker, cardMetrics)
 
 	cardHandler := http.NewCardHandler(
 		o11y,
