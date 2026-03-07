@@ -12,20 +12,24 @@ import (
 	"github.com/jailtonjunior94/financial/pkg/pagination"
 )
 
+const (
+	defaultInvoiceLimit = 20
+	maxInvoiceLimit     = 100
+)
+
 type (
-	// ListInvoicesByCardPaginatedUseCase lista faturas de um cartão com paginação cursor-based.
 	ListInvoicesByCardPaginatedUseCase interface {
 		Execute(ctx context.Context, input ListInvoicesByCardPaginatedInput) (*ListInvoicesByCardPaginatedOutput, error)
 	}
 
-	// ListInvoicesByCardPaginatedInput representa a entrada do use case.
 	ListInvoicesByCardPaginatedInput struct {
+		UserID string
 		CardID string
+		Status string // optional filter: "" | "open" | "closed" | "paid"
 		Limit  int
 		Cursor string
 	}
 
-	// ListInvoicesByCardPaginatedOutput representa a saída do use case.
 	ListInvoicesByCardPaginatedOutput struct {
 		Invoices   []dtos.InvoiceOutput
 		NextCursor *string
@@ -37,7 +41,6 @@ type (
 	}
 )
 
-// NewListInvoicesByCardPaginatedUseCase cria uma nova instância do use case.
 func NewListInvoicesByCardPaginatedUseCase(
 	invoiceRepository interfaces.InvoiceRepository,
 	o11y observability.Observability,
@@ -48,63 +51,54 @@ func NewListInvoicesByCardPaginatedUseCase(
 	}
 }
 
-// Execute executa o use case de listagem paginada de faturas por cartão.
 func (u *listInvoicesByCardPaginatedUseCase) Execute(
 	ctx context.Context,
 	input ListInvoicesByCardPaginatedInput,
 ) (*ListInvoicesByCardPaginatedOutput, error) {
 	ctx, span := u.o11y.Tracer().Start(ctx, "list_invoices_by_card_paginated_usecase.execute")
 	defer span.End()
-
-	// Parse card ID
+	limit := clampLimit(input.Limit, defaultInvoiceLimit, maxInvoiceLimit)
+	userID, err := vos.NewUUIDFromString(input.UserID)
+	if err != nil {
+		return nil, err
+	}
 	cardID, err := vos.NewUUIDFromString(input.CardID)
 	if err != nil {
 		return nil, err
 	}
-
-	// Decode cursor
 	cursor, err := pagination.DecodeCursor(input.Cursor)
 	if err != nil {
 		return nil, err
 	}
-
-	// List invoices (paginado)
 	invoices, err := u.invoiceRepository.ListByCard(ctx, interfaces.ListInvoicesByCardParams{
+		UserID: userID,
 		CardID: cardID,
-		Limit:  input.Limit + 1, // +1 para detectar has_next
+		Status: input.Status,
+		Limit:  limit + 1,
 		Cursor: cursor,
 	})
 	if err != nil {
 		return nil, err
 	}
-
-	// Determinar se há próxima página
-	hasNext := len(invoices) > input.Limit
+	hasNext := len(invoices) > limit
 	if hasNext {
-		invoices = invoices[:input.Limit] // Remover o item extra
+		invoices = invoices[:limit]
 	}
-
-	// Construir cursor para próxima página
 	var nextCursor *string
 	if hasNext && len(invoices) > 0 {
 		lastInvoice := invoices[len(invoices)-1]
-
 		newCursor := pagination.Cursor{
-			Fields: map[string]interface{}{
+			Fields: map[string]any{
 				"reference_month": lastInvoice.ReferenceMonth.String(),
 				"id":              lastInvoice.ID.String(),
 			},
 		}
-
 		encoded, err := pagination.EncodeCursor(newCursor)
 		if err != nil {
 			return nil, err
 		}
-
 		nextCursor = &encoded
 	}
-
-	// Converter para DTOs
 	output := make([]dtos.InvoiceOutput, len(invoices))
 	for i, invoice := range invoices {
 		items := make([]dtos.InvoiceItemOutput, len(invoice.Items))
@@ -124,7 +118,6 @@ func (u *listInvoicesByCardPaginatedUseCase) Execute(
 				UpdatedAt:         item.UpdatedAt.ValueOr(item.CreatedAt),
 			}
 		}
-
 		output[i] = dtos.InvoiceOutput{
 			ID:             invoice.ID.String(),
 			UserID:         invoice.UserID.String(),
@@ -139,9 +132,18 @@ func (u *listInvoicesByCardPaginatedUseCase) Execute(
 			UpdatedAt:      invoice.UpdatedAt.ValueOr(invoice.CreatedAt),
 		}
 	}
-
 	return &ListInvoicesByCardPaginatedOutput{
 		Invoices:   output,
 		NextCursor: nextCursor,
 	}, nil
+}
+
+func clampLimit(limit, defaultVal, maxVal int) int {
+	if limit <= 0 {
+		return defaultVal
+	}
+	if limit > maxVal {
+		return maxVal
+	}
+	return limit
 }

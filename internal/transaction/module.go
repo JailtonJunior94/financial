@@ -2,79 +2,63 @@ package transaction
 
 import (
 	"database/sql"
-	"fmt"
 
 	"github.com/JailtonJunior94/devkit-go/pkg/database/uow"
 	"github.com/JailtonJunior94/devkit-go/pkg/observability"
 
-	appstrategies "github.com/jailtonjunior94/financial/internal/transaction/application/strategies"
+	invoiceInterfaces "github.com/jailtonjunior94/financial/internal/invoice/domain/interfaces"
 	"github.com/jailtonjunior94/financial/internal/transaction/application/usecase"
-	transactiondomain "github.com/jailtonjunior94/financial/internal/transaction/domain"
-	"github.com/jailtonjunior94/financial/internal/transaction/domain/interfaces"
-	"github.com/jailtonjunior94/financial/internal/transaction/infrastructure/adapters"
-	"github.com/jailtonjunior94/financial/internal/transaction/infrastructure/http"
+	transactionDomain "github.com/jailtonjunior94/financial/internal/transaction/domain"
+	transactionInterfaces "github.com/jailtonjunior94/financial/internal/transaction/domain/interfaces"
+	transactionhttp "github.com/jailtonjunior94/financial/internal/transaction/infrastructure/http"
 	"github.com/jailtonjunior94/financial/internal/transaction/infrastructure/messaging"
 	"github.com/jailtonjunior94/financial/internal/transaction/infrastructure/repositories"
 	"github.com/jailtonjunior94/financial/pkg/api/httperrors"
 	"github.com/jailtonjunior94/financial/pkg/api/middlewares"
 	"github.com/jailtonjunior94/financial/pkg/auth"
 	"github.com/jailtonjunior94/financial/pkg/observability/metrics"
+	"github.com/jailtonjunior94/financial/pkg/outbox"
 )
 
+// TransactionModule wires the transaction bounded context.
 type TransactionModule struct {
-	TransactionRouter     *http.TransactionRouter
-	SyncMonthlyUseCase    usecase.SyncMonthlyFromInvoicesUseCase
+	TransactionRouter     *transactionhttp.TransactionRouter
 	PurchaseEventConsumer *messaging.PurchaseEventConsumer
 }
 
+// NewTransactionModule creates and wires all dependencies for the transaction module.
 func NewTransactionModule(
 	db *sql.DB,
 	o11y observability.Observability,
 	tokenValidator auth.TokenValidator,
-	invoiceTotalProvider interfaces.InvoiceTotalProvider,
+	invoiceProvider transactionInterfaces.InvoiceProvider,
+	cardProvider invoiceInterfaces.CardProvider,
+	outboxService outbox.Service,
 ) (TransactionModule, error) {
-	if invoiceTotalProvider == nil {
-		invoiceTotalProvider = adapters.NewNoOpInvoiceTotalProvider()
-	}
-
-	errorHandler := httperrors.NewErrorHandler(o11y, transactiondomain.ErrorMappings())
+	errorHandler := httperrors.NewErrorHandler(o11y, transactionDomain.ErrorMappings())
 	authMiddleware := middlewares.NewAuthorization(tokenValidator, o11y, errorHandler)
+
+	transactionMetrics := metrics.NewTransactionMetrics(o11y)
+	transactionRepository := repositories.NewTransactionRepository(db, o11y, transactionMetrics)
 
 	unitOfWork, err := uow.NewUnitOfWork(db)
 	if err != nil {
-		return TransactionModule{}, fmt.Errorf("transaction module: failed to create unit of work: %v", err)
+		return TransactionModule{}, err
 	}
 
-	financialMetrics := metrics.NewFinancialMetrics(o11y)
+	createUC := usecase.NewCreateTransactionUseCase(o11y, unitOfWork, transactionRepository, invoiceProvider, cardProvider, outboxService)
+	updateUC := usecase.NewUpdateTransactionUseCase(o11y, unitOfWork, transactionRepository, invoiceProvider)
+	reverseUC := usecase.NewReverseTransactionUseCase(o11y, unitOfWork, transactionRepository, invoiceProvider)
+	listUC := usecase.NewListTransactionsUseCase(o11y, transactionRepository)
+	getUC := usecase.NewGetTransactionUseCase(o11y, transactionRepository)
 
-	transactionRepository := repositories.NewTransactionRepository(db, o11y, financialMetrics)
+	transactionHandler := transactionhttp.NewTransactionHandler(o11y, errorHandler, createUC, updateUC, reverseUC, listUC, getUC)
+	transactionRouter := transactionhttp.NewTransactionRouter(transactionHandler, authMiddleware)
 
-	ccItemPersister := appstrategies.NewCreditCardItemPersister(transactionRepository)
-
-	registerTransactionUseCase := usecase.NewRegisterTransactionUseCase(unitOfWork, transactionRepository, invoiceTotalProvider, ccItemPersister, o11y, financialMetrics)
-	updateTransactionItemUseCase := usecase.NewUpdateTransactionItemUseCase(unitOfWork, transactionRepository, o11y, financialMetrics)
-	deleteTransactionItemUseCase := usecase.NewDeleteTransactionItemUseCase(unitOfWork, transactionRepository, o11y, financialMetrics)
-	listMonthlyPaginatedUseCase := usecase.NewListMonthlyPaginatedUseCase(o11y, transactionRepository, financialMetrics)
-	getMonthlyUseCase := usecase.NewGetMonthlyUseCase(o11y, transactionRepository, financialMetrics)
-	syncMonthlyFromInvoicesUseCase := usecase.NewSyncMonthlyFromInvoicesUseCase(unitOfWork, transactionRepository, invoiceTotalProvider, ccItemPersister, o11y, financialMetrics)
-
-	transactionHandler := http.NewTransactionHandler(
-		o11y,
-		errorHandler,
-		registerTransactionUseCase,
-		updateTransactionItemUseCase,
-		deleteTransactionItemUseCase,
-		listMonthlyPaginatedUseCase,
-		getMonthlyUseCase,
-	)
-
-	transactionRouter := http.NewTransactionRouter(transactionHandler, authMiddleware)
-
-	purchaseEventConsumer := messaging.NewPurchaseEventConsumer(syncMonthlyFromInvoicesUseCase, db, o11y, financialMetrics)
+	purchaseEventConsumer := messaging.NewPurchaseEventConsumer()
 
 	return TransactionModule{
 		TransactionRouter:     transactionRouter,
-		SyncMonthlyUseCase:    syncMonthlyFromInvoicesUseCase,
 		PurchaseEventConsumer: purchaseEventConsumer,
 	}, nil
 }

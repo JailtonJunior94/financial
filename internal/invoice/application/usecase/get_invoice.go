@@ -15,7 +15,7 @@ import (
 
 type (
 	GetInvoiceUseCase interface {
-		Execute(ctx context.Context, invoiceID string) (*dtos.InvoiceOutput, error)
+		Execute(ctx context.Context, userID, cardID, invoiceID string) (*dtos.InvoiceOutput, error)
 	}
 
 	getInvoiceUseCase struct {
@@ -34,28 +34,29 @@ func NewGetInvoiceUseCase(
 	}
 }
 
-func (u *getInvoiceUseCase) Execute(ctx context.Context, invoiceID string) (*dtos.InvoiceOutput, error) {
+func (u *getInvoiceUseCase) Execute(ctx context.Context, userID, cardID, invoiceID string) (*dtos.InvoiceOutput, error) {
 	ctx, span := u.o11y.Tracer().Start(ctx, "get_invoice_usecase.execute")
 	defer span.End()
-
-	// Parse invoiceID
 	id, err := vos.NewUUIDFromString(invoiceID)
 	if err != nil {
 		return nil, fmt.Errorf("invalid invoice ID: %w", err)
 	}
-
-	// Find invoice
 	invoice, err := u.invoiceRepository.FindByID(ctx, id)
 	if err != nil {
-		u.o11y.Logger().Error(ctx, "failed to find invoice", observability.Error(err))
+		u.o11y.Logger().Error(ctx, "query_failed",
+			observability.String("operation", "GetInvoice"),
+			observability.String("layer", "usecase"),
+			observability.String("entity", "invoice"),
+			observability.Error(err),
+		)
 		return nil, err
 	}
-
 	if invoice == nil {
 		return nil, domain.ErrInvoiceNotFound
 	}
-
-	// Convert to DTO
+	if invoice.UserID.String() != userID || invoice.CardID.String() != cardID {
+		return nil, domain.ErrInvoiceNotOwned
+	}
 	return u.toInvoiceOutput(invoice), nil
 }
 

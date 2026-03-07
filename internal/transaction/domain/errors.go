@@ -3,25 +3,17 @@ package domain
 import "errors"
 
 var (
-	// Erros de MonthlyTransaction.
-	ErrMonthlyTransactionNotFound      = errors.New("transação mensal não encontrada")
-	ErrMonthlyTransactionAlreadyExists = errors.New("transação mensal já existe para este mês")
-	ErrInvalidReferenceMonth           = errors.New("mês de referência inválido")
-
-	// Erros de TransactionItem.
-	ErrTransactionItemNotFound     = errors.New("item de transação não encontrado")
-	ErrTransactionItemDeleted      = errors.New("item de transação foi excluído")
-	ErrInvalidTransactionTitle     = errors.New("título da transação inválido")
-	ErrInvalidTransactionAmount    = errors.New("valor da transação inválido")
-	ErrInvalidTransactionDirection = errors.New("direção da transação inválida")
-	ErrInvalidTransactionType      = errors.New("tipo de transação inválido")
-	ErrItemDoesNotBelongToMonth    = errors.New("item não pertence a esta transação mensal")
-
-	// Erros de negócio.
-	ErrCannotUpdateDeletedItem = errors.New("não é possível atualizar um item excluído")
-	ErrCannotDeleteDeletedItem = errors.New("não é possível excluir um item já excluído")
-	ErrNegativeAmount          = errors.New("valor não pode ser negativo")
-
-	// Erros de Invoice.
-	ErrInvoiceProviderUnavailable = errors.New("provedor de fatura indisponível")
+	ErrTransactionNotFound       = errors.New("transaction not found")
+	ErrTransactionNotOwned       = errors.New("transaction does not belong to user")
+	ErrInvoiceClosed             = errors.New("invoice is closed and cannot be modified")
+	ErrNothingToReverse          = errors.New("all installments are in closed or paid invoices")
+	ErrCardRequiredForCredit     = errors.New("card_id is required for credit and debit payments")
+	ErrCardNotAllowedForMethod   = errors.New("card_id is not allowed for this payment method")
+	ErrInstallmentsOnlyForCredit = errors.New("installments only allowed for credit payment method")
+	ErrTransactionDateFuture     = errors.New("transaction_date cannot be in the future")
+	ErrInvalidPaymentMethod      = errors.New("invalid payment method")
+	ErrInvalidTransactionStatus  = errors.New("invalid transaction status")
+	ErrDescriptionRequired       = errors.New("description is required")
+	ErrAmountMustBePositive      = errors.New("amount must be positive")
+	ErrInstallmentsTooMany       = errors.New("installments cannot exceed 48")
 )

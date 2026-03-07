@@ -89,13 +89,10 @@ func Run() error {
 	outboxService := outbox.NewService(outboxRepository, o11y)
 
 	// Create invoice module first — it provides adapters needed by transaction and budget modules
-	invoiceModule, err := invoice.NewInvoiceModule(dbManager.DB(), o11y, jwtAdapter, cardModule.CardProvider, outboxService)
-	if err != nil {
-		return fmt.Errorf("run: failed to create invoice module: %v", err)
-	}
+	invoiceModule := invoice.NewInvoiceModule(dbManager.DB(), o11y, jwtAdapter)
 
-	// Create transaction module with the InvoiceTotalProvider from invoice module
-	transactionModule, err := transaction.NewTransactionModule(dbManager.DB(), o11y, jwtAdapter, invoiceModule.InvoiceTotalProvider)
+	// Create transaction module with the InvoiceProviderAdapter from invoice module and CardProvider from card module
+	transactionModule, err := transaction.NewTransactionModule(dbManager.DB(), o11y, jwtAdapter, invoiceModule.InvoiceProviderAdapter, cardModule.CardProvider, outboxService)
 	if err != nil {
 		return fmt.Errorf("run: failed to create transaction module: %v", err)
 	}

@@ -5,6 +5,7 @@ import "errors"
 var (
 	// Invoice errors.
 	ErrInvoiceNotFound              = errors.New("invoice not found")
+	ErrInvoiceNotOwned              = errors.New("invoice does not belong to the authenticated user")
 	ErrInvoiceAlreadyExistsForMonth = errors.New("invoice already exists for this card and month")
 	ErrInvoiceHasNoItems            = errors.New("invoice must have at least one item")
 	ErrInvoiceNegativeTotal         = errors.New("invoice total amount cannot be negative")

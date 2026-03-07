@@ -19,6 +19,7 @@ type Invoice struct {
 	ReferenceMonth pkgVos.ReferenceMonth
 	DueDate        time.Time
 	TotalAmount    vos.Money
+	Status         string
 	Items          []*InvoiceItem
 }
 

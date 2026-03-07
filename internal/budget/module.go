@@ -14,6 +14,7 @@ import (
 	"github.com/jailtonjunior94/financial/pkg/api/middlewares"
 	"github.com/jailtonjunior94/financial/pkg/auth"
 	"github.com/jailtonjunior94/financial/pkg/observability/metrics"
+	"github.com/jailtonjunior94/financial/pkg/outbox"
 
 	"github.com/JailtonJunior94/devkit-go/pkg/database/uow"
 	"github.com/JailtonJunior94/devkit-go/pkg/observability"
@@ -62,7 +63,8 @@ func NewBudgetModule(
 	var budgetEventConsumer *messaging.BudgetEventConsumer
 	if invoiceCategoryTotal != nil {
 		syncUseCase := usecase.NewSyncBudgetSpentAmountUseCase(unitOfWork, invoiceCategoryTotal, o11y, financialMetrics)
-		budgetEventConsumer = messaging.NewBudgetEventConsumer(syncUseCase, db, o11y)
+		processedEventsRepo := outbox.NewProcessedEventsRepository(db)
+		budgetEventConsumer = messaging.NewBudgetEventConsumer(syncUseCase, processedEventsRepo, o11y)
 	}
 
 	return BudgetModule{

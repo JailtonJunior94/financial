@@ -77,6 +77,10 @@ func (m *mockInvoiceRepository) FindItemsByPurchaseOrigin(ctx context.Context, p
 	panic("not implemented")
 }
 
+func (m *mockInvoiceRepository) FindStatus(ctx context.Context, invoiceID vos.UUID) (string, error) {
+	panic("not implemented")
+}
+
 func TestInvoiceCheckerAdapter_HasOpenInvoices(t *testing.T) {
 	cardID, _ := vos.NewUUIDFromString("550e8400-e29b-41d4-a716-446655440000")
 

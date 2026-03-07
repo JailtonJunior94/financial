@@ -2,7 +2,6 @@ package messaging
 
 import (
 	"context"
-	"database/sql"
 	"encoding/json"
 	"fmt"
 
@@ -10,34 +9,41 @@ import (
 	"github.com/JailtonJunior94/devkit-go/pkg/vos"
 	"github.com/google/uuid"
 
-	invoiceevents "github.com/jailtonjunior94/financial/internal/invoice/domain/events"
-
 	"github.com/jailtonjunior94/financial/internal/budget/application/usecase"
 	pkgVos "github.com/jailtonjunior94/financial/pkg/domain/vos"
 	"github.com/jailtonjunior94/financial/pkg/messaging"
 	"github.com/jailtonjunior94/financial/pkg/outbox"
 )
 
-// BudgetEventConsumer processa eventos de purchase e sincroniza o spent_amount do budget.
+// BudgetEventConsumer consumes transaction.created events and syncs budget spent amounts.
 type BudgetEventConsumer struct {
 	syncUseCase         usecase.SyncBudgetSpentAmountUseCase
 	processedEventsRepo outbox.ProcessedEventsRepository
 	o11y                observability.Observability
 }
 
+// NewBudgetEventConsumer creates a BudgetEventConsumer with injected dependencies.
 func NewBudgetEventConsumer(
 	syncUseCase usecase.SyncBudgetSpentAmountUseCase,
-	db *sql.DB,
+	processedEventsRepo outbox.ProcessedEventsRepository,
 	o11y observability.Observability,
 ) *BudgetEventConsumer {
 	return &BudgetEventConsumer{
 		syncUseCase:         syncUseCase,
-		processedEventsRepo: outbox.NewProcessedEventsRepository(db),
+		processedEventsRepo: processedEventsRepo,
 		o11y:                o11y,
 	}
 }
 
-// Handle implementa messaging.Handler.
+// transactionCreatedPayload mirrors the TransactionCreatedEvent payload contract.
+type transactionCreatedPayload struct {
+	TransactionID  string `json:"transaction_id"`
+	UserID         string `json:"user_id"`
+	CategoryID     string `json:"category_id"`
+	ReferenceMonth string `json:"reference_month"`
+}
+
+// Handle implements messaging.Handler for transaction.created events.
 func (c *BudgetEventConsumer) Handle(ctx context.Context, msg *messaging.Message) error {
 	ctx, span := c.o11y.Tracer().Start(ctx, "budget_event_consumer.handle")
 	defer span.End()
@@ -49,92 +55,73 @@ func (c *BudgetEventConsumer) Handle(ctx context.Context, msg *messaging.Message
 		return fmt.Errorf("invalid message ID format: %w", err)
 	}
 
-	// ✅ IDEMPOTÊNCIA ATÔMICA: TryClaimEvent usa INSERT ... ON CONFLICT DO NOTHING,
-	// garantindo que apenas um worker processa o evento mesmo com consumers concorrentes.
-	// Elimina o race condition TOCTOU da abordagem anterior (IsProcessed + MarkAsProcessed).
 	claimed, err := c.processedEventsRepo.TryClaimEvent(ctx, eventID, consumerName)
 	if err != nil {
+		span.RecordError(err)
 		return fmt.Errorf("failed to claim event: %w", err)
 	}
 
 	if !claimed {
-		c.o11y.Logger().Info(ctx, "budget event already processed, skipping",
+		c.o11y.Logger().Info(ctx, "event_already_processed",
+			observability.String("operation", "handle_transaction_created"),
+			observability.String("layer", "consumer"),
+			observability.String("entity", "budget"),
 			observability.String("event_id", eventID.String()),
 		)
 		return nil
 	}
 
-	// Parse payload usando o contrato canônico definido no módulo de invoice
-	var payload invoiceevents.PurchaseEventPayload
+	var payload transactionCreatedPayload
 	if err := json.Unmarshal(msg.Payload, &payload); err != nil {
-		return fmt.Errorf("failed to unmarshal budget event payload: %w", err)
+		span.RecordError(err)
+		return fmt.Errorf("failed to parse transaction.created payload: %w", err)
 	}
 
 	userID, err := vos.NewUUIDFromString(payload.UserID)
 	if err != nil {
+		span.RecordError(err)
 		return fmt.Errorf("invalid user_id: %w", err)
 	}
 
 	categoryID, err := vos.NewUUIDFromString(payload.CategoryID)
 	if err != nil {
+		span.RecordError(err)
 		return fmt.Errorf("invalid category_id: %w", err)
 	}
 
-	var syncErrors []error
-
-	for _, month := range payload.AffectedMonths {
-		referenceMonth, err := pkgVos.NewReferenceMonth(month)
-		if err != nil {
-			c.o11y.Logger().Error(ctx, "invalid reference month in budget event",
-				observability.Error(err),
-				observability.String("month", month),
-			)
-			syncErrors = append(syncErrors, fmt.Errorf("invalid month %s: %w", month, err))
-			continue
-		}
-
-		if err := c.syncUseCase.Execute(ctx, userID, referenceMonth, categoryID); err != nil {
-			c.o11y.Logger().Error(ctx, "failed to sync budget spent amount",
-				observability.Error(err),
-				observability.String("month", month),
-			)
-			syncErrors = append(syncErrors, fmt.Errorf("failed to sync month %s: %w", month, err))
-			continue
-		}
-
-		c.o11y.Logger().Info(ctx, "budget synced for month",
-			observability.String("user_id", payload.UserID),
-			observability.String("month", month),
-			observability.String("category_id", payload.CategoryID),
-		)
+	referenceMonth, err := pkgVos.NewReferenceMonth(payload.ReferenceMonth)
+	if err != nil {
+		span.RecordError(err)
+		return fmt.Errorf("invalid reference_month: %w", err)
 	}
 
-	// Se houve erros de sincronização, liberar o claim para que a mensagem seja
-	// reentregue pelo broker e processada novamente.
-	if len(syncErrors) > 0 {
+	if err := c.syncUseCase.Execute(ctx, userID, referenceMonth, categoryID); err != nil {
+		span.RecordError(err)
 		if deleteErr := c.processedEventsRepo.DeleteClaim(ctx, eventID, consumerName); deleteErr != nil {
-			c.o11y.Logger().Error(ctx, "failed to delete claim after sync error",
-				observability.Error(deleteErr),
+			c.o11y.Logger().Error(ctx, "query_failed",
+				observability.String("operation", "delete_claim"),
+				observability.String("layer", "consumer"),
+				observability.String("entity", "budget"),
 				observability.String("event_id", eventID.String()),
+				observability.Error(deleteErr),
 			)
 		}
-		return fmt.Errorf("failed to sync %d of %d months: %v", len(syncErrors), len(payload.AffectedMonths), syncErrors)
+		return fmt.Errorf("failed to sync budget: %w", err)
 	}
 
-	// Claim inserido pelo TryClaimEvent permanece como registro permanente de idempotência.
-	c.o11y.Logger().Info(ctx, "budget event processed successfully",
+	c.o11y.Logger().Info(ctx, "request_completed",
+		observability.String("operation", "handle_transaction_created"),
+		observability.String("layer", "consumer"),
+		observability.String("entity", "budget"),
 		observability.String("event_id", eventID.String()),
-		observability.Int("months_synced", len(payload.AffectedMonths)),
+		observability.String("user_id", payload.UserID),
+		observability.String("reference_month", payload.ReferenceMonth),
 	)
 
 	return nil
 }
 
-// Topics retorna as routing keys que este consumer processa.
+// Topics returns the routing keys this consumer handles.
 func (c *BudgetEventConsumer) Topics() []string {
-	return []string{
-		"invoice." + invoiceevents.PurchaseCreatedEventName,
-		"invoice." + invoiceevents.PurchaseUpdatedEventName,
-		"invoice." + invoiceevents.PurchaseDeletedEventName,
-	}
+	return []string{"transaction.created"}
 }

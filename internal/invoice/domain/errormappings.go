@@ -48,6 +48,12 @@ func ErrorMappings() map[error]httperrors.ErrorMapping {
 			Message: "Invoice total amount cannot be negative",
 		},
 
+		// Ownership errors → 403 Forbidden
+		ErrInvoiceNotOwned: {
+			Status:  http.StatusForbidden,
+			Message: "Access to this invoice is not allowed",
+		},
+
 		// Not found errors → 404 Not Found
 		ErrInvoiceNotFound: {
 			Status:  http.StatusNotFound,

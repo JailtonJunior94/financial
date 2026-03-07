@@ -2,72 +2,32 @@ package interfaces
 
 import (
 	"context"
-
-	"github.com/jailtonjunior94/financial/internal/transaction/domain/entities"
-	pkgVos "github.com/jailtonjunior94/financial/pkg/domain/vos"
-	"github.com/jailtonjunior94/financial/pkg/pagination"
+	"time"
 
 	"github.com/JailtonJunior94/devkit-go/pkg/database"
-	sharedVos "github.com/JailtonJunior94/devkit-go/pkg/vos"
+	"github.com/JailtonJunior94/devkit-go/pkg/vos"
+
+	"github.com/jailtonjunior94/financial/internal/transaction/domain/entities"
 )
 
-// ListMonthlyParams representa os parâmetros para paginação de monthly transactions.
-type ListMonthlyParams struct {
-	UserID sharedVos.UUID
-	Limit  int
-	Cursor pagination.Cursor
+// ListParams represents the parameters for paginated transaction listing.
+type ListParams struct {
+	UserID        vos.UUID
+	PaymentMethod string
+	CategoryID    string
+	StartDate     *time.Time
+	EndDate       *time.Time
+	Limit         int
+	Cursor        string
 }
 
-// TransactionRepository define o contrato de persistência para transações.
+// TransactionRepository defines the persistence contract for transactions.
 type TransactionRepository interface {
-	// FindOrCreateMonthly busca ou cria o aggregate do mês.
-	FindOrCreateMonthly(
-		ctx context.Context,
-		executor database.DBTX,
-		userID sharedVos.UUID,
-		referenceMonth pkgVos.ReferenceMonth,
-	) (*entities.MonthlyTransaction, error)
-
-	// FindMonthlyByID busca o aggregate por ID com todos os items.
-	FindMonthlyByID(
-		ctx context.Context,
-		executor database.DBTX,
-		userID sharedVos.UUID,
-		monthlyID sharedVos.UUID,
-	) (*entities.MonthlyTransaction, error)
-
-	// UpdateMonthly atualiza o aggregate (totais).
-	UpdateMonthly(
-		ctx context.Context,
-		executor database.DBTX,
-		monthly *entities.MonthlyTransaction,
-	) error
-
-	// InsertItem insere um novo transaction item.
-	InsertItem(
-		ctx context.Context,
-		executor database.DBTX,
-		item *entities.TransactionItem,
-	) error
-
-	// UpdateItem atualiza um transaction item existente.
-	UpdateItem(
-		ctx context.Context,
-		executor database.DBTX,
-		item *entities.TransactionItem,
-	) error
-
-	// FindItemByID busca um item por ID.
-	FindItemByID(
-		ctx context.Context,
-		executor database.DBTX,
-		userID sharedVos.UUID,
-		itemID sharedVos.UUID,
-	) (*entities.TransactionItem, error)
-
-	// ListMonthlyPaginated lista monthly transactions com paginação cursor-based.
-	ListMonthlyPaginated(ctx context.Context, params ListMonthlyParams) ([]*entities.MonthlyTransaction, error)
-
-	// GetMonthlyByID busca um monthly transaction por ID (sem executor UoW).
-	GetMonthlyByID(ctx context.Context, userID sharedVos.UUID, monthlyID sharedVos.UUID) (*entities.MonthlyTransaction, error)
+	Save(ctx context.Context, tx database.DBTX, t *entities.Transaction) error
+	SaveAll(ctx context.Context, tx database.DBTX, ts []*entities.Transaction) error
+	FindByID(ctx context.Context, id vos.UUID) (*entities.Transaction, error)
+	FindByInstallmentGroup(ctx context.Context, groupID vos.UUID) ([]*entities.Transaction, error)
+	Update(ctx context.Context, tx database.DBTX, t *entities.Transaction) error
+	UpdateAll(ctx context.Context, tx database.DBTX, ts []*entities.Transaction) error
+	ListPaginated(ctx context.Context, params ListParams) ([]*entities.Transaction, string, error)
 }

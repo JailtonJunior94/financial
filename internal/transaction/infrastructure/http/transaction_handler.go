@@ -1,9 +1,10 @@
 package http
 
 import (
+	"context"
 	"encoding/json"
-	"fmt"
 	"net/http"
+	"strconv"
 
 	"github.com/JailtonJunior94/devkit-go/pkg/observability"
 	"github.com/JailtonJunior94/devkit-go/pkg/responses"
@@ -14,475 +15,276 @@ import (
 	"github.com/jailtonjunior94/financial/internal/transaction/application/usecase"
 	"github.com/jailtonjunior94/financial/pkg/api/httperrors"
 	"github.com/jailtonjunior94/financial/pkg/api/middlewares"
-	"github.com/jailtonjunior94/financial/pkg/pagination"
 )
 
+// TransactionHandler handles HTTP requests for the transaction resource.
 type TransactionHandler struct {
-	o11y                         observability.Observability
-	errorHandler                 httperrors.ErrorHandler
-	registerTransactionUseCase   usecase.RegisterTransactionUseCase
-	updateTransactionItemUseCase usecase.UpdateTransactionItemUseCase
-	deleteTransactionItemUseCase usecase.DeleteTransactionItemUseCase
-	listMonthlyPaginatedUseCase  usecase.ListMonthlyPaginatedUseCase
-	getMonthlyUseCase            usecase.GetMonthlyUseCase
+	o11y         observability.Observability
+	errorHandler httperrors.ErrorHandler
+	createUC     usecase.CreateTransactionUseCase
+	updateUC     usecase.UpdateTransactionUseCase
+	reverseUC    usecase.ReverseTransactionUseCase
+	listUC       usecase.ListTransactionsUseCase
+	getUC        usecase.GetTransactionUseCase
 }
 
+// NewTransactionHandler creates a new TransactionHandler.
 func NewTransactionHandler(
 	o11y observability.Observability,
 	errorHandler httperrors.ErrorHandler,
-	registerTransactionUseCase usecase.RegisterTransactionUseCase,
-	updateTransactionItemUseCase usecase.UpdateTransactionItemUseCase,
-	deleteTransactionItemUseCase usecase.DeleteTransactionItemUseCase,
-	listMonthlyPaginatedUseCase usecase.ListMonthlyPaginatedUseCase,
-	getMonthlyUseCase usecase.GetMonthlyUseCase,
+	createUC usecase.CreateTransactionUseCase,
+	updateUC usecase.UpdateTransactionUseCase,
+	reverseUC usecase.ReverseTransactionUseCase,
+	listUC usecase.ListTransactionsUseCase,
+	getUC usecase.GetTransactionUseCase,
 ) *TransactionHandler {
 	return &TransactionHandler{
-		o11y:                         o11y,
-		errorHandler:                 errorHandler,
-		registerTransactionUseCase:   registerTransactionUseCase,
-		updateTransactionItemUseCase: updateTransactionItemUseCase,
-		deleteTransactionItemUseCase: deleteTransactionItemUseCase,
-		listMonthlyPaginatedUseCase:  listMonthlyPaginatedUseCase,
-		getMonthlyUseCase:            getMonthlyUseCase,
+		o11y:         o11y,
+		errorHandler: errorHandler,
+		createUC:     createUC,
+		updateUC:     updateUC,
+		reverseUC:    reverseUC,
+		listUC:       listUC,
+		getUC:        getUC,
 	}
 }
 
-// Register godoc
+func (h *TransactionHandler) logInfo(ctx context.Context, event, operation, correlationID, userID string) {
+	h.o11y.Logger().Info(ctx, event,
+		observability.String("operation", operation),
+		observability.String("layer", "handler"),
+		observability.String("entity", "transaction"),
+		observability.String("correlation_id", correlationID),
+		observability.String("user_id", userID),
+	)
+}
+
+func (h *TransactionHandler) logError(ctx context.Context, operation, correlationID, userID string, err error) {
+	h.o11y.Logger().Error(ctx, "request_failed",
+		observability.String("operation", operation),
+		observability.String("layer", "handler"),
+		observability.String("entity", "transaction"),
+		observability.String("correlation_id", correlationID),
+		observability.String("user_id", userID),
+		observability.Error(err),
+	)
+}
+
+const (
+	maxTransactionLimit     = 100
+	defaultTransactionLimit = 20
+)
+
+// Create godoc
 //
-//	@Summary		Registrar transação
-//	@Description	Cria uma nova transação mensal (ou adiciona um item a transação existente do mês).
-//	@Description
-//	@Description	**Enums:**
-//	@Description	- `direction`: `INCOME` | `EXPENSE`
-//	@Description	- `type`: `PIX` | `BOLETO` | `TRANSFER` | `CREDIT_CARD`
-//	@Description
-//	@Description	**Formato de campos:**
-//	@Description	- `reference_month`: `YYYY-MM` (ex: `2025-01`)
-//	@Description	- `amount`: string decimal (ex: `"1234.56"`)
+//	@Summary		Create a new transaction
 //	@Tags			transactions
 //	@Accept			json
 //	@Produce		json
 //	@Security		BearerAuth
-//	@Param			request	body		dtos.RegisterTransactionInput	true	"Dados da transação"
-//	@Success		201		{object}	dtos.MonthlyTransactionOutput	"Transação registrada"
-//	@Failure		400		{object}	httperrors.ProblemDetail		"Dados inválidos"
-//	@Failure		401		{object}	httperrors.ProblemDetail		"Não autenticado"
-//	@Failure		404		{object}	httperrors.ProblemDetail		"Categoria não encontrada"
-//	@Failure		500		{object}	httperrors.ProblemDetail		"Erro interno"
+//	@Param			request	body		dtos.TransactionInput	true	"Transaction input"
+//	@Success		201		{array}		dtos.TransactionOutput
+//	@Failure		400		{object}	httperrors.ProblemDetail
+//	@Failure		401		{object}	httperrors.ProblemDetail
+//	@Failure		422		{object}	httperrors.ProblemDetail
+//	@Failure		500		{object}	httperrors.ProblemDetail
 //	@Router			/api/v1/transactions [post]
-func (h *TransactionHandler) Register(w http.ResponseWriter, r *http.Request) {
-	ctx, span := h.o11y.Tracer().Start(r.Context(), "transaction_handler.register")
+func (h *TransactionHandler) Create(w http.ResponseWriter, r *http.Request) {
+	ctx, span := h.o11y.Tracer().Start(r.Context(), "transaction_handler.create")
 	defer span.End()
-
 	correlationID := trace.SpanFromContext(ctx).SpanContext().TraceID().String()
-
 	user, err := middlewares.GetUserFromContext(ctx)
 	if err != nil {
 		h.errorHandler.HandleError(w, r, err)
 		return
 	}
-
-	h.o11y.Logger().Info(ctx, "request_received",
-		observability.String("operation", "RegisterTransaction"),
-		observability.String("layer", "handler"),
-		observability.String("entity", "transaction"),
-		observability.String("correlation_id", correlationID),
-		observability.String("user_id", user.ID),
-	)
-
-	var input *dtos.RegisterTransactionInput
-	if err = json.NewDecoder(r.Body).Decode(&input); err != nil {
-		h.o11y.Logger().Error(ctx, "validation_failed",
-			observability.String("operation", "RegisterTransaction"),
-			observability.String("layer", "handler"),
-			observability.String("entity", "transaction"),
-			observability.String("correlation_id", correlationID),
-			observability.String("user_id", user.ID),
-			observability.String("error_type", "validation"),
-			observability.String("error_code", "DECODE_BODY_FAILED"),
-			observability.Error(err),
-		)
+	h.logInfo(ctx, "request_received", "create_transaction", correlationID, user.ID)
+	var input dtos.TransactionInput
+	if err := json.NewDecoder(r.Body).Decode(&input); err != nil {
 		h.errorHandler.HandleError(w, r, err)
 		return
 	}
-
-	if validationErrs := input.Validate(); validationErrs.HasErrors() {
-		h.o11y.Logger().Warn(ctx, "validation_failed",
-			observability.String("operation", "RegisterTransaction"),
-			observability.String("layer", "handler"),
-			observability.String("entity", "transaction"),
-			observability.String("correlation_id", correlationID),
-			observability.String("user_id", user.ID),
-			observability.String("error_type", "validation"),
-			observability.String("error_code", "INPUT_VALIDATION_FAILED"),
-		)
-		h.errorHandler.HandleError(w, r, validationErrs)
-		return
-	}
-
-	output, err := h.registerTransactionUseCase.Execute(ctx, user.ID, input)
+	outputs, err := h.createUC.Execute(ctx, user.ID, &input)
 	if err != nil {
-		h.o11y.Logger().Error(ctx, "request_failed",
-			observability.String("operation", "RegisterTransaction"),
-			observability.String("layer", "handler"),
-			observability.String("entity", "transaction"),
-			observability.String("correlation_id", correlationID),
-			observability.String("user_id", user.ID),
-			observability.String("error_type", "business"),
-			observability.String("error_code", "REGISTER_TRANSACTION_FAILED"),
-			observability.Error(err),
-		)
+		span.RecordError(err)
+		h.logError(ctx, "create_transaction", correlationID, user.ID, err)
 		h.errorHandler.HandleError(w, r, err)
 		return
 	}
-
-	h.o11y.Logger().Info(ctx, "request_completed",
-		observability.String("operation", "RegisterTransaction"),
-		observability.String("layer", "handler"),
-		observability.String("entity", "transaction"),
-		observability.String("correlation_id", correlationID),
-		observability.String("user_id", user.ID),
-	)
-
-	responses.JSON(w, http.StatusCreated, output)
+	h.logInfo(ctx, "request_completed", "create_transaction", correlationID, user.ID)
+	responses.JSON(w, http.StatusCreated, outputs)
 }
 
 // List godoc
 //
-//	@Summary		Listar transações mensais
-//	@Description	Retorna a lista paginada de transações mensais consolidadas do usuário autenticado.
-//	@Description	Cada item representa um mês com seus totais e itens individuais.
+//	@Summary		List transactions with pagination
 //	@Tags			transactions
 //	@Produce		json
 //	@Security		BearerAuth
-//	@Param			limit	query		integer	false	"Itens por página (default: 20, max: 100)"	minimum(1)	maximum(100)	default(20)
-//	@Param			cursor	query		string	false	"Cursor de paginação"
-//	@Success		200		{object}	dtos.MonthlyTransactionPaginatedOutput	"Lista paginada de transações mensais"
-//	@Failure		400		{object}	httperrors.ProblemDetail									"Parâmetro inválido"
-//	@Failure		401		{object}	httperrors.ProblemDetail									"Não autenticado"
-//	@Failure		500		{object}	httperrors.ProblemDetail									"Erro interno"
+//	@Param			payment_method	query	string	false	"Filter by payment method"
+//	@Param			category_id		query	string	false	"Filter by category ID"
+//	@Param			start_date		query	string	false	"Start date (YYYY-MM-DD)"
+//	@Param			end_date		query	string	false	"End date (YYYY-MM-DD)"
+//	@Param			limit			query	int		false	"Page size (default 20, max 100)"
+//	@Param			cursor			query	string	false	"Pagination cursor"
+//	@Success		200	{object}	dtos.TransactionListOutput
+//	@Failure		401	{object}	httperrors.ProblemDetail
+//	@Failure		500	{object}	httperrors.ProblemDetail
 //	@Router			/api/v1/transactions [get]
 func (h *TransactionHandler) List(w http.ResponseWriter, r *http.Request) {
 	ctx, span := h.o11y.Tracer().Start(r.Context(), "transaction_handler.list")
 	defer span.End()
-
 	correlationID := trace.SpanFromContext(ctx).SpanContext().TraceID().String()
-
 	user, err := middlewares.GetUserFromContext(ctx)
 	if err != nil {
 		h.errorHandler.HandleError(w, r, err)
 		return
 	}
-
-	h.o11y.Logger().Info(ctx, "request_received",
-		observability.String("operation", "ListTransactions"),
-		observability.String("layer", "handler"),
-		observability.String("entity", "transaction"),
-		observability.String("correlation_id", correlationID),
-		observability.String("user_id", user.ID),
-	)
-
-	params, err := pagination.ParseCursorParams(r, 20, 100)
+	h.logInfo(ctx, "request_received", "list_transactions", correlationID, user.ID)
+	params := &dtos.ListParams{
+		PaymentMethod: r.URL.Query().Get("payment_method"),
+		CategoryID:    r.URL.Query().Get("category_id"),
+		StartDate:     r.URL.Query().Get("start_date"),
+		EndDate:       r.URL.Query().Get("end_date"),
+		Limit:         parseTransactionLimit(r.URL.Query().Get("limit")),
+		Cursor:        r.URL.Query().Get("cursor"),
+	}
+	output, err := h.listUC.Execute(ctx, user.ID, params)
 	if err != nil {
-		h.o11y.Logger().Error(ctx, "request_failed",
-			observability.String("operation", "ListTransactions"),
-			observability.String("layer", "handler"),
-			observability.String("entity", "transaction"),
-			observability.String("correlation_id", correlationID),
-			observability.String("user_id", user.ID),
-			observability.String("error_type", "validation"),
-			observability.String("error_code", "PAGINATION_PARAMS_INVALID"),
-			observability.Error(err),
-		)
+		span.RecordError(err)
+		h.logError(ctx, "list_transactions", correlationID, user.ID, err)
 		h.errorHandler.HandleError(w, r, err)
 		return
 	}
-
-	output, err := h.listMonthlyPaginatedUseCase.Execute(ctx, usecase.ListMonthlyPaginatedInput{
-		UserID: user.ID,
-		Limit:  params.Limit,
-		Cursor: params.Cursor,
-	})
-	if err != nil {
-		h.o11y.Logger().Error(ctx, "request_failed",
-			observability.String("operation", "ListTransactions"),
-			observability.String("layer", "handler"),
-			observability.String("entity", "transaction"),
-			observability.String("correlation_id", correlationID),
-			observability.String("user_id", user.ID),
-			observability.String("error_type", "business"),
-			observability.String("error_code", "LIST_TRANSACTIONS_FAILED"),
-			observability.Error(err),
-		)
-		h.errorHandler.HandleError(w, r, err)
-		return
-	}
-
-	h.o11y.Logger().Info(ctx, "request_completed",
-		observability.String("operation", "ListTransactions"),
-		observability.String("layer", "handler"),
-		observability.String("entity", "transaction"),
-		observability.String("correlation_id", correlationID),
-		observability.String("user_id", user.ID),
-	)
-
-	response := pagination.NewPaginatedResponse(output.MonthlyTransactions, params.Limit, output.NextCursor)
-	responses.JSON(w, http.StatusOK, response)
+	h.logInfo(ctx, "request_completed", "list_transactions", correlationID, user.ID)
+	responses.JSON(w, http.StatusOK, output)
 }
 
 // Get godoc
 //
-//	@Summary		Buscar transação mensal por ID
-//	@Description	Retorna os detalhes de uma transação mensal específica, incluindo todos os itens e totais.
+//	@Summary		Get a transaction by ID
 //	@Tags			transactions
 //	@Produce		json
 //	@Security		BearerAuth
-//	@Param			id	path		string							true	"ID da transação mensal"	format(uuid)
-//	@Success		200	{object}	dtos.MonthlyTransactionOutput	"Dados da transação mensal"
-//	@Failure		400	{object}	httperrors.ProblemDetail		"ID inválido"
-//	@Failure		401	{object}	httperrors.ProblemDetail		"Não autenticado"
-//	@Failure		404	{object}	httperrors.ProblemDetail		"Transação não encontrada"
-//	@Failure		500	{object}	httperrors.ProblemDetail		"Erro interno"
+//	@Param			id	path		string	true	"Transaction ID"	format(uuid)
+//	@Success		200	{object}	dtos.TransactionOutput
+//	@Failure		401	{object}	httperrors.ProblemDetail
+//	@Failure		403	{object}	httperrors.ProblemDetail
+//	@Failure		404	{object}	httperrors.ProblemDetail
+//	@Failure		500	{object}	httperrors.ProblemDetail
 //	@Router			/api/v1/transactions/{id} [get]
 func (h *TransactionHandler) Get(w http.ResponseWriter, r *http.Request) {
 	ctx, span := h.o11y.Tracer().Start(r.Context(), "transaction_handler.get")
 	defer span.End()
-
 	correlationID := trace.SpanFromContext(ctx).SpanContext().TraceID().String()
-
 	user, err := middlewares.GetUserFromContext(ctx)
 	if err != nil {
 		h.errorHandler.HandleError(w, r, err)
 		return
 	}
-
-	monthlyID := chi.URLParam(r, "id")
-	if monthlyID == "" {
-		h.errorHandler.HandleError(w, r, fmt.Errorf("monthly_id is required"))
-		return
-	}
-
-	h.o11y.Logger().Info(ctx, "request_received",
-		observability.String("operation", "GetTransaction"),
-		observability.String("layer", "handler"),
-		observability.String("entity", "transaction"),
-		observability.String("correlation_id", correlationID),
-		observability.String("user_id", user.ID),
-		observability.String("monthly_id", monthlyID),
-	)
-
-	output, err := h.getMonthlyUseCase.Execute(ctx, user.ID, monthlyID)
+	transactionID := chi.URLParam(r, "id")
+	h.logInfo(ctx, "request_received", "get_transaction", correlationID, user.ID)
+	output, err := h.getUC.Execute(ctx, user.ID, transactionID)
 	if err != nil {
-		h.o11y.Logger().Error(ctx, "request_failed",
-			observability.String("operation", "GetTransaction"),
-			observability.String("layer", "handler"),
-			observability.String("entity", "transaction"),
-			observability.String("correlation_id", correlationID),
-			observability.String("user_id", user.ID),
-			observability.String("monthly_id", monthlyID),
-			observability.String("error_type", "business"),
-			observability.String("error_code", "GET_TRANSACTION_FAILED"),
-			observability.Error(err),
-		)
+		span.RecordError(err)
+		h.logError(ctx, "get_transaction", correlationID, user.ID, err)
 		h.errorHandler.HandleError(w, r, err)
 		return
 	}
-
-	h.o11y.Logger().Info(ctx, "request_completed",
-		observability.String("operation", "GetTransaction"),
-		observability.String("layer", "handler"),
-		observability.String("entity", "transaction"),
-		observability.String("correlation_id", correlationID),
-		observability.String("user_id", user.ID),
-		observability.String("monthly_id", monthlyID),
-	)
-
+	h.logInfo(ctx, "request_completed", "get_transaction", correlationID, user.ID)
 	responses.JSON(w, http.StatusOK, output)
 }
 
-// UpdateItem godoc
+// Update godoc
 //
-//	@Summary		Atualizar item de transação
-//	@Description	Atualiza os dados de um item individual dentro de uma transação mensal.
-//	@Description	O `transactionId` é o ID do consolidado mensal; o `itemId` é o item específico.
-//	@Description
-//	@Description	**Enums:**
-//	@Description	- `direction`: `INCOME` | `EXPENSE`
-//	@Description	- `type`: `PIX` | `BOLETO` | `TRANSFER` | `CREDIT_CARD`
+//	@Summary		Update a transaction
 //	@Tags			transactions
 //	@Accept			json
 //	@Produce		json
 //	@Security		BearerAuth
-//	@Param			transactionId	path		string							true	"ID da transação mensal"	format(uuid)
-//	@Param			itemId			path		string							true	"ID do item de transação"	format(uuid)
-//	@Param			request			body		dtos.UpdateTransactionItemInput	true	"Dados atualizados do item"
-//	@Success		200				{object}	dtos.TransactionItemOutput		"Item atualizado"
-//	@Failure		400				{object}	httperrors.ProblemDetail		"Dados inválidos"
-//	@Failure		401				{object}	httperrors.ProblemDetail		"Não autenticado"
-//	@Failure		404				{object}	httperrors.ProblemDetail		"Item não encontrado"
-//	@Failure		500				{object}	httperrors.ProblemDetail		"Erro interno"
-//	@Router			/api/v1/transactions/{transactionId}/items/{itemId} [put]
-func (h *TransactionHandler) UpdateItem(w http.ResponseWriter, r *http.Request) {
-	ctx, span := h.o11y.Tracer().Start(r.Context(), "transaction_handler.update_item")
+//	@Param			id		path		string						true	"Transaction ID"	format(uuid)
+//	@Param			request	body		dtos.TransactionUpdateInput	true	"Update input"
+//	@Success		200		{object}	dtos.TransactionOutput
+//	@Failure		400		{object}	httperrors.ProblemDetail
+//	@Failure		401		{object}	httperrors.ProblemDetail
+//	@Failure		403		{object}	httperrors.ProblemDetail
+//	@Failure		404		{object}	httperrors.ProblemDetail
+//	@Failure		422		{object}	httperrors.ProblemDetail
+//	@Failure		500		{object}	httperrors.ProblemDetail
+//	@Router			/api/v1/transactions/{id} [put]
+func (h *TransactionHandler) Update(w http.ResponseWriter, r *http.Request) {
+	ctx, span := h.o11y.Tracer().Start(r.Context(), "transaction_handler.update")
 	defer span.End()
-
 	correlationID := trace.SpanFromContext(ctx).SpanContext().TraceID().String()
-
 	user, err := middlewares.GetUserFromContext(ctx)
 	if err != nil {
 		h.errorHandler.HandleError(w, r, err)
 		return
 	}
-
-	transactionID := chi.URLParam(r, "transactionId")
-	itemID := chi.URLParam(r, "itemId")
-
-	if transactionID == "" || itemID == "" {
-		h.errorHandler.HandleError(w, r, fmt.Errorf("transactionId and itemId are required"))
-		return
-	}
-
-	h.o11y.Logger().Info(ctx, "request_received",
-		observability.String("operation", "UpdateTransactionItem"),
-		observability.String("layer", "handler"),
-		observability.String("entity", "transaction"),
-		observability.String("correlation_id", correlationID),
-		observability.String("user_id", user.ID),
-		observability.String("transaction_id", transactionID),
-		observability.String("item_id", itemID),
-	)
-
-	var input *dtos.UpdateTransactionItemInput
-	if err = json.NewDecoder(r.Body).Decode(&input); err != nil {
-		h.o11y.Logger().Error(ctx, "validation_failed",
-			observability.String("operation", "UpdateTransactionItem"),
-			observability.String("layer", "handler"),
-			observability.String("entity", "transaction"),
-			observability.String("correlation_id", correlationID),
-			observability.String("user_id", user.ID),
-			observability.String("error_type", "validation"),
-			observability.String("error_code", "DECODE_BODY_FAILED"),
-			observability.Error(err),
-		)
+	transactionID := chi.URLParam(r, "id")
+	h.logInfo(ctx, "request_received", "update_transaction", correlationID, user.ID)
+	var input dtos.TransactionUpdateInput
+	if err := json.NewDecoder(r.Body).Decode(&input); err != nil {
 		h.errorHandler.HandleError(w, r, err)
 		return
 	}
-
-	if validationErrs := input.Validate(); validationErrs.HasErrors() {
-		h.o11y.Logger().Warn(ctx, "validation_failed",
-			observability.String("operation", "UpdateTransactionItem"),
-			observability.String("layer", "handler"),
-			observability.String("entity", "transaction"),
-			observability.String("correlation_id", correlationID),
-			observability.String("user_id", user.ID),
-			observability.String("error_type", "validation"),
-			observability.String("error_code", "INPUT_VALIDATION_FAILED"),
-		)
-		h.errorHandler.HandleError(w, r, validationErrs)
-		return
-	}
-
-	// Note: Current use case uses itemId only. The domain aggregate ensures item belongs to transaction.
-	output, err := h.updateTransactionItemUseCase.Execute(ctx, user.ID, itemID, input)
+	output, err := h.updateUC.Execute(ctx, user.ID, transactionID, &input)
 	if err != nil {
-		h.o11y.Logger().Error(ctx, "request_failed",
-			observability.String("operation", "UpdateTransactionItem"),
-			observability.String("layer", "handler"),
-			observability.String("entity", "transaction"),
-			observability.String("correlation_id", correlationID),
-			observability.String("user_id", user.ID),
-			observability.String("item_id", itemID),
-			observability.String("error_type", "business"),
-			observability.String("error_code", "UPDATE_TRANSACTION_ITEM_FAILED"),
-			observability.Error(err),
-		)
+		span.RecordError(err)
+		h.logError(ctx, "update_transaction", correlationID, user.ID, err)
 		h.errorHandler.HandleError(w, r, err)
 		return
 	}
-
-	h.o11y.Logger().Info(ctx, "request_completed",
-		observability.String("operation", "UpdateTransactionItem"),
-		observability.String("layer", "handler"),
-		observability.String("entity", "transaction"),
-		observability.String("correlation_id", correlationID),
-		observability.String("user_id", user.ID),
-		observability.String("item_id", itemID),
-	)
-
+	h.logInfo(ctx, "request_completed", "update_transaction", correlationID, user.ID)
 	responses.JSON(w, http.StatusOK, output)
 }
 
-// DeleteItem godoc
+// Reverse godoc
 //
-//	@Summary		Remover item de transação
-//	@Description	Remove um item individual de uma transação mensal. Se for o último item, a transação mensal também é removida.
+//	@Summary		Reverse a transaction (cancel installments in open invoices)
 //	@Tags			transactions
 //	@Produce		json
 //	@Security		BearerAuth
-//	@Param			transactionId	path	string	true	"ID da transação mensal"	format(uuid)
-//	@Param			itemId			path	string	true	"ID do item de transação"	format(uuid)
-//	@Success		204	"Item removido com sucesso"
-//	@Failure		400	{object}	httperrors.ProblemDetail	"IDs inválidos"
-//	@Failure		401	{object}	httperrors.ProblemDetail	"Não autenticado"
-//	@Failure		404	{object}	httperrors.ProblemDetail	"Item não encontrado"
-//	@Failure		500	{object}	httperrors.ProblemDetail	"Erro interno"
-//	@Router			/api/v1/transactions/{transactionId}/items/{itemId} [delete]
-func (h *TransactionHandler) DeleteItem(w http.ResponseWriter, r *http.Request) {
-	ctx, span := h.o11y.Tracer().Start(r.Context(), "transaction_handler.delete_item")
+//	@Param			id	path		string	true	"Transaction ID"	format(uuid)
+//	@Success		200	{object}	dtos.ReverseOutput
+//	@Failure		401	{object}	httperrors.ProblemDetail
+//	@Failure		403	{object}	httperrors.ProblemDetail
+//	@Failure		404	{object}	httperrors.ProblemDetail
+//	@Failure		409	{object}	httperrors.ProblemDetail
+//	@Failure		500	{object}	httperrors.ProblemDetail
+//	@Router			/api/v1/transactions/{id}/reverse [post]
+func (h *TransactionHandler) Reverse(w http.ResponseWriter, r *http.Request) {
+	ctx, span := h.o11y.Tracer().Start(r.Context(), "transaction_handler.reverse")
 	defer span.End()
-
 	correlationID := trace.SpanFromContext(ctx).SpanContext().TraceID().String()
-
 	user, err := middlewares.GetUserFromContext(ctx)
 	if err != nil {
 		h.errorHandler.HandleError(w, r, err)
 		return
 	}
-
-	transactionID := chi.URLParam(r, "transactionId")
-	itemID := chi.URLParam(r, "itemId")
-
-	if transactionID == "" || itemID == "" {
-		h.errorHandler.HandleError(w, r, fmt.Errorf("transactionId and itemId are required"))
-		return
-	}
-
-	h.o11y.Logger().Info(ctx, "request_received",
-		observability.String("operation", "DeleteTransactionItem"),
-		observability.String("layer", "handler"),
-		observability.String("entity", "transaction"),
-		observability.String("correlation_id", correlationID),
-		observability.String("user_id", user.ID),
-		observability.String("transaction_id", transactionID),
-		observability.String("item_id", itemID),
-	)
-
-	// Note: Current use case uses itemId only. The domain aggregate ensures item belongs to transaction.
-	_, err = h.deleteTransactionItemUseCase.Execute(ctx, user.ID, itemID)
+	transactionID := chi.URLParam(r, "id")
+	h.logInfo(ctx, "request_received", "reverse_transaction", correlationID, user.ID)
+	output, err := h.reverseUC.Execute(ctx, user.ID, transactionID)
 	if err != nil {
-		h.o11y.Logger().Error(ctx, "request_failed",
-			observability.String("operation", "DeleteTransactionItem"),
-			observability.String("layer", "handler"),
-			observability.String("entity", "transaction"),
-			observability.String("correlation_id", correlationID),
-			observability.String("user_id", user.ID),
-			observability.String("item_id", itemID),
-			observability.String("error_type", "business"),
-			observability.String("error_code", "DELETE_TRANSACTION_ITEM_FAILED"),
-			observability.Error(err),
-		)
+		span.RecordError(err)
+		h.logError(ctx, "reverse_transaction", correlationID, user.ID, err)
 		h.errorHandler.HandleError(w, r, err)
 		return
 	}
+	h.logInfo(ctx, "request_completed", "reverse_transaction", correlationID, user.ID)
+	responses.JSON(w, http.StatusOK, output)
+}
 
-	h.o11y.Logger().Info(ctx, "request_completed",
-		observability.String("operation", "DeleteTransactionItem"),
-		observability.String("layer", "handler"),
-		observability.String("entity", "transaction"),
-		observability.String("correlation_id", correlationID),
-		observability.String("user_id", user.ID),
-		observability.String("item_id", itemID),
-	)
-
-	responses.JSON(w, http.StatusNoContent, nil)
+func parseTransactionLimit(raw string) int {
+	if raw == "" {
+		return defaultTransactionLimit
+	}
+	parsed, err := strconv.Atoi(raw)
+	if err != nil || parsed <= 0 {
+		return defaultTransactionLimit
+	}
+	if parsed > maxTransactionLimit {
+		return maxTransactionLimit
+	}
+	return parsed
 }

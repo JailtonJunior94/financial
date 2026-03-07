@@ -164,7 +164,10 @@ func (_c *CardRepository_FindByIDOnly_Call) Run(run func(ctx context.Context, id
 		if args[1] != nil {
 			arg1 = args[1].(vos.UUID)
 		}
-		run(arg0, arg1)
+		run(
+			arg0,
+			arg1,
+		)
 	})
 	return _c
 }

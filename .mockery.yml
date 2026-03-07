@@ -46,3 +46,23 @@ packages:
       pkgname: mocks
     interfaces:
       ErrorHandler: {}
+  github.com/jailtonjunior94/financial/internal/transaction/domain/interfaces:
+    config:
+      dir: ./internal/transaction/domain/interfaces/mocks
+      pkgname: mocks
+    interfaces:
+      TransactionRepository: {}
+      InvoiceProvider: {}
+  github.com/jailtonjunior94/financial/internal/invoice/domain/interfaces:
+    config:
+      dir: ./internal/invoice/domain/interfaces/mocks
+      pkgname: mocks
+    interfaces:
+      InvoiceRepository: {}
+      CardProvider: {}
+  github.com/jailtonjunior94/financial/pkg/outbox:
+    config:
+      dir: ./pkg/outbox/mocks
+      pkgname: mocks
+    interfaces:
+      Service: {}

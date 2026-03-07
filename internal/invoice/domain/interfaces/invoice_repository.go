@@ -10,9 +10,11 @@ import (
 	"github.com/jailtonjunior94/financial/pkg/pagination"
 )
 
-// ListInvoicesByCardParams representa os parâmetros para paginação de faturas por cartão.
+// ListInvoicesByCardParams holds the parameters for cursor-based pagination of invoices by card.
 type ListInvoicesByCardParams struct {
+	UserID vos.UUID
 	CardID vos.UUID
+	Status string // optional filter: "" | "open" | "closed" | "paid"
 	Limit  int
 	Cursor pagination.Cursor
 }
@@ -83,4 +85,8 @@ type InvoiceRepository interface {
 		categoryID vos.UUID,
 		description string,
 	) ([]*entities.InvoiceItem, error)
+
+	// FindStatus returns the status of an invoice by ID.
+	// Returns ("", nil) if not found.
+	FindStatus(ctx context.Context, invoiceID vos.UUID) (string, error)
 }

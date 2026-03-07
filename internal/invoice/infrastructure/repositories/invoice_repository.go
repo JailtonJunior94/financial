@@ -95,7 +95,8 @@ func (r *invoiceRepository) UpsertInvoice(ctx context.Context, invoice *entities
 		ON CONFLICT (user_id, card_id, reference_month)
 		DO UPDATE SET updated_at = invoices.updated_at
 		RETURNING id, user_id, card_id, reference_month, due_date,
-		          total_amount, created_at, updated_at, deleted_at
+		          total_amount, created_at, updated_at, deleted_at,
+		          COALESCE(status, 'open')
 	`
 
 	row := r.db.QueryRowContext(ctx, query,
@@ -110,7 +111,7 @@ func (r *invoiceRepository) UpsertInvoice(ctx context.Context, invoice *entities
 		invoice.DeletedAt.Ptr(),
 	)
 
-	result, err := r.scanInvoice(row)
+	result, err := r.scanInvoiceWithStatus(row)
 	if err != nil {
 		span.RecordError(err)
 		r.fm.RecordRepositoryFailure(ctx, "upsert_invoice", "invoice", "infra", time.Since(start))
@@ -127,6 +128,30 @@ func (r *invoiceRepository) UpsertInvoice(ctx context.Context, invoice *entities
 
 	r.fm.RecordRepositoryQuery(ctx, "upsert_invoice", "invoice", time.Since(start))
 	return result, nil
+}
+
+// FindStatus returns the status of an invoice by ID. Returns ("", nil) if not found.
+func (r *invoiceRepository) FindStatus(ctx context.Context, invoiceID vos.UUID) (string, error) {
+	start := time.Now()
+	ctx, span := r.o11y.Tracer().Start(ctx, "invoice_repository.find_status")
+	defer span.End()
+
+	query := `SELECT COALESCE(status, 'open') FROM invoices WHERE id = $1 AND deleted_at IS NULL`
+
+	var status string
+	err := r.db.QueryRowContext(ctx, query, invoiceID.Value).Scan(&status)
+	if err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			r.fm.RecordRepositoryQuery(ctx, "find_status", "invoice", time.Since(start))
+			return "", nil
+		}
+		span.RecordError(err)
+		r.fm.RecordRepositoryFailure(ctx, "find_status", "invoice", "infra", time.Since(start))
+		return "", err
+	}
+
+	r.fm.RecordRepositoryQuery(ctx, "find_status", "invoice", time.Since(start))
+	return status, nil
 }
 
 func (r *invoiceRepository) InsertItems(ctx context.Context, items []*entities.InvoiceItem) error {
@@ -526,14 +551,12 @@ func (r *invoiceRepository) FindByCard(ctx context.Context, cardID vos.UUID) ([]
 	return invoices, nil
 }
 
-// ListByCard busca faturas de um cartão com cursor-based pagination.
-// Ordena por reference_month DESC, id DESC (mais recentes primeiro).
+// ListByCard fetches invoices for a card with cursor-based pagination.
+// Orders by reference_month DESC, id DESC (most recent first).
 func (r *invoiceRepository) ListByCard(ctx context.Context, params interfaces.ListInvoicesByCardParams) ([]*entities.Invoice, error) {
 	start := time.Now()
 	ctx, span := r.o11y.Tracer().Start(ctx, "invoice_repository.list_by_card")
 	defer span.End()
-
-	// Base query com ORDER BY determinístico
 	query := `
 		SELECT
 			id,
@@ -547,31 +570,26 @@ func (r *invoiceRepository) ListByCard(ctx context.Context, params interfaces.Li
 			deleted_at
 		FROM invoices
 		WHERE
-			card_id = $1
+			user_id = $1
+			AND card_id = $2
 			AND deleted_at IS NULL`
-
-	args := []interface{}{params.CardID}
-	argIndex := 2
-
-	// Adicionar condição de cursor (keyset pagination)
-	// Para ORDER BY DESC, usamos < em vez de >
+	args := []interface{}{params.UserID, params.CardID}
+	argIndex := 3
+	if params.Status != "" {
+		query += fmt.Sprintf(` AND status = $%d`, argIndex)
+		args = append(args, params.Status)
+		argIndex++
+	}
 	if refMonth, ok := params.Cursor.GetString("reference_month"); ok {
 		if id, ok := params.Cursor.GetString("id"); ok {
-			// WHERE (reference_month, id) < (cursor_month, cursor_id)
 			query += fmt.Sprintf(` AND (reference_month, id) < ($%d, $%d)`, argIndex, argIndex+1)
 			args = append(args, refMonth, id)
 			argIndex += 2
 		}
 	}
-
-	// ORDER BY determinístico (reference_month DESC, id DESC)
 	query += ` ORDER BY reference_month DESC, id DESC`
-
-	// LIMIT
 	query += fmt.Sprintf(` LIMIT $%d`, argIndex)
 	args = append(args, params.Limit)
-
-	// Executar query
 	rows, err := r.db.QueryContext(ctx, query, args...)
 	if err != nil {
 		span.RecordError(err)
@@ -579,8 +597,6 @@ func (r *invoiceRepository) ListByCard(ctx context.Context, params interfaces.Li
 		return nil, err
 	}
 	defer func() { _ = rows.Close() }()
-
-	// Scanear resultados
 	invoices := make([]*entities.Invoice, 0)
 	for rows.Next() {
 		invoice, err := r.scanInvoice(rows)
@@ -591,33 +607,27 @@ func (r *invoiceRepository) ListByCard(ctx context.Context, params interfaces.Li
 		}
 		invoices = append(invoices, invoice)
 	}
-
 	if err := rows.Err(); err != nil {
 		span.RecordError(err)
 		r.fm.RecordRepositoryFailure(ctx, "list_by_card", "invoice", "infra", time.Since(start))
 		return nil, err
 	}
-
-	// Bulk-fetch items for all invoices in a single query (avoids N+1)
 	ids := make([]vos.UUID, len(invoices))
 	for i, inv := range invoices {
 		ids[i] = inv.ID
 	}
-
 	itemsByInvoice, err := r.findItemsByInvoiceIDs(ctx, ids)
 	if err != nil {
 		span.RecordError(err)
 		r.fm.RecordRepositoryFailure(ctx, "list_by_card", "invoice", "infra", time.Since(start))
 		return nil, err
 	}
-
 	for _, inv := range invoices {
 		inv.Items = itemsByInvoice[inv.ID.String()]
 		if inv.Items == nil {
 			inv.Items = []*entities.InvoiceItem{}
 		}
 	}
-
 	r.fm.RecordRepositoryQuery(ctx, "list_by_card", "invoice", time.Since(start))
 	return invoices, nil
 }
@@ -859,6 +869,41 @@ func (r *invoiceRepository) scanInvoice(s scanner) (*entities.Invoice, error) {
 		&invoice.CreatedAt,
 		&updatedAt,
 		&deletedAt,
+	)
+	if err != nil {
+		return nil, err
+	}
+
+	invoice.TotalAmount, err = vos.NewMoneyFromString(totalAmount, constants.DefaultCurrency)
+	if err != nil {
+		return nil, fmt.Errorf("failed to create Money from total_amount: %w", err)
+	}
+
+	invoice.ReferenceMonth = pkgVos.NewReferenceMonthFromDate(referenceDate)
+	invoice.UpdatedAt = helpers.ParseNullableTime(updatedAt)
+	invoice.DeletedAt = helpers.ParseNullableTime(deletedAt)
+
+	return &invoice, nil
+}
+
+// scanInvoiceWithStatus scans an invoice row that includes the status column.
+func (r *invoiceRepository) scanInvoiceWithStatus(s scanner) (*entities.Invoice, error) {
+	var invoice entities.Invoice
+	var updatedAt, deletedAt *time.Time
+	var totalAmount string
+	var referenceDate time.Time
+
+	err := s.Scan(
+		&invoice.ID.Value,
+		&invoice.UserID.Value,
+		&invoice.CardID.Value,
+		&referenceDate,
+		&invoice.DueDate,
+		&totalAmount,
+		&invoice.CreatedAt,
+		&updatedAt,
+		&deletedAt,
+		&invoice.Status,
 	)
 	if err != nil {
 		return nil, err

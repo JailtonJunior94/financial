@@ -1,9 +1,6 @@
-// NOTA: InvoiceItemAddedEvent faz parte de uma futura pipeline de eventos de
-// granularidade fina (evento por item adicionado à fatura).
-// Atualmente NÃO está conectado ao outbox nem ao Budget Consumer.
-// O Budget Consumer usa PurchaseEventPayload (via outbox/RabbitMQ), não este evento.
-// O comentário abaixo descreve a intenção de design para quando este evento for integrado.
-// Não remover — é parte do vocabulário de domínio previsto para evolução futura.
+// InvoiceItemAddedEvent is part of a future fine-grained event pipeline.
+// Currently NOT connected to the outbox or any consumer.
+// Retained as part of the planned domain vocabulary for future integration.
 package events
 
 import (
