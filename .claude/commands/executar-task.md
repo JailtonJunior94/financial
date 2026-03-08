@@ -1,107 +1,65 @@
-Você é um assistente IA responsável por implementar as tarefas de forma correta. Sua tarefa é identificar a próxima tarefa disponível, realizar a configuração necessária e preparar-se para começar o trabalho E IMPLEMENTAR.
+Voce e um assistente IA para implementacao de tasks aprovadas com validacao tecnica obrigatoria.
 
-<critical>Após completar a tarefa, **marque como completa em tasks.md**</critical>
-<critical>Você não deve se apressar para finalizar a tarefa, sempre verifique os arquivos necessários, verifique os testes, faça um processo de reasoning para garantir tanto a compreensão quanto na execução (you are not lazy)</critical>
-<critical>A TAREFA NÃO PODE SER CONSIDERADA COMPLETA ENQUANTO TODOS OS TESTES NÃO ESTIVEREM PASSANDO, **com 100% de sucesso**</critical>
-<critical>Você não pode finalizar a tarefa sem executar o agente `task-reviewer` (via Agent tool com subagent_type task-reviewer), caso ele não passe você deve resolver os problemas e analisar novamente</critical>
+<critical>Nao marcar tarefa como concluida sem validacao tecnica</critical>
+<critical>Nao finalizar sem executar code-reviewer</critical>
+<critical>A tarefa so pode ser concluida com aprovacao de QA e code-reviewer</critical>
 
-## Stack do Projeto
+## Contexto Obrigatorio
+- `.claude/context/stack.md`
+- `.claude/context/tooling.md`
+- `.claude/context/paths.md`
+- `.claude/rules/`
 
-- **Tipo:** Backend - Monolito Modular
-- **Linguagem:** Go (Golang)
-- **Arquitetura:** Hexagonal (Ports & Adapters)
-- **Banco de Dados:** CockroachDB
-- **Mensageria:** RabbitMQ
-- **HTTP Router:** go-chi
-- **Testes:** Testify (assert, require, mock) + Mockery
-- **Observabilidade:** OpenTelemetry
-- **CLI/Config:** Cobra + Viper
-- **Comandos:** `make test`, `make lint`, `make check`, `make build`
+## Entradas
+- `tasks/prd-[nome-funcionalidade]/tasks.md`
+- arquivo da tarefa selecionada (`[num]_task.md`)
+- `prd.md` e `techspec.md`
 
-## Informações Fornecidas
+## Algoritmo de selecao da proxima tarefa
+1. Escolher a primeira task com status `pending`.
+2. Confirmar que todas as dependencias dela estao `done`.
+3. Se nenhuma task elegivel existir, reportar bloqueio explicitamente.
+4. Estados permitidos durante execucao: `in_progress`, `blocked`, `needs_input`, `done`.
 
-## Localização dos Arquivos
+## Workflow Deterministico
 
-- PRD: `./tasks/prd-[nome-funcionalidade]/prd.md`
-- Tech Spec: `./tasks/prd-[nome-funcionalidade]/techspec.md`
-- Tasks: `./tasks/prd-[nome-funcionalidade]/tasks.md`
-- Regras do Projeto: `.claude/rules/`
+### 1. Preparacao
+- Ler contexto (PRD, TechSpec, task alvo).
+- Resumir objetivo, dependencias, riscos e criterios de aceite.
 
-## Etapas para Executar
+### 2. Plano de implementacao
+- Definir passos pequenos e verificaveis.
+- Identificar arquivos a alterar.
 
-### 1. Configuração Pré-Tarefa
+### 3. Implementacao
+- Aplicar mudancas seguindo arquitetura e regras.
+- Evitar gambiarras e acoplamentos desnecessarios.
 
-- Ler a definição da tarefa
-- Revisar o contexto do PRD
-- Verificar requisitos da tech spec
-- Entender dependências de tarefas anteriores
+### 4. Validacao tecnica
+- Executar testes/lint da task e do impacto.
+- Quando houver baseline com falhas legadas, nao piorar baseline e registrar diferenca.
+- Registrar evidencias minimas: comandos executados, resultado resumido e arquivos impactados.
 
-### 2. Análise da Tarefa
+### 5. Revisao obrigatoria
+- Executar skill `code-reviewer`.
+- A aprovacao final deve ser `APPROVED` ou `APPROVED_WITH_REMARKS` sem itens criticos/major em aberto.
+- Limite de remedicao: maximo 2 ciclos de ajuste apos review.
 
-Analise considerando:
+### 6. QA obrigatorio
+- Executar skill `qa`.
+- A aprovacao final de QA deve ser `APPROVED`.
+- Corrigir falhas encontradas antes de seguir.
+- Limite de remedicao: maximo 2 ciclos de ajuste apos QA.
 
-- Objetivos principais da tarefa
-- Como a tarefa se encaixa no contexto do projeto
-- Alinhamento com regras e padrões do projeto
-- Possíveis soluções ou abordagens
-
-### 3. Resumo da Tarefa
-
-```
-ID da Tarefa: [ID ou número]
-Nome da Tarefa: [Nome ou descrição breve]
-Contexto PRD: [Pontos principais do PRD]
-Requisitos Tech Spec: [Requisitos técnicos principais]
-Dependências: [Lista de dependências]
-Objetivos Principais: [Objetivos primários]
-Riscos/Desafios: [Riscos ou desafios identificados]
-```
-
-### 4. Plano de Abordagem
-
-```
-1. [Primeiro passo]
-2. [Segundo passo]
-3. [Passos adicionais conforme necessário]
-```
-
-### 5. Revisão
-
-1. Execute o agente `task-reviewer` (via Agent tool com subagent_type task-reviewer)
-2. Ajuste os problemas indicados
-3. Não finalize a tarefa até resolver
-
-<critical>NÃO PULE NENHUM PASSO</critical>
-
-## Notas Importantes
-
-- Sempre verifique o PRD, tech spec e arquivo de tarefa
-- Implemente soluções adequadas **sem usar gambiarras**
-- Siga todos os padrões estabelecidos do projeto
-- Use **Web Search** para buscar documentação de Go, CockroachDB, go-chi, Testify e outras bibliotecas quando necessário
-- Use as ferramentas de busca (Glob, Grep, Read) para explorar a codebase antes de implementar
-
-## Implementação
-
-Após fornecer o resumo e abordagem, **comece imediatamente a implementar a tarefa**:
-- Executar comandos necessários
-- Fazer alterações de código
-- Seguir padrões estabelecidos do projeto (hexagonal architecture)
-- Garantir que todos os requisitos sejam atendidos
-- Executar `make test` e `make lint` para validar
-
-<critical>**VOCÊ DEVE** iniciar a implementação logo após o processo acima.</critical>
-<critical>Após completar a tarefa, marque como completa em tasks.md</critical>
-<critical>Você não pode finalizar a tarefa sem executar o agente `task-reviewer` (via Agent tool com subagent_type task-reviewer), caso ele não passe você deve resolver os problemas e analisar novamente</critical>
+### 7. Fechamento
+- Nao atualizar status para `done` sem as duas aprovacoes (`qa` e `code-reviewer`).
+- Atualizar status da task em `tasks.md` para `done`.
+- Reportar evidencias: testes, lint, resultado do `code-reviewer`, resultado do `qa` e arquivos alterados.
+- Usar `.claude/templates/task-execution-report-template.md` para montar o relatorio.
+- Salvar o relatorio em `tasks/prd-[nome-funcionalidade]/[num]_execution_report.md`.
+- Executar `.claude/scripts/validate-task-evidence.sh tasks/prd-[nome-funcionalidade]/[num]_execution_report.md` e somente concluir se validacao passar.
+- Se qualquer gate exceder limite de remedicao ou depender de informacao externa, marcar `blocked`/`needs_input` com causa objetiva.
 
 ## Mandatory Rules
-
-This command MUST follow the project rules defined in:
-
-`.claude/rules/`
-
-Rules are mandatory and non-negotiable.
-
-Before executing any task, the agent MUST consult the relevant rule files and comply with their constraints.
-
-If any instruction in this file conflicts with a rule, the rule takes precedence.
+Este comando deve seguir `.claude/rules/`.
+Em conflito, regras prevalecem.

@@ -292,6 +292,15 @@ mocks: ## Generate mocks
 check: fmt vet lint test-all ## Run all checks (format, vet, lint, tests)
 	@echo "✅ All checks passed!"
 
+.PHONY: check-agent-evidence
+check-agent-evidence: ## Validate executar-task evidence bundle (usage: make check-agent-evidence REPORT=tasks/.../_execution_report.md)
+	@if [ -z "$(REPORT)" ]; then \
+		echo "❌ Error: REPORT is required"; \
+		echo "Usage: make check-agent-evidence REPORT=tasks/prd-<slug>/<num>_execution_report.md"; \
+		exit 1; \
+	fi
+	@.claude/scripts/validate-task-evidence.sh "$(REPORT)"
+
 # ============================================================================
 # HEALTH CHECKS
 # ============================================================================
