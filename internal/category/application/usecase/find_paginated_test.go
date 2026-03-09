@@ -168,5 +168,3 @@ func (s *FindCategoryPaginatedUseCaseSuite) TestExecute() {
 		})
 	}
 }
-
-

@@ -163,36 +163,36 @@ func (s *RemoveSubcategoryUseCaseSuite) TestExecute() {
 				s.Contains(err.Error(), "database connection failed")
 			},
 		},
-{
-name: "deve retornar erro com userID inválido",
-args: args{
-userID:        "invalid-uuid",
-categoryID:    "660e8400-e29b-41d4-a716-446655440001",
-subcategoryID: "770e8400-e29b-41d4-a716-446655440001",
-},
-dependencies: dependencies{
-categoryRepository:    s.categoryRepository,
-subcategoryRepository: s.subcategoryRepository,
-},
-expect: func(err error) {
-s.Error(err)
-},
-},
-{
-name: "deve retornar erro com categoryID inválido",
-args: args{
-userID:        "550e8400-e29b-41d4-a716-446655440000",
-categoryID:    "invalid-uuid",
-subcategoryID: "770e8400-e29b-41d4-a716-446655440001",
-},
-dependencies: dependencies{
-categoryRepository:    s.categoryRepository,
-subcategoryRepository: s.subcategoryRepository,
-},
-expect: func(err error) {
-s.Error(err)
-},
-},
+		{
+			name: "deve retornar erro com userID inválido",
+			args: args{
+				userID:        "invalid-uuid",
+				categoryID:    "660e8400-e29b-41d4-a716-446655440001",
+				subcategoryID: "770e8400-e29b-41d4-a716-446655440001",
+			},
+			dependencies: dependencies{
+				categoryRepository:    s.categoryRepository,
+				subcategoryRepository: s.subcategoryRepository,
+			},
+			expect: func(err error) {
+				s.Error(err)
+			},
+		},
+		{
+			name: "deve retornar erro com categoryID inválido",
+			args: args{
+				userID:        "550e8400-e29b-41d4-a716-446655440000",
+				categoryID:    "invalid-uuid",
+				subcategoryID: "770e8400-e29b-41d4-a716-446655440001",
+			},
+			dependencies: dependencies{
+				categoryRepository:    s.categoryRepository,
+				subcategoryRepository: s.subcategoryRepository,
+			},
+			expect: func(err error) {
+				s.Error(err)
+			},
+		},
 	}
 
 	for _, scenario := range scenarios {

@@ -205,7 +205,7 @@ func TestSubcategoryHandler_Create_UseCaseError(t *testing.T) {
 
 func TestSubcategoryHandler_Find_Success(t *testing.T) {
 	output := &dtos.SubcategoryPaginatedOutput{
-		Data: []dtos.SubcategoryOutput{{ID: testSubcategoryID, Name: "Uber", Sequence: 1}},
+		Data:       []dtos.SubcategoryOutput{{ID: testSubcategoryID, Name: "Uber", Sequence: 1}},
 		Pagination: dtos.CategoryPaginationMeta{Limit: 20, HasNext: false},
 	}
 	handler := newSubcategoryTestHandler(

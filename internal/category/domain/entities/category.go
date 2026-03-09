@@ -1,50 +1,50 @@
 package entities
 
 import (
-"time"
+	"time"
 
-sharedVos "github.com/JailtonJunior94/devkit-go/pkg/vos"
-"github.com/jailtonjunior94/financial/internal/category/domain/vos"
+	sharedVos "github.com/JailtonJunior94/devkit-go/pkg/vos"
+	"github.com/jailtonjunior94/financial/internal/category/domain/vos"
 )
 
 type Category struct {
-ID        sharedVos.UUID
-UserID    sharedVos.UUID
-Name      vos.CategoryName
-Sequence  vos.CategorySequence
-CreatedAt sharedVos.NullableTime
-UpdatedAt sharedVos.NullableTime
-DeletedAt sharedVos.NullableTime
+	ID        sharedVos.UUID
+	UserID    sharedVos.UUID
+	Name      vos.CategoryName
+	Sequence  vos.CategorySequence
+	CreatedAt sharedVos.NullableTime
+	UpdatedAt sharedVos.NullableTime
+	DeletedAt sharedVos.NullableTime
 }
 
 func NewCategory(userID sharedVos.UUID, name vos.CategoryName, sequence vos.CategorySequence) (*Category, error) {
-category := &Category{
-Name:      name,
-UserID:    userID,
-Sequence:  sequence,
-CreatedAt: sharedVos.NewNullableTime(time.Now()),
-}
-return category, nil
+	category := &Category{
+		Name:      name,
+		UserID:    userID,
+		Sequence:  sequence,
+		CreatedAt: sharedVos.NewNullableTime(time.Now()),
+	}
+	return category, nil
 }
 
 func (c *Category) Update(name string, sequence uint) error {
-categoryName, err := vos.NewCategoryName(name)
-if err != nil {
-return err
-}
+	categoryName, err := vos.NewCategoryName(name)
+	if err != nil {
+		return err
+	}
 
-categorySequence, err := vos.NewCategorySequence(sequence)
-if err != nil {
-return err
-}
+	categorySequence, err := vos.NewCategorySequence(sequence)
+	if err != nil {
+		return err
+	}
 
-c.Name = categoryName
-c.Sequence = categorySequence
-c.UpdatedAt = sharedVos.NewNullableTime(time.Now())
+	c.Name = categoryName
+	c.Sequence = categorySequence
+	c.UpdatedAt = sharedVos.NewNullableTime(time.Now())
 
-return nil
+	return nil
 }
 
 func (c *Category) Delete() {
-c.DeletedAt = sharedVos.NewNullableTime(time.Now())
+	c.DeletedAt = sharedVos.NewNullableTime(time.Now())
 }

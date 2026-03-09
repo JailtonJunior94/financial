@@ -1,40 +1,40 @@
 package factories
 
 import (
-"fmt"
+	"fmt"
 
-"github.com/jailtonjunior94/financial/internal/category/domain/entities"
+	"github.com/jailtonjunior94/financial/internal/category/domain/entities"
 
-sharedVos "github.com/JailtonJunior94/devkit-go/pkg/vos"
-"github.com/jailtonjunior94/financial/internal/category/domain/vos"
+	sharedVos "github.com/JailtonJunior94/devkit-go/pkg/vos"
+	"github.com/jailtonjunior94/financial/internal/category/domain/vos"
 )
 
 func CreateCategory(userID, name string, sequence uint) (*entities.Category, error) {
-id, err := sharedVos.NewUUID()
-if err != nil {
-return nil, fmt.Errorf("error generating category id: %v", err)
-}
+	id, err := sharedVos.NewUUID()
+	if err != nil {
+		return nil, fmt.Errorf("error generating category id: %v", err)
+	}
 
-user, err := sharedVos.NewUUIDFromString(userID)
-if err != nil {
-return nil, fmt.Errorf("invalid user_id: %s", userID)
-}
+	user, err := sharedVos.NewUUIDFromString(userID)
+	if err != nil {
+		return nil, fmt.Errorf("invalid user_id: %s", userID)
+	}
 
-categoryName, err := vos.NewCategoryName(name)
-if err != nil {
-return nil, err
-}
+	categoryName, err := vos.NewCategoryName(name)
+	if err != nil {
+		return nil, err
+	}
 
-sequenceVO, err := vos.NewCategorySequence(sequence)
-if err != nil {
-return nil, err
-}
+	sequenceVO, err := vos.NewCategorySequence(sequence)
+	if err != nil {
+		return nil, err
+	}
 
-category, err := entities.NewCategory(user, categoryName, sequenceVO)
-if err != nil {
-return nil, fmt.Errorf("error creating category: %w", err)
-}
+	category, err := entities.NewCategory(user, categoryName, sequenceVO)
+	if err != nil {
+		return nil, fmt.Errorf("error creating category: %w", err)
+	}
 
-category.ID = id
-return category, nil
+	category.ID = id
+	return category, nil
 }
