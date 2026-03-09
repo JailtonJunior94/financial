@@ -26,18 +26,28 @@ require_pattern() {
   fi
 }
 
-# Required by evidence-policy.md
-require_pattern "executed commands|comandos executados" "Executed commands section"
-require_pattern "changed files|arquivos alterados" "Changed files section"
-require_pattern "validation results|resultado(s)? de validacao" "Validation results section"
-require_pattern "assumptions|premissas" "Assumptions section"
-require_pattern "residual risks|riscos residuais" "Residual risks section"
+# Required sections
+require_pattern "executed commands" "Executed commands section"
+require_pattern "changed files" "Changed files section"
+require_pattern "validation results" "Validation results section"
+require_pattern "assumptions" "Assumptions section"
+require_pattern "residual risks" "Residual risks section"
 
-# Required by executar-task.md closing gate
-require_pattern "test(s)?[[:space:]]*:" "Test evidence"
-require_pattern "lint[[:space:]]*:" "Lint evidence"
-require_pattern "code-reviewer|technical review" "Code-reviewer evidence"
-require_pattern "qa[[:space:]]*report|qa[[:space:]]*:" "QA evidence"
+# Require a terminal canonical state
+if ! grep -Eiq "state[[:space:]]*:[[:space:]]*(blocked|failed|done)" "$report_file"; then
+  echo "MISSING: Terminal execution state (blocked|failed|done)"
+  missing=1
+fi
+
+# Test and lint evidence
+require_pattern "test(s)?[[:space:]]*:[[:space:]]*(pass|fail|blocked)" "Test evidence with result"
+require_pattern "lint[[:space:]]*:[[:space:]]*(pass|fail|blocked)" "Lint evidence with result"
+
+# Reviewer verdict
+if ! grep -Eiq "reviewer verdict[[:space:]]*:[[:space:]]*(APPROVED|APPROVED_WITH_REMARKS|REJECTED|BLOCKED)" "$report_file"; then
+  echo "MISSING: Reviewer verdict with canonical enum value"
+  missing=1
+fi
 
 if [[ $missing -ne 0 ]]; then
   echo ""

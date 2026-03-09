@@ -1,24 +1,26 @@
-# Task Execution Report
+# Relatório de Execução de Tarefa
 
-## Task
+## Tarefa
 - ID:
-- Title:
-- Status: done | blocked | needs_input
+- Título:
+- State: pending | in_progress | needs_input | blocked | failed | done
 
 ## Executed Commands
-- [command] -> [result]
+- [comando] -> [resultado]
 
 ## Changed Files
-- [path]
+- [caminho]
 
 ## Validation Results
 - Tests: pass | fail | blocked
 - Lint: pass | fail | blocked
-- Code-Reviewer: APPROVED | APPROVED_WITH_REMARKS | REJECTED
-- QA: APPROVED | REJECTED
+- Reviewer Verdict: APPROVED | APPROVED_WITH_REMARKS | REJECTED | BLOCKED
 
 ## Assumptions
-- [assumption]
+- [suposição]
 
 ## Residual Risks
-- [risk]
+- [risco]
+
+## Rule Conflicts
+- [rule_id_1 vs rule_id_2 | regra_escolhida | razão_de_precedência | "none" se sem conflitos]
