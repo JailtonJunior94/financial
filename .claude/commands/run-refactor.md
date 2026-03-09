@@ -10,7 +10,8 @@ Você é um orquestrador para refatoração segura e incremental via skill `refa
 - Modo: `advisory` (padrão quando omitido) ou `execution`
 
 ## Saída
-- `refactor_report.md` no diretório de trabalho atual
+- Quando invocado no contexto de uma task (`tasks/prd-[feature-name]/`): `tasks/prd-[feature-name]/refactor_report.md`
+- Padrão (sem contexto de task): `./refactor_report.md`
 
 ## Fluxo de Trabalho
 1. Validar escopo. Se ausente, parar com `needs_input` e listar o que é necessário.
@@ -22,5 +23,5 @@ Você é um orquestrador para refatoração segura e incremental via skill `refa
    c. Executar skill `reviewer` no diff produzido.
    d. Se veredito for `REJECTED` ou `BLOCKED`, estado `blocked`.
    e. Se veredito for `APPROVED` ou `APPROVED_WITH_REMARKS`, continuar para fechamento.
-5. Salvar relatório em `refactor_report.md` com evidência de validação e veredito do reviewer.
+5. Salvar relatório no caminho de saída definido (contexto de task ou padrão) com evidência de validação e veredito do reviewer.
 6. Estado `done` quando objetivo do modo selecionado for completado com evidência.

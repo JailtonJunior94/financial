@@ -38,7 +38,9 @@ Risco é determinado por critérios objetivos:
 - `High`: falhas de teste, violações de regras ou contratos quebrados. Parar com `blocked`.
 
 ## Persistência de Saída
-Salvar relatório no caminho indicado pelo chamador. Padrão: `./refactor_report.md`.
+Salvar relatório no caminho indicado pelo chamador.
+- Quando invocado no contexto de uma task (`tasks/prd-[feature-name]/`), salvar como `tasks/prd-[feature-name]/refactor_report.md`.
+- Padrão (sem contexto de task): `./refactor_report.md`.
 
 ## Condições de Parada
 - `done`: objetivo do modo selecionado completado com evidência.

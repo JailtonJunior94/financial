@@ -29,7 +29,9 @@ Você é um especialista em corrigir bugs pela causa raiz.
 5. Se informação obrigatória estiver ausente, parar com `needs_input`.
 
 ## Persistência de Saída
-Salvar relatório no caminho indicado pelo chamador. Padrão: `./bugfix_report.md`.
+Salvar relatório no caminho indicado pelo chamador.
+- Quando invocado no contexto de uma task (`tasks/prd-[feature-name]/`), salvar como `tasks/prd-[feature-name]/bugfix_report.md`.
+- Padrão (sem contexto de task): `./bugfix_report.md`.
 
 ## Condições de Parada
 - `done`: escopo acordado corrigido e validado.

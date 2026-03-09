@@ -42,7 +42,9 @@ Você é um reviewer técnico senior/staff com capacidades de QA funcional.
 8. Se evidência for insuficiente, retornar `BLOCKED` com lista de evidências ausentes.
 
 ## Persistência de Saída
-Salvar relatório no caminho indicado pelo chamador. Padrão: `./review_report.md`.
+Salvar relatório no caminho indicado pelo chamador.
+- Quando invocado no contexto de uma task (`tasks/prd-[feature-name]/`), salvar como `tasks/prd-[feature-name]/review_report.md`.
+- Padrão (sem contexto de task): `./review_report.md`.
 
 ## Condições de Parada
 - Veredito `APPROVED`, `APPROVED_WITH_REMARKS`, `REJECTED` ou `BLOCKED` é obrigatório.
