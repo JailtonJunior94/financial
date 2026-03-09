@@ -10,6 +10,16 @@ import (
 // Call NewErrorHandler(o11y, domain.ErrorMappings()) in the budget module.
 func ErrorMappings() map[error]httperrors.ErrorMapping {
 	return map[error]httperrors.ErrorMapping{
+		// Category validation errors → 400 Bad Request
+		ErrCategoryNotFound: {
+			Status:  http.StatusBadRequest,
+			Message: "One or more categories not found",
+		},
+		ErrCategoryNotOwnedByUser: {
+			Status:  http.StatusBadRequest,
+			Message: "One or more categories do not belong to user",
+		},
+
 		// Validation errors → 400 Bad Request
 		ErrBudgetInvalidTotal: {
 			Status:  http.StatusBadRequest,

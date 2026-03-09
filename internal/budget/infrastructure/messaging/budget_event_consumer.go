@@ -15,7 +15,7 @@ import (
 	"github.com/jailtonjunior94/financial/pkg/outbox"
 )
 
-// BudgetEventConsumer consumes transaction.created events and syncs budget spent amounts.
+// BudgetEventConsumer consumes transaction.created and transaction.reversed events and syncs budget spent amounts.
 type BudgetEventConsumer struct {
 	syncUseCase         usecase.SyncBudgetSpentAmountUseCase
 	processedEventsRepo outbox.ProcessedEventsRepository
@@ -43,7 +43,7 @@ type transactionCreatedPayload struct {
 	ReferenceMonth string `json:"reference_month"`
 }
 
-// Handle implements messaging.Handler for transaction.created events.
+// Handle implements messaging.Handler for transaction.created and transaction.reversed events.
 func (c *BudgetEventConsumer) Handle(ctx context.Context, msg *messaging.Message) error {
 	ctx, span := c.o11y.Tracer().Start(ctx, "budget_event_consumer.handle")
 	defer span.End()
@@ -63,10 +63,11 @@ func (c *BudgetEventConsumer) Handle(ctx context.Context, msg *messaging.Message
 
 	if !claimed {
 		c.o11y.Logger().Info(ctx, "event_already_processed",
-			observability.String("operation", "handle_transaction_created"),
+			observability.String("operation", "handle_budget_event"),
 			observability.String("layer", "consumer"),
 			observability.String("entity", "budget"),
 			observability.String("event_id", eventID.String()),
+			observability.String("event_type", msg.Topic),
 		)
 		return nil
 	}
@@ -74,7 +75,7 @@ func (c *BudgetEventConsumer) Handle(ctx context.Context, msg *messaging.Message
 	var payload transactionCreatedPayload
 	if err := json.Unmarshal(msg.Payload, &payload); err != nil {
 		span.RecordError(err)
-		return fmt.Errorf("failed to parse transaction.created payload: %w", err)
+		return fmt.Errorf("failed to parse payload: %w", err)
 	}
 
 	userID, err := vos.NewUUIDFromString(payload.UserID)
@@ -103,6 +104,7 @@ func (c *BudgetEventConsumer) Handle(ctx context.Context, msg *messaging.Message
 				observability.String("layer", "consumer"),
 				observability.String("entity", "budget"),
 				observability.String("event_id", eventID.String()),
+				observability.String("event_type", msg.Topic),
 				observability.Error(deleteErr),
 			)
 		}
@@ -110,10 +112,11 @@ func (c *BudgetEventConsumer) Handle(ctx context.Context, msg *messaging.Message
 	}
 
 	c.o11y.Logger().Info(ctx, "request_completed",
-		observability.String("operation", "handle_transaction_created"),
+		observability.String("operation", "handle_budget_event"),
 		observability.String("layer", "consumer"),
 		observability.String("entity", "budget"),
 		observability.String("event_id", eventID.String()),
+		observability.String("event_type", msg.Topic),
 		observability.String("user_id", payload.UserID),
 		observability.String("reference_month", payload.ReferenceMonth),
 	)
@@ -123,5 +126,5 @@ func (c *BudgetEventConsumer) Handle(ctx context.Context, msg *messaging.Message
 
 // Topics returns the routing keys this consumer handles.
 func (c *BudgetEventConsumer) Topics() []string {
-	return []string{"transaction.created"}
+	return []string{"transaction.created", "transaction.reversed"}
 }

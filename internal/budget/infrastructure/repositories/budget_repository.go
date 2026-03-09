@@ -477,6 +477,64 @@ func (r *budgetRepository) Delete(ctx context.Context, id vos.UUID) error {
 	return nil
 }
 
+func (r *budgetRepository) DeleteItemsNotIn(ctx context.Context, budgetID vos.UUID, keepIDs []vos.UUID) error {
+	start := time.Now()
+	ctx, span := r.o11y.Tracer().Start(ctx, "budget_repository.delete_items_not_in")
+	defer span.End()
+
+	r.o11y.Logger().Debug(ctx, "query_started",
+		observability.String("operation", "delete_items_not_in"),
+		observability.String("layer", "repository"),
+		observability.String("entity", "budget_item"),
+		observability.String("budget_id", budgetID.String()),
+	)
+
+	now := time.Now().UTC()
+
+	var query string
+	var args []any
+
+	if len(keepIDs) == 0 {
+		query = `UPDATE budget_items SET deleted_at = $1 WHERE budget_id = $2 AND deleted_at IS NULL`
+		args = []any{now, budgetID.Value}
+	} else {
+		placeholders := make([]string, len(keepIDs))
+		args = make([]any, len(keepIDs)+2)
+		args[0] = now
+		args[1] = budgetID.Value
+		for i, id := range keepIDs {
+			placeholders[i] = fmt.Sprintf("$%d", i+3)
+			args[i+2] = id.Value
+		}
+		query = fmt.Sprintf(
+			`UPDATE budget_items SET deleted_at = $1 WHERE budget_id = $2 AND id NOT IN (%s) AND deleted_at IS NULL`,
+			strings.Join(placeholders, ", "),
+		)
+	}
+
+	if _, err := r.db.ExecContext(ctx, query, args...); err != nil {
+		span.RecordError(err)
+		r.o11y.Logger().Error(ctx, "query_failed",
+			observability.String("operation", "delete_items_not_in"),
+			observability.String("layer", "repository"),
+			observability.String("entity", "budget_item"),
+			observability.String("budget_id", budgetID.String()),
+			observability.Error(err),
+		)
+		r.fm.RecordRepositoryFailure(ctx, "delete_items_not_in", "budget_item", "infra", time.Since(start))
+		return err
+	}
+
+	r.o11y.Logger().Debug(ctx, "query_completed",
+		observability.String("operation", "delete_items_not_in"),
+		observability.String("layer", "repository"),
+		observability.String("entity", "budget_item"),
+		observability.String("budget_id", budgetID.String()),
+	)
+	r.fm.RecordRepositoryQuery(ctx, "delete_items_not_in", "budget_item", time.Since(start))
+	return nil
+}
+
 func (r *budgetRepository) UpdateItem(ctx context.Context, item *entities.BudgetItem) error {
 	start := time.Now()
 	ctx, span := r.o11y.Tracer().Start(ctx, "budget_repository.update_item")

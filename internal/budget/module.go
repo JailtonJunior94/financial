@@ -10,6 +10,7 @@ import (
 	budgethttp "github.com/jailtonjunior94/financial/internal/budget/infrastructure/http"
 	"github.com/jailtonjunior94/financial/internal/budget/infrastructure/messaging"
 	"github.com/jailtonjunior94/financial/internal/budget/infrastructure/repositories"
+	"github.com/jailtonjunior94/financial/internal/category/infrastructure/adapters"
 	"github.com/jailtonjunior94/financial/pkg/api/httperrors"
 	"github.com/jailtonjunior94/financial/pkg/api/middlewares"
 	"github.com/jailtonjunior94/financial/pkg/auth"
@@ -42,9 +43,11 @@ func NewBudgetModule(
 	financialMetrics := metrics.NewFinancialMetrics(o11y)
 
 	budgetRepository := repositories.NewBudgetRepository(db, o11y, financialMetrics)
-	createBudgetUseCase := usecase.NewCreateBudgetUseCase(unitOfWork, o11y, financialMetrics)
-	updateBudgetUseCase := usecase.NewUpdateBudgetUseCase(unitOfWork, o11y, financialMetrics)
-	deleteBudgetUseCase := usecase.NewDeleteBudgetUseCase(unitOfWork, o11y, financialMetrics)
+	categoryProvider := adapters.NewCategoryProviderAdapter(db, o11y, financialMetrics)
+	replicateBudgetUseCase := usecase.NewReplicateBudgetUseCase(o11y)
+	createBudgetUseCase := usecase.NewCreateBudgetUseCase(unitOfWork, o11y, financialMetrics, budgetRepository, categoryProvider, replicateBudgetUseCase)
+	updateBudgetUseCase := usecase.NewUpdateBudgetUseCase(unitOfWork, o11y, financialMetrics, budgetRepository, categoryProvider, replicateBudgetUseCase)
+	deleteBudgetUseCase := usecase.NewDeleteBudgetUseCase(unitOfWork, o11y, financialMetrics, budgetRepository)
 	findBudgetUseCase := usecase.NewFindBudgetUseCase(budgetRepository, o11y, financialMetrics)
 	listBudgetsPaginatedUseCase := usecase.NewListBudgetsPaginatedUseCase(o11y, budgetRepository)
 
@@ -62,7 +65,7 @@ func NewBudgetModule(
 
 	var budgetEventConsumer *messaging.BudgetEventConsumer
 	if invoiceCategoryTotal != nil {
-		syncUseCase := usecase.NewSyncBudgetSpentAmountUseCase(unitOfWork, invoiceCategoryTotal, o11y, financialMetrics)
+		syncUseCase := usecase.NewSyncBudgetSpentAmountUseCase(unitOfWork, invoiceCategoryTotal, budgetRepository, o11y, financialMetrics)
 		processedEventsRepo := outbox.NewProcessedEventsRepository(db)
 		budgetEventConsumer = messaging.NewBudgetEventConsumer(syncUseCase, processedEventsRepo, o11y)
 	}

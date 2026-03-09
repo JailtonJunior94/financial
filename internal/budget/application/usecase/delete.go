@@ -6,7 +6,7 @@ import (
 	"time"
 
 	"github.com/jailtonjunior94/financial/internal/budget/domain"
-	"github.com/jailtonjunior94/financial/internal/budget/infrastructure/repositories"
+	"github.com/jailtonjunior94/financial/internal/budget/domain/interfaces"
 	"github.com/jailtonjunior94/financial/pkg/observability/metrics"
 
 	"github.com/JailtonJunior94/devkit-go/pkg/database"
@@ -22,9 +22,10 @@ type (
 	}
 
 	deleteBudgetUseCase struct {
-		uow     uow.UnitOfWork
-		o11y    observability.Observability
-		metrics *metrics.FinancialMetrics
+		uow              uow.UnitOfWork
+		o11y             observability.Observability
+		metrics          *metrics.FinancialMetrics
+		budgetRepository interfaces.BudgetRepository
 	}
 )
 
@@ -32,11 +33,13 @@ func NewDeleteBudgetUseCase(
 	uow uow.UnitOfWork,
 	o11y observability.Observability,
 	fm *metrics.FinancialMetrics,
+	repository interfaces.BudgetRepository,
 ) DeleteBudgetUseCase {
 	return &deleteBudgetUseCase{
-		uow:     uow,
-		o11y:    o11y,
-		metrics: fm,
+		uow:              uow,
+		o11y:             o11y,
+		metrics:          fm,
+		budgetRepository: repository,
 	}
 }
 
@@ -62,23 +65,18 @@ func (u *deleteBudgetUseCase) Execute(ctx context.Context, userID string, budget
 		observability.String("user_id", userID),
 	)
 
-	// Parse userID
 	uid, err := vos.NewUUIDFromString(userID)
 	if err != nil {
 		return fmt.Errorf("invalid user_id: %w", err)
 	}
 
-	// Parse budget ID
 	id, err := vos.NewUUIDFromString(budgetID)
 	if err != nil {
 		return fmt.Errorf("invalid budget_id: %w", err)
 	}
 
-	err = u.uow.Do(ctx, func(ctx context.Context, tx database.DBTX) error {
-		budgetRepository := repositories.NewBudgetRepository(tx, u.o11y, u.metrics)
-
-		// Find budget (scoped by userID to prevent IDOR)
-		budget, err := budgetRepository.FindByID(ctx, uid, id)
+	err = u.uow.Do(ctx, func(ctx context.Context, _ database.DBTX) error {
+		budget, err := u.budgetRepository.FindByID(ctx, uid, id)
 		if err != nil {
 			return err
 		}
@@ -87,8 +85,7 @@ func (u *deleteBudgetUseCase) Execute(ctx context.Context, userID string, budget
 			return domain.ErrBudgetNotFound
 		}
 
-		// Soft delete via repositorio (persiste deleted_at no banco)
-		if err := budgetRepository.Delete(ctx, id); err != nil {
+		if err := u.budgetRepository.Delete(ctx, id); err != nil {
 			return err
 		}
 
@@ -96,6 +93,7 @@ func (u *deleteBudgetUseCase) Execute(ctx context.Context, userID string, budget
 	})
 
 	if err != nil {
+		span.RecordError(err)
 		u.metrics.RecordUsecaseFailure(ctx, "DeleteBudget", "budget", "infra", time.Since(start))
 		u.o11y.Logger().Error(ctx, "execution_failed",
 			observability.String("operation", "DeleteBudget"),

@@ -25,5 +25,6 @@ type BudgetRepository interface {
 	ListPaginated(ctx context.Context, params ListBudgetsParams) ([]*entities.Budget, error)
 	Update(ctx context.Context, budget *entities.Budget) error
 	UpdateItem(ctx context.Context, item *entities.BudgetItem) error
+	DeleteItemsNotIn(ctx context.Context, budgetID vos.UUID, keepIDs []vos.UUID) error
 	Delete(ctx context.Context, id vos.UUID) error
 }

@@ -41,6 +41,65 @@ func (_m *BudgetRepository) EXPECT() *BudgetRepository_Expecter {
 	return &BudgetRepository_Expecter{mock: &_m.Mock}
 }
 
+// DeleteItemsNotIn provides a mock function for the type BudgetRepository
+func (_mock *BudgetRepository) DeleteItemsNotIn(ctx context.Context, budgetID vos.UUID, keepIDs []vos.UUID) error {
+	ret := _mock.Called(ctx, budgetID, keepIDs)
+
+	if len(ret) == 0 {
+		panic("no return value specified for DeleteItemsNotIn")
+	}
+
+	var r0 error
+	if returnFunc, ok := ret.Get(0).(func(context.Context, vos.UUID, []vos.UUID) error); ok {
+		r0 = returnFunc(ctx, budgetID, keepIDs)
+	} else {
+		r0 = ret.Error(0)
+	}
+	return r0
+}
+
+// BudgetRepository_DeleteItemsNotIn_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'DeleteItemsNotIn'
+type BudgetRepository_DeleteItemsNotIn_Call struct {
+	*mock.Call
+}
+
+// DeleteItemsNotIn is a helper method to define mock.On call
+//   - ctx context.Context
+//   - budgetID vos.UUID
+//   - keepIDs []vos.UUID
+func (_e *BudgetRepository_Expecter) DeleteItemsNotIn(ctx interface{}, budgetID interface{}, keepIDs interface{}) *BudgetRepository_DeleteItemsNotIn_Call {
+	return &BudgetRepository_DeleteItemsNotIn_Call{Call: _e.mock.On("DeleteItemsNotIn", ctx, budgetID, keepIDs)}
+}
+
+func (_c *BudgetRepository_DeleteItemsNotIn_Call) Run(run func(ctx context.Context, budgetID vos.UUID, keepIDs []vos.UUID)) *BudgetRepository_DeleteItemsNotIn_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		var arg0 context.Context
+		if args[0] != nil {
+			arg0 = args[0].(context.Context)
+		}
+		var arg1 vos.UUID
+		if args[1] != nil {
+			arg1 = args[1].(vos.UUID)
+		}
+		var arg2 []vos.UUID
+		if args[2] != nil {
+			arg2 = args[2].([]vos.UUID)
+		}
+		run(arg0, arg1, arg2)
+	})
+	return _c
+}
+
+func (_c *BudgetRepository_DeleteItemsNotIn_Call) Return(err error) *BudgetRepository_DeleteItemsNotIn_Call {
+	_c.Call.Return(err)
+	return _c
+}
+
+func (_c *BudgetRepository_DeleteItemsNotIn_Call) RunAndReturn(run func(ctx context.Context, budgetID vos.UUID, keepIDs []vos.UUID) error) *BudgetRepository_DeleteItemsNotIn_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
 // Delete provides a mock function for the type BudgetRepository
 func (_mock *BudgetRepository) Delete(ctx context.Context, id vos.UUID) error {
 	ret := _mock.Called(ctx, id)

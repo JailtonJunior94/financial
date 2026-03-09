@@ -1,6 +1,10 @@
 package domain
 
-import "errors"
+import (
+	"errors"
+
+	pkginterfaces "github.com/jailtonjunior94/financial/pkg/domain/interfaces"
+)
 
 var (
 	// Budget errors.
@@ -16,4 +20,8 @@ var (
 	ErrNegativeAmount     = errors.New("amount cannot be negative")
 	ErrInvalidCategoryID  = errors.New("invalid category ID")
 	ErrDuplicateCategory  = errors.New("category already exists in budget")
+
+	// Category validation errors (referencing shared pkg errors so errors.Is works cross-module).
+	ErrCategoryNotFound       = pkginterfaces.ErrCategoryNotFound
+	ErrCategoryNotOwnedByUser = pkginterfaces.ErrCategoryNotOwnedByUser
 )
