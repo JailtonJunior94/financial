@@ -2,10 +2,12 @@ package http
 
 import (
 	"net/http"
+	"time"
 
 	"github.com/jailtonjunior94/financial/internal/user/application/dtos"
 	"github.com/jailtonjunior94/financial/internal/user/application/usecase"
 	"github.com/jailtonjunior94/financial/pkg/api/httperrors"
+	"github.com/jailtonjunior94/financial/pkg/observability/metrics"
 
 	"github.com/JailtonJunior94/devkit-go/pkg/observability"
 	"github.com/JailtonJunior94/devkit-go/pkg/responses"
@@ -14,17 +16,20 @@ import (
 
 type AuthHandler struct {
 	o11y         observability.Observability
+	fm           *metrics.FinancialMetrics
 	errorHandler httperrors.ErrorHandler
 	tokenUseCase usecase.TokenUseCase
 }
 
 func NewAuthHandler(
 	o11y observability.Observability,
+	fm *metrics.FinancialMetrics,
 	errorHandler httperrors.ErrorHandler,
 	tokenUseCase usecase.TokenUseCase,
 ) *AuthHandler {
 	return &AuthHandler{
 		o11y:         o11y,
+		fm:           fm,
 		errorHandler: errorHandler,
 		tokenUseCase: tokenUseCase,
 	}
@@ -46,6 +51,7 @@ func NewAuthHandler(
 //	@Failure		500			{object}	httperrors.ProblemDetail	"Erro interno"
 //	@Router			/api/v1/token [post]
 func (h *AuthHandler) Token(w http.ResponseWriter, r *http.Request) {
+	start := time.Now()
 	ctx, span := h.o11y.Tracer().Start(r.Context(), "auth_handler.token")
 	defer span.End()
 
@@ -68,6 +74,7 @@ func (h *AuthHandler) Token(w http.ResponseWriter, r *http.Request) {
 			observability.String("error_code", "PARSE_FORM_FAILED"),
 			observability.Error(err),
 		)
+		h.fm.RecordHandlerFailure(ctx, "token", "user", "validation", time.Since(start))
 		h.errorHandler.HandleError(w, r, err)
 		return
 	}
@@ -88,6 +95,7 @@ func (h *AuthHandler) Token(w http.ResponseWriter, r *http.Request) {
 			observability.String("error_code", "TOKEN_GENERATION_FAILED"),
 			observability.Error(err),
 		)
+		h.fm.RecordHandlerFailure(ctx, "token", "user", "business", time.Since(start))
 		h.errorHandler.HandleError(w, r, err)
 		return
 	}
@@ -99,5 +107,6 @@ func (h *AuthHandler) Token(w http.ResponseWriter, r *http.Request) {
 		observability.String("correlation_id", correlationID),
 	)
 
+	h.fm.RecordHandlerRequest(ctx, "token", "user", time.Since(start))
 	responses.JSON(w, http.StatusOK, output)
 }

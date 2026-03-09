@@ -23,15 +23,15 @@ func NewUserModule(db database.DBTX, cfg *configs.Config, o11y observability.Obs
 	errorHandler := httperrors.NewErrorHandler(o11y)
 	financialMetrics := metrics.NewFinancialMetrics(o11y)
 	userRepository := repositories.NewUserRepository(db, o11y, financialMetrics)
-	authUseCase := usecase.NewTokenUseCase(cfg, o11y, hash, tokenGenerator, userRepository)
-	createUserUseCase := usecase.NewCreateUserUseCase(o11y, hash, userRepository)
+	authUseCase := usecase.NewTokenUseCase(cfg, o11y, financialMetrics, hash, tokenGenerator, userRepository)
+	createUserUseCase := usecase.NewCreateUserUseCase(o11y, financialMetrics, hash, userRepository)
 	getUserUseCase := usecase.NewGetUserUseCase(o11y, financialMetrics, userRepository)
 	listUsersUseCase := usecase.NewListUsersUseCase(o11y, financialMetrics, userRepository)
 	updateUserUseCase := usecase.NewUpdateUserUseCase(o11y, financialMetrics, hash, userRepository)
 	deleteUserUseCase := usecase.NewDeleteUserUseCase(o11y, financialMetrics, userRepository)
 	authMiddleware := middlewares.NewAuthorization(tokenValidator, o11y, errorHandler)
 	ownershipMiddleware := middlewares.NewResourceOwnership(o11y, errorHandler)
-	authHandler := userHttp.NewAuthHandler(o11y, errorHandler, authUseCase)
+	authHandler := userHttp.NewAuthHandler(o11y, financialMetrics, errorHandler, authUseCase)
 	userHandler := userHttp.NewUserHandler(userHttp.UserHandlerDeps{
 		O11y:              o11y,
 		FM:                financialMetrics,

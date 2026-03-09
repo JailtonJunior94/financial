@@ -107,28 +107,10 @@ func (r *userRepository) FindByEmail(ctx context.Context, email string) (*entiti
 		observability.String("entity", "user"),
 	)
 	query := `select
-				id,
-				name,
-				email,
-				password,
-				created_at,
-				updated_at,
-				deleted_at
-			from
-				users
-			where
-				email = $1
-				and deleted_at is null;`
-	var user entities.User
-	err := r.db.QueryRowContext(ctx, query, email).Scan(
-		&user.ID.Value,
-		&user.Name.Value,
-		&user.Email.Value,
-		&user.Password,
-		&user.CreatedAt,
-		&user.UpdatedAt,
-		&user.DeletedAt,
-	)
+				id, name, email, password, created_at, updated_at, deleted_at
+			from users
+			where email = $1 and deleted_at is null;`
+	user, err := r.scanSingleUser(ctx, query, email)
 	if err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
 			r.o11y.Logger().Debug(ctx, "query_completed",
@@ -156,7 +138,7 @@ func (r *userRepository) FindByEmail(ctx context.Context, email string) (*entiti
 		observability.String("user_id", user.ID.String()),
 	)
 	r.fm.RecordRepositoryQuery(ctx, "find_by_email", "user", time.Since(start))
-	return &user, nil
+	return user, nil
 }
 
 func (r *userRepository) FindByID(ctx context.Context, id string) (*entities.User, error) {
@@ -170,28 +152,10 @@ func (r *userRepository) FindByID(ctx context.Context, id string) (*entities.Use
 		observability.String("user_id", id),
 	)
 	query := `select
-				id,
-				name,
-				email,
-				password,
-				created_at,
-				updated_at,
-				deleted_at
-			from
-				users
-			where
-				id = $1
-				and deleted_at is null;`
-	var user entities.User
-	err := r.db.QueryRowContext(ctx, query, id).Scan(
-		&user.ID.Value,
-		&user.Name.Value,
-		&user.Email.Value,
-		&user.Password,
-		&user.CreatedAt,
-		&user.UpdatedAt,
-		&user.DeletedAt,
-	)
+				id, name, email, password, created_at, updated_at, deleted_at
+			from users
+			where id = $1 and deleted_at is null;`
+	user, err := r.scanSingleUser(ctx, query, id)
 	if err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
 			r.o11y.Logger().Debug(ctx, "query_completed",
@@ -221,5 +185,22 @@ func (r *userRepository) FindByID(ctx context.Context, id string) (*entities.Use
 		observability.String("user_id", id),
 	)
 	r.fm.RecordRepositoryQuery(ctx, "find_by_id", "user", time.Since(start))
+	return user, nil
+}
+
+func (r *userRepository) scanSingleUser(ctx context.Context, query string, arg any) (*entities.User, error) {
+	var user entities.User
+	err := r.db.QueryRowContext(ctx, query, arg).Scan(
+		&user.ID.Value,
+		&user.Name.Value,
+		&user.Email.Value,
+		&user.Password,
+		&user.CreatedAt,
+		&user.UpdatedAt,
+		&user.DeletedAt,
+	)
+	if err != nil {
+		return nil, err
+	}
 	return &user, nil
 }
