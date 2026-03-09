@@ -129,10 +129,6 @@ func buildDomainErrorMappings() map[error]ErrorMapping {
 			Status:  http.StatusBadRequest,
 			Message: "Category cannot be its own parent or create a cycle",
 		},
-		customerrors.ErrBudgetInvalidTotal: {
-			Status:  http.StatusBadRequest,
-			Message: "Sum of budget item percentages must equal 100%",
-		},
 		customerrors.ErrNameTooLong: {
 			Status:  http.StatusBadRequest,
 			Message: "Name cannot be more than 100 characters",
@@ -143,36 +139,12 @@ func buildDomainErrorMappings() map[error]ErrorMapping {
 		},
 
 		// Not found errors → 404 Not Found
-		customerrors.ErrBudgetNotFound: {
-			Status:  http.StatusNotFound,
-			Message: "Budget not found",
-		},
-		customerrors.ErrCardNotFound: {
-			Status:  http.StatusNotFound,
-			Message: "Card not found",
-		},
-		customerrors.ErrCategoryNotFound: {
-			Status:  http.StatusNotFound,
-			Message: "Category not found",
-		},
 		customerrors.ErrSubcategoryNotFound: {
 			Status:  http.StatusNotFound,
 			Message: "Subcategory not found",
 		},
-		customerrors.ErrPaymentMethodNotFound: {
-			Status:  http.StatusNotFound,
-			Message: "Payment method not found",
-		},
-		customerrors.ErrUserNotFound: {
-			Status:  http.StatusNotFound,
-			Message: "User not found",
-		},
 
 		// Conflict errors → 409 Conflict
-		customerrors.ErrEmailAlreadyExists: {
-			Status:  http.StatusConflict,
-			Message: "Email already exists",
-		},
 		customerrors.ErrInvalidParentCategory: {
 			Status:  http.StatusConflict,
 			Message: "Invalid parent category",

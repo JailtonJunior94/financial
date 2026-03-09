@@ -6,7 +6,7 @@ import (
 	"github.com/JailtonJunior94/devkit-go/pkg/observability"
 	"github.com/JailtonJunior94/devkit-go/pkg/vos"
 	"github.com/jailtonjunior94/financial/internal/payment_method/domain/interfaces"
-	customErrors "github.com/jailtonjunior94/financial/pkg/custom_errors"
+	pmdomain "github.com/jailtonjunior94/financial/internal/payment_method/domain"
 )
 
 type (
@@ -36,22 +36,15 @@ func (u *removePaymentMethodUseCase) Execute(ctx context.Context, id string) err
 
 	paymentMethodID, err := vos.NewUUIDFromString(id)
 	if err != nil {
-		span.AddEvent(
-			"error parsing payment method id",
-			observability.Field{Key: "payment_method_id", Value: id},
-			observability.Field{Key: "error", Value: err},
-		)
-
+		span.RecordError(err)
+		span.SetStatus(observability.StatusCodeError, "error parsing payment method id")
 		return err
 	}
 
 	paymentMethod, err := u.repository.FindByID(ctx, paymentMethodID)
 	if err != nil {
-		span.AddEvent(
-			"error finding payment method by id",
-			observability.Field{Key: "payment_method_id", Value: id},
-			observability.Field{Key: "error", Value: err},
-		)
+		span.RecordError(err)
+		span.SetStatus(observability.StatusCodeError, "error finding payment method by id")
 		u.o11y.Logger().Error(ctx, "error finding payment method by id",
 			observability.Error(err),
 			observability.String("payment_method_id", id))
@@ -59,22 +52,17 @@ func (u *removePaymentMethodUseCase) Execute(ctx context.Context, id string) err
 	}
 
 	if paymentMethod == nil {
-		span.AddEvent(
-			"payment method not found",
-			observability.Field{Key: "payment_method_id", Value: id},
-		)
+		span.RecordError(pmdomain.ErrPaymentMethodNotFound)
+		span.SetStatus(observability.StatusCodeError, "payment method not found")
 		u.o11y.Logger().Error(ctx, "payment method not found",
-			observability.Error(customErrors.ErrPaymentMethodNotFound),
+			observability.Error(pmdomain.ErrPaymentMethodNotFound),
 			observability.String("payment_method_id", id))
-		return customErrors.ErrPaymentMethodNotFound
+		return pmdomain.ErrPaymentMethodNotFound
 	}
 
 	if err := u.repository.Update(ctx, paymentMethod.Delete()); err != nil {
-		span.AddEvent(
-			"error deleting payment method in repository",
-			observability.Field{Key: "payment_method_id", Value: id},
-			observability.Field{Key: "error", Value: err},
-		)
+		span.RecordError(err)
+		span.SetStatus(observability.StatusCodeError, "error deleting payment method in repository")
 		u.o11y.Logger().Error(ctx, "error deleting payment method in repository",
 			observability.Error(err),
 			observability.String("payment_method_id", id))

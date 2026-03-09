@@ -6,10 +6,10 @@ import (
 	"time"
 
 	"github.com/jailtonjunior94/financial/internal/user/application/dtos"
+	userdomain "github.com/jailtonjunior94/financial/internal/user/domain"
 	"github.com/jailtonjunior94/financial/internal/user/domain/entities"
 	"github.com/jailtonjunior94/financial/internal/user/domain/interfaces"
 	"github.com/jailtonjunior94/financial/internal/user/domain/vos"
-	customerrors "github.com/jailtonjunior94/financial/pkg/custom_errors"
 	"github.com/jailtonjunior94/financial/pkg/observability/metrics"
 
 	"github.com/JailtonJunior94/devkit-go/pkg/encrypt"
@@ -57,7 +57,7 @@ func (u *updateUserUseCase) Execute(ctx context.Context, id string, input *dtos.
 	}
 	if user == nil {
 		u.fm.RecordUsecaseFailure(ctx, "update_user", "user", "not_found", time.Since(start))
-		return nil, customerrors.ErrUserNotFound
+		return nil, userdomain.ErrUserNotFound
 	}
 	if err := u.applyFieldUpdates(ctx, span, start, id, input, user); err != nil {
 		return nil, err
@@ -69,6 +69,10 @@ func (u *updateUserUseCase) Execute(ctx context.Context, id string, input *dtos.
 		span.RecordError(err)
 		u.fm.RecordUsecaseFailure(ctx, "update_user", "user", "infra", time.Since(start))
 		return nil, err
+	}
+	if updated == nil {
+		u.fm.RecordUsecaseFailure(ctx, "update_user", "user", "not_found", time.Since(start))
+		return nil, userdomain.ErrUserNotFound
 	}
 	u.fm.RecordUsecaseOperation(ctx, "update_user", "user", time.Since(start))
 	return &dtos.UserOutput{
@@ -118,7 +122,7 @@ func (u *updateUserUseCase) updateEmail(ctx context.Context, span observability.
 	}
 	if existing != nil && existing.ID.String() != id {
 		u.fm.RecordUsecaseFailure(ctx, "update_user", "user", "conflict", time.Since(start))
-		return customerrors.ErrEmailAlreadyExists
+		return userdomain.ErrEmailAlreadyExists
 	}
 	user.UpdateEmail(email)
 	return nil

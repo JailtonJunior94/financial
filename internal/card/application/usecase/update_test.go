@@ -11,6 +11,7 @@ import (
 	"github.com/JailtonJunior94/devkit-go/pkg/observability"
 	"github.com/JailtonJunior94/devkit-go/pkg/observability/fake"
 	"github.com/jailtonjunior94/financial/internal/card/application/dtos"
+	cardDomain "github.com/jailtonjunior94/financial/internal/card/domain"
 	repositoryMock "github.com/jailtonjunior94/financial/internal/card/infrastructure/repositories/mocks"
 	customErrors "github.com/jailtonjunior94/financial/pkg/custom_errors"
 	"github.com/jailtonjunior94/financial/pkg/observability/metrics"
@@ -121,7 +122,7 @@ func (s *UpdateCardUseCaseSuite) TestExecute() {
 			expect: func(output *dtos.CardOutput, err error) {
 				s.Error(err)
 				s.Nil(output)
-				s.ErrorIs(err, customErrors.ErrCardNotFound)
+				s.ErrorIs(err, cardDomain.ErrCardNotFound)
 			},
 		},
 		{

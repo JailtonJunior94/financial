@@ -6,12 +6,11 @@ import (
 	"testing"
 
 	"github.com/JailtonJunior94/devkit-go/pkg/observability/fake"
-	repositoryMock "github.com/jailtonjunior94/financial/internal/user/infrastructure/repositories/mocks"
-	customerrors "github.com/jailtonjunior94/financial/pkg/custom_errors"
-	"github.com/jailtonjunior94/financial/pkg/observability/metrics"
-
+	userdomain "github.com/jailtonjunior94/financial/internal/user/domain"
 	"github.com/jailtonjunior94/financial/internal/user/domain/entities"
 	"github.com/jailtonjunior94/financial/internal/user/domain/vos"
+	repositoryMock "github.com/jailtonjunior94/financial/internal/user/infrastructure/repositories/mocks"
+	"github.com/jailtonjunior94/financial/pkg/observability/metrics"
 
 	"github.com/stretchr/testify/require"
 	"github.com/stretchr/testify/suite"
@@ -82,7 +81,7 @@ func (s *GetUserUseCaseSuite) TestExecute() {
 			expect: func(output interface{}, err error) {
 				s.Error(err)
 				s.Nil(output)
-				s.ErrorIs(err, customerrors.ErrUserNotFound)
+				s.ErrorIs(err, userdomain.ErrUserNotFound)
 			},
 		},
 		{

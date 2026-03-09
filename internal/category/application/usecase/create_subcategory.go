@@ -5,9 +5,9 @@ import (
 	"time"
 
 	"github.com/jailtonjunior94/financial/internal/category/application/dtos"
+	categorydomain "github.com/jailtonjunior94/financial/internal/category/domain"
 	"github.com/jailtonjunior94/financial/internal/category/domain/factories"
 	"github.com/jailtonjunior94/financial/internal/category/domain/interfaces"
-	customErrors "github.com/jailtonjunior94/financial/pkg/custom_errors"
 	"github.com/jailtonjunior94/financial/pkg/observability/metrics"
 
 	"github.com/JailtonJunior94/devkit-go/pkg/observability"
@@ -54,7 +54,7 @@ func (u *createSubcategoryUseCase) Execute(ctx context.Context, userID, category
 		return nil, err
 	}
 	if category == nil {
-		return nil, customErrors.ErrCategoryNotFound
+		return nil, categorydomain.ErrCategoryNotFound
 	}
 
 	subcategory, err := factories.CreateSubcategory(userID, categoryID, input.Name, input.Sequence)

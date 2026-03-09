@@ -1,6 +1,3 @@
-//go:build integration
-// +build integration
-
 package entities
 
 import (
@@ -66,7 +63,8 @@ func TestNewBudgetItem(t *testing.T) {
 	for _, scenario := range scenarios {
 		t.Run(scenario.name, func(t *testing.T) {
 			budgetItem := NewBudgetItem(
-				scenario.args.budget,
+				scenario.args.budget.ID,
+				scenario.args.budget.TotalAmount,
 				scenario.args.categoryID,
 				scenario.args.percentageGoal,
 			)
@@ -147,7 +145,8 @@ func TestUpdateItemSpentAmount(t *testing.T) {
 	for _, scenario := range scenarios {
 		t.Run(scenario.name, func(t *testing.T) {
 			budgetItem := NewBudgetItem(
-				scenario.args.budget,
+				scenario.args.budget.ID,
+				scenario.args.budget.TotalAmount,
 				scenario.args.categoryID,
 				scenario.args.percentageGoal,
 			)

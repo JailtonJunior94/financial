@@ -6,8 +6,8 @@ import (
 	"testing"
 
 	"github.com/JailtonJunior94/devkit-go/pkg/observability/fake"
+	userdomain "github.com/jailtonjunior94/financial/internal/user/domain"
 	repositoryMock "github.com/jailtonjunior94/financial/internal/user/infrastructure/repositories/mocks"
-	customerrors "github.com/jailtonjunior94/financial/pkg/custom_errors"
 	"github.com/jailtonjunior94/financial/pkg/observability/metrics"
 
 	"github.com/stretchr/testify/suite"
@@ -40,9 +40,14 @@ func (s *DeleteUserUseCaseSuite) TestExecute() {
 		expect func(err error)
 	}{
 		{
-			name: "deve deletar usuário com sucesso",
+			name: "should delete user successfully",
 			args: args{id: "550e8400-e29b-41d4-a716-446655440000"},
 			setup: func() {
+				user := newTestUserEntity(s.T())
+				s.userRepository.EXPECT().
+					FindByID(s.ctx, "550e8400-e29b-41d4-a716-446655440000").
+					Return(user, nil).
+					Once()
 				s.userRepository.EXPECT().
 					SoftDelete(s.ctx, "550e8400-e29b-41d4-a716-446655440000").
 					Return(nil).
@@ -53,23 +58,42 @@ func (s *DeleteUserUseCaseSuite) TestExecute() {
 			},
 		},
 		{
-			name: "deve retornar ErrUserNotFound quando usuário não existe",
+			name: "should return ErrUserNotFound when user does not exist",
 			args: args{id: "550e8400-e29b-41d4-a716-446655440000"},
 			setup: func() {
 				s.userRepository.EXPECT().
-					SoftDelete(s.ctx, "550e8400-e29b-41d4-a716-446655440000").
-					Return(customerrors.ErrUserNotFound).
+					FindByID(s.ctx, "550e8400-e29b-41d4-a716-446655440000").
+					Return(nil, nil).
 					Once()
 			},
 			expect: func(err error) {
 				s.Error(err)
-				s.ErrorIs(err, customerrors.ErrUserNotFound)
+				s.ErrorIs(err, userdomain.ErrUserNotFound)
 			},
 		},
 		{
-			name: "deve retornar erro de infra ao falhar no repositório",
+			name: "should return infra error when FindByID fails",
 			args: args{id: "550e8400-e29b-41d4-a716-446655440000"},
 			setup: func() {
+				s.userRepository.EXPECT().
+					FindByID(s.ctx, "550e8400-e29b-41d4-a716-446655440000").
+					Return(nil, errors.New("db error")).
+					Once()
+			},
+			expect: func(err error) {
+				s.Error(err)
+				s.Contains(err.Error(), "db error")
+			},
+		},
+		{
+			name: "should return infra error when SoftDelete fails",
+			args: args{id: "550e8400-e29b-41d4-a716-446655440000"},
+			setup: func() {
+				user := newTestUserEntity(s.T())
+				s.userRepository.EXPECT().
+					FindByID(s.ctx, "550e8400-e29b-41d4-a716-446655440000").
+					Return(user, nil).
+					Once()
 				s.userRepository.EXPECT().
 					SoftDelete(s.ctx, "550e8400-e29b-41d4-a716-446655440000").
 					Return(errors.New("db error")).

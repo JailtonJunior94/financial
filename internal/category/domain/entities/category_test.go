@@ -1,6 +1,3 @@
-//go:build integration
-// +build integration
-
 package entities_test
 
 import (
@@ -147,7 +144,7 @@ func (s *CategoryEntitySuite) TestDelete() {
 	})
 }
 
-// Helper methods
+// Helper methods.
 func (s *CategoryEntitySuite) createUUID() sharedVos.UUID {
 	uuid, _ := sharedVos.NewUUID()
 	return uuid

@@ -2,7 +2,6 @@ package http
 
 import (
 	"encoding/json"
-	"fmt"
 	"net/http"
 
 	"github.com/jailtonjunior94/financial/internal/budget/application/dtos"
@@ -13,6 +12,7 @@ import (
 
 	"github.com/JailtonJunior94/devkit-go/pkg/observability"
 	"github.com/JailtonJunior94/devkit-go/pkg/responses"
+	"github.com/go-chi/chi/v5"
 	"go.opentelemetry.io/otel/trace"
 )
 
@@ -254,20 +254,7 @@ func (h *BudgetHandler) Find(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	budgetID := r.PathValue("id")
-	if budgetID == "" {
-		h.o11y.Logger().Warn(ctx, "validation_failed",
-			observability.String("operation", "FindBudget"),
-			observability.String("layer", "handler"),
-			observability.String("entity", "budget"),
-			observability.String("correlation_id", correlationID),
-			observability.String("user_id", user.ID),
-			observability.String("error_type", "validation"),
-			observability.String("error_code", "BUDGET_ID_REQUIRED"),
-		)
-		h.errorHandler.HandleError(w, r, fmt.Errorf("budget_id is required"))
-		return
-	}
+	budgetID := chi.URLParam(r, "id")
 
 	h.o11y.Logger().Info(ctx, "request_received",
 		observability.String("operation", "FindBudget"),
@@ -336,11 +323,7 @@ func (h *BudgetHandler) Update(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	budgetID := r.PathValue("id")
-	if budgetID == "" {
-		h.errorHandler.HandleError(w, r, fmt.Errorf("budget_id is required"))
-		return
-	}
+	budgetID := chi.URLParam(r, "id")
 
 	h.o11y.Logger().Info(ctx, "request_received",
 		observability.String("operation", "UpdateBudget"),
@@ -436,11 +419,7 @@ func (h *BudgetHandler) Delete(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	budgetID := r.PathValue("id")
-	if budgetID == "" {
-		h.errorHandler.HandleError(w, r, fmt.Errorf("budget_id is required"))
-		return
-	}
+	budgetID := chi.URLParam(r, "id")
 
 	h.o11y.Logger().Info(ctx, "request_received",
 		observability.String("operation", "DeleteBudget"),

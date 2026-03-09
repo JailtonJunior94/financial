@@ -8,19 +8,19 @@ import (
 )
 
 var (
-	// UUIDRegex valida UUIDs em qualquer formato (v1, v4, v7, ULID, etc)
+	// UUIDRegex valida UUIDs em qualquer formato (v1, v4, v7, ULID, etc).
 	UUIDRegex = regexp.MustCompile(`^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$`)
 
-	// DateRegex valida datas no formato YYYY-MM-DD
+	// DateRegex valida datas no formato YYYY-MM-DD.
 	DateRegex = regexp.MustCompile(`^\d{4}-\d{2}-\d{2}$`)
 
-	// MonthRegex valida meses no formato YYYY-MM
+	// MonthRegex valida meses no formato YYYY-MM.
 	MonthRegex = regexp.MustCompile(`^\d{4}-\d{2}$`)
 
-	// MoneyRegex valida valores monetários (até 2 casas decimais, máximo 15 dígitos inteiros)
+	// MoneyRegex valida valores monetários (até 2 casas decimais, máximo 15 dígitos inteiros).
 	MoneyRegex = regexp.MustCompile(`^\d{1,15}(\.\d{1,2})?$`)
 
-	// PercentageRegex valida valores percentuais (até 3 casas decimais, alinhado com NUMERIC(6,3))
+	// PercentageRegex valida valores percentuais (até 3 casas decimais, alinhado com NUMERIC(6,3)).
 	PercentageRegex = regexp.MustCompile(`^\d+(\.\d{1,3})?$`)
 )
 

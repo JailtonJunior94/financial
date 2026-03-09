@@ -3,9 +3,9 @@ package usecase
 import (
 	"context"
 
+	categorydomain "github.com/jailtonjunior94/financial/internal/category/domain"
 	"github.com/jailtonjunior94/financial/internal/category/domain/interfaces"
 	"github.com/jailtonjunior94/financial/internal/category/infrastructure/repositories"
-	customErrors "github.com/jailtonjunior94/financial/pkg/custom_errors"
 	"github.com/jailtonjunior94/financial/pkg/observability/metrics"
 
 	"github.com/JailtonJunior94/devkit-go/pkg/database"
@@ -61,7 +61,7 @@ func (u *removeCategoryUseCase) Execute(ctx context.Context, userID, id string) 
 	}
 
 	if category == nil {
-		return customErrors.ErrCategoryNotFound
+		return categorydomain.ErrCategoryNotFound
 	}
 
 	return u.uow.Do(ctx, func(ctx context.Context, tx database.DBTX) error {

@@ -38,7 +38,7 @@ func New(ctx context.Context, o11y observability.Observability, config *jobs.Con
 		config = jobs.DefaultConfig()
 	}
 
-	ctx, cancel := context.WithCancel(ctx)
+	ctx, cancel := context.WithCancel(ctx) //nolint:gosec
 
 	// Configurar cron com recovery se habilitado
 	opts := []cron.Option{

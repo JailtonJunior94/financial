@@ -10,6 +10,7 @@ import (
 	"github.com/JailtonJunior94/devkit-go/pkg/observability"
 	"github.com/JailtonJunior94/devkit-go/pkg/observability/fake"
 	"github.com/JailtonJunior94/devkit-go/pkg/vos"
+	categorydomain "github.com/jailtonjunior94/financial/internal/category/domain"
 	mocks "github.com/jailtonjunior94/financial/internal/category/infrastructure/repositories/mocks"
 	customErrors "github.com/jailtonjunior94/financial/pkg/custom_errors"
 	"github.com/jailtonjunior94/financial/pkg/observability/metrics"
@@ -130,7 +131,7 @@ func (s *RemoveSubcategoryUseCaseSuite) TestExecute() {
 			},
 			expect: func(err error) {
 				s.Error(err)
-				s.Equal(customErrors.ErrCategoryNotFound, err)
+				s.Equal(categorydomain.ErrCategoryNotFound, err)
 			},
 		},
 		{

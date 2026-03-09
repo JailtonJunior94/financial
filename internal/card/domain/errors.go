@@ -3,6 +3,7 @@ package domain
 import "errors"
 
 var (
+	ErrCardNotFound          = errors.New("card not found")
 	ErrCardHasOpenInvoices   = errors.New("card has open invoices")
 	ErrInvalidCardType       = errors.New("invalid card type: must be 'credit' or 'debit'")
 	ErrInvalidCardFlag       = errors.New("invalid card flag")

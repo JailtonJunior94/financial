@@ -263,7 +263,7 @@ func (m *FinancialMetrics) RecordConsumerFailure(ctx context.Context, operation,
 	)
 }
 
-// Constantes de operação adicionais (complementam as definidas em card_metrics.go)
+// Constantes de operação adicionais (complementam as definidas em card_metrics.go).
 const (
 	OperationGet        = "get"
 	OperationFindByCode = "find_by_code"
@@ -273,7 +273,7 @@ const (
 	OperationRegister   = "register"
 )
 
-// Constantes de entidade
+// Constantes de entidade.
 const (
 	EntityBudgetItem = "budget_item"
 )

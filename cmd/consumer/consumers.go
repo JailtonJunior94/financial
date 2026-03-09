@@ -205,7 +205,7 @@ func NewApplication() (*application, error) {
 		rabbitmq.WithQueue(cfg.RabbitMQConfig.Queue),
 	)
 
-	ctx, cancel := context.WithCancel(context.Background())
+	ctx, cancel := context.WithCancel(context.Background()) //nolint:gosec
 
 	return &application{
 		config:    cfg,

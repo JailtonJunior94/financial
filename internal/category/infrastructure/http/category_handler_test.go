@@ -13,11 +13,11 @@ import (
 	"github.com/go-chi/chi/v5"
 	"github.com/jailtonjunior94/financial/internal/category/application/dtos"
 	"github.com/jailtonjunior94/financial/internal/category/application/usecase"
+	categorydomain "github.com/jailtonjunior94/financial/internal/category/domain"
 	categoryHttp "github.com/jailtonjunior94/financial/internal/category/infrastructure/http"
 	"github.com/jailtonjunior94/financial/pkg/api/httperrors"
 	"github.com/jailtonjunior94/financial/pkg/api/middlewares"
 	"github.com/jailtonjunior94/financial/pkg/auth"
-	customerrors "github.com/jailtonjunior94/financial/pkg/custom_errors"
 	"github.com/jailtonjunior94/financial/pkg/observability/metrics"
 	"github.com/stretchr/testify/assert"
 )
@@ -82,7 +82,7 @@ func newCategoryTestHandler(
 ) *categoryHttp.CategoryHandler {
 	obs := fake.NewProvider()
 	fm := metrics.NewTestFinancialMetrics()
-	errorHandler := httperrors.NewErrorHandler(obs)
+	errorHandler := httperrors.NewErrorHandler(obs, categorydomain.ErrorMappings())
 	return categoryHttp.NewCategoryHandler(categoryHttp.CategoryHandlerDeps{
 		O11y:                         obs,
 		FM:                           fm,
@@ -284,7 +284,7 @@ func TestCategoryHandler_FindBy_NotFound(t *testing.T) {
 	handler := newCategoryTestHandler(
 		&stubCreateCategory{},
 		&stubFindCategoryPaginated{},
-		&stubFindCategoryBy{err: customerrors.ErrCategoryNotFound},
+		&stubFindCategoryBy{err: categorydomain.ErrCategoryNotFound},
 		&stubUpdateCategory{},
 		&stubRemoveCategory{},
 	)
@@ -362,7 +362,7 @@ func TestCategoryHandler_Update_NotFound(t *testing.T) {
 		&stubCreateCategory{},
 		&stubFindCategoryPaginated{},
 		&stubFindCategoryBy{},
-		&stubUpdateCategory{err: customerrors.ErrCategoryNotFound},
+		&stubUpdateCategory{err: categorydomain.ErrCategoryNotFound},
 		&stubRemoveCategory{},
 	)
 
@@ -418,7 +418,7 @@ func TestCategoryHandler_Delete_NotFound(t *testing.T) {
 		&stubFindCategoryPaginated{},
 		&stubFindCategoryBy{},
 		&stubUpdateCategory{},
-		&stubRemoveCategory{err: customerrors.ErrCategoryNotFound},
+		&stubRemoveCategory{err: categorydomain.ErrCategoryNotFound},
 	)
 
 	req := makeAuthenticatedCategoryChiRequest(http.MethodDelete, "/api/v1/categories/"+testCategoryID, "id", testCategoryID, nil, testUserID)

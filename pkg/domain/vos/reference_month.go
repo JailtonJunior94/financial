@@ -7,7 +7,7 @@ import (
 )
 
 var (
-	// ErrInvalidReferenceMonth indica formato inválido de mês de referência
+	// ErrInvalidReferenceMonth indica formato inválido de mês de referência.
 	ErrInvalidReferenceMonth = errors.New("invalid reference month format, expected YYYY-MM")
 )
 

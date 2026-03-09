@@ -5,6 +5,7 @@ import (
 	"fmt"
 
 	"github.com/jailtonjunior94/financial/internal/category/application/usecase"
+	categorydomain "github.com/jailtonjunior94/financial/internal/category/domain"
 	"github.com/jailtonjunior94/financial/internal/category/infrastructure/adapters"
 	"github.com/jailtonjunior94/financial/internal/category/infrastructure/http"
 	"github.com/jailtonjunior94/financial/internal/category/infrastructure/repositories"
@@ -24,7 +25,7 @@ type CategoryModule struct {
 }
 
 func NewCategoryModule(db *sql.DB, o11y observability.Observability, tokenValidator auth.TokenValidator) (CategoryModule, error) {
-	errorHandler := httperrors.NewErrorHandler(o11y)
+	errorHandler := httperrors.NewErrorHandler(o11y, categorydomain.ErrorMappings())
 	fm := metrics.NewFinancialMetrics(o11y)
 
 	unitOfWork, err := uow.NewUnitOfWork(db)

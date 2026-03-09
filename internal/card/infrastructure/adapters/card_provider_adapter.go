@@ -6,9 +6,9 @@ import (
 	"github.com/JailtonJunior94/devkit-go/pkg/observability"
 	"github.com/JailtonJunior94/devkit-go/pkg/vos"
 
+	cardDomain "github.com/jailtonjunior94/financial/internal/card/domain"
 	"github.com/jailtonjunior94/financial/internal/card/domain/interfaces"
 	invoiceInterfaces "github.com/jailtonjunior94/financial/internal/invoice/domain/interfaces"
-	customErrors "github.com/jailtonjunior94/financial/pkg/custom_errors"
 )
 
 type CardProviderAdapter struct {
@@ -41,7 +41,7 @@ func (a *CardProviderAdapter) GetCardBillingInfo(
 	}
 
 	if card == nil {
-		return nil, customErrors.ErrCardNotFound
+		return nil, cardDomain.ErrCardNotFound
 	}
 
 	return &invoiceInterfaces.CardBillingInfo{

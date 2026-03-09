@@ -4,6 +4,7 @@ import (
 	"context"
 	"time"
 
+	userdomain "github.com/jailtonjunior94/financial/internal/user/domain"
 	"github.com/jailtonjunior94/financial/internal/user/domain/interfaces"
 	"github.com/jailtonjunior94/financial/pkg/observability/metrics"
 
@@ -40,6 +41,19 @@ func (u *deleteUserUseCase) Execute(ctx context.Context, id string) error {
 	defer span.End()
 
 	span.AddEvent("deleting user", observability.Field{Key: "user.id", Value: id})
+
+	user, err := u.repository.FindByID(ctx, id)
+	if err != nil {
+		span.RecordError(err)
+		u.fm.RecordUsecaseFailure(ctx, "delete_user", "user", "infra", time.Since(start))
+		return err
+	}
+	if user == nil {
+		span.RecordError(userdomain.ErrUserNotFound)
+		span.SetStatus(observability.StatusCodeError, "user not found")
+		u.fm.RecordUsecaseFailure(ctx, "delete_user", "user", "not_found", time.Since(start))
+		return userdomain.ErrUserNotFound
+	}
 
 	if err := u.repository.SoftDelete(ctx, id); err != nil {
 		span.RecordError(err)

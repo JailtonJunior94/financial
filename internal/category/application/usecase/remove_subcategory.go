@@ -3,6 +3,7 @@ package usecase
 import (
 	"context"
 
+	categorydomain "github.com/jailtonjunior94/financial/internal/category/domain"
 	"github.com/jailtonjunior94/financial/internal/category/domain/interfaces"
 	customErrors "github.com/jailtonjunior94/financial/pkg/custom_errors"
 	"github.com/jailtonjunior94/financial/pkg/observability/metrics"
@@ -56,7 +57,7 @@ func (u *removeSubcategoryUseCase) Execute(ctx context.Context, userID, category
 		return err
 	}
 	if category == nil {
-		return customErrors.ErrCategoryNotFound
+		return categorydomain.ErrCategoryNotFound
 	}
 
 	subcategory, err := u.subcategoryRepo.FindByID(ctx, user, catID, subID)

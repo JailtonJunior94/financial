@@ -4,6 +4,7 @@ import (
 	"database/sql"
 
 	"github.com/jailtonjunior94/financial/internal/payment_method/application/usecase"
+	pmdomain "github.com/jailtonjunior94/financial/internal/payment_method/domain"
 	"github.com/jailtonjunior94/financial/internal/payment_method/infrastructure/http"
 	"github.com/jailtonjunior94/financial/internal/payment_method/infrastructure/repositories"
 	"github.com/jailtonjunior94/financial/pkg/api/httperrors"
@@ -17,7 +18,7 @@ type PaymentMethodModule struct {
 }
 
 func NewPaymentMethodModule(db *sql.DB, o11y observability.Observability) PaymentMethodModule {
-	errorHandler := httperrors.NewErrorHandler(o11y)
+	errorHandler := httperrors.NewErrorHandler(o11y, pmdomain.ErrorMappings())
 
 	financialMetrics := metrics.NewFinancialMetrics(o11y)
 

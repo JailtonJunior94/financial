@@ -5,7 +5,7 @@ import (
 
 	"github.com/jailtonjunior94/financial/internal/payment_method/application/dtos"
 	"github.com/jailtonjunior94/financial/internal/payment_method/domain/interfaces"
-	customErrors "github.com/jailtonjunior94/financial/pkg/custom_errors"
+	pmdomain "github.com/jailtonjunior94/financial/internal/payment_method/domain"
 
 	"github.com/JailtonJunior94/devkit-go/pkg/observability"
 )
@@ -54,9 +54,9 @@ func (u *findPaymentMethodByCodeUseCase) Execute(ctx context.Context, code strin
 			observability.Field{Key: "code", Value: code},
 		)
 		u.o11y.Logger().Error(ctx, "payment method not found",
-			observability.Error(customErrors.ErrPaymentMethodNotFound),
+			observability.Error(pmdomain.ErrPaymentMethodNotFound),
 			observability.String("code", code))
-		return nil, customErrors.ErrPaymentMethodNotFound
+		return nil, pmdomain.ErrPaymentMethodNotFound
 	}
 
 	return toPaymentMethodOutput(paymentMethod), nil

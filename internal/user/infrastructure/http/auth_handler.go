@@ -64,6 +64,7 @@ func (h *AuthHandler) Token(w http.ResponseWriter, r *http.Request) {
 		observability.String("correlation_id", correlationID),
 	)
 
+	r.Body = http.MaxBytesReader(w, r.Body, 1<<20)
 	if err := r.ParseForm(); err != nil {
 		h.o11y.Logger().Error(ctx, "request_failed",
 			observability.String("operation", "Token"),

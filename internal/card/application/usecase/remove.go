@@ -112,7 +112,7 @@ func (u *removeCardUseCase) Execute(ctx context.Context, userID, id string) erro
 			observability.String("user_id", userID),
 			observability.String("card_id", id),
 		)
-		return customErrors.ErrCardNotFound
+		return domain.ErrCardNotFound
 	}
 
 	if card.UserID.String() != user.String() {

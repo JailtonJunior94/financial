@@ -24,7 +24,7 @@ type InvoiceItem struct {
 	InstallmentAmount vos.Money // Valor desta parcela
 }
 
-// validateInvoiceItemFields valida os campos de um InvoiceItem
+// validateInvoiceItemFields valida os campos de um InvoiceItem.
 func validateInvoiceItemFields(description string, totalAmount, installmentAmount vos.Money, installmentNumber, installmentTotal int) error {
 	if description == "" {
 		return domain.ErrEmptyDescription

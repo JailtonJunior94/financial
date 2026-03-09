@@ -9,8 +9,8 @@ import (
 	"github.com/JailtonJunior94/devkit-go/pkg/observability/fake"
 	devkitVos "github.com/JailtonJunior94/devkit-go/pkg/vos"
 	"github.com/jailtonjunior94/financial/internal/user/application/dtos"
+	userdomain "github.com/jailtonjunior94/financial/internal/user/domain"
 	repositoryMock "github.com/jailtonjunior94/financial/internal/user/infrastructure/repositories/mocks"
-	customerrors "github.com/jailtonjunior94/financial/pkg/custom_errors"
 	"github.com/jailtonjunior94/financial/pkg/observability/metrics"
 
 	"github.com/stretchr/testify/mock"
@@ -151,7 +151,7 @@ func (s *UpdateUserUseCaseSuite) TestExecute() {
 			expect: func(output interface{}, err error) {
 				s.Error(err)
 				s.Nil(output)
-				s.ErrorIs(err, customerrors.ErrEmailAlreadyExists)
+				s.ErrorIs(err, userdomain.ErrEmailAlreadyExists)
 			},
 		},
 		{
@@ -169,7 +169,7 @@ func (s *UpdateUserUseCaseSuite) TestExecute() {
 			expect: func(output interface{}, err error) {
 				s.Error(err)
 				s.Nil(output)
-				s.ErrorIs(err, customerrors.ErrUserNotFound)
+				s.ErrorIs(err, userdomain.ErrUserNotFound)
 			},
 		},
 		{

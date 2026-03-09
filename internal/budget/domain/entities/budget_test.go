@@ -1,6 +1,3 @@
-//go:build integration
-// +build integration
-
 package entities
 
 import (
@@ -80,12 +77,12 @@ func TestAddItems(t *testing.T) {
 	percentageGoalCategorySix, _ := vos.NewPercentage(5000) // 5%
 
 	items := []*BudgetItem{
-		NewBudgetItem(budget, categoryOne, percentageGoalCategoryOne),
-		NewBudgetItem(budget, categoryTwo, percentageGoalCategoryTwo),
-		NewBudgetItem(budget, categoryThree, percentageGoalCategoryThree),
-		NewBudgetItem(budget, categoryFour, percentageGoalCategoryFour),
-		NewBudgetItem(budget, categoryFive, percentageGoalCategoryFive),
-		NewBudgetItem(budget, categorySix, percentageGoalCategorySix),
+		NewBudgetItem(budget.ID, budget.TotalAmount, categoryOne, percentageGoalCategoryOne),
+		NewBudgetItem(budget.ID, budget.TotalAmount, categoryTwo, percentageGoalCategoryTwo),
+		NewBudgetItem(budget.ID, budget.TotalAmount, categoryThree, percentageGoalCategoryThree),
+		NewBudgetItem(budget.ID, budget.TotalAmount, categoryFour, percentageGoalCategoryFour),
+		NewBudgetItem(budget.ID, budget.TotalAmount, categoryFive, percentageGoalCategoryFive),
+		NewBudgetItem(budget.ID, budget.TotalAmount, categorySix, percentageGoalCategorySix),
 	}
 
 	type args struct {

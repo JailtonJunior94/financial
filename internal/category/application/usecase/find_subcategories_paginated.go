@@ -5,8 +5,8 @@ import (
 	"time"
 
 	"github.com/jailtonjunior94/financial/internal/category/application/dtos"
+	categorydomain "github.com/jailtonjunior94/financial/internal/category/domain"
 	"github.com/jailtonjunior94/financial/internal/category/domain/interfaces"
-	customErrors "github.com/jailtonjunior94/financial/pkg/custom_errors"
 	"github.com/jailtonjunior94/financial/pkg/observability/metrics"
 	"github.com/jailtonjunior94/financial/pkg/pagination"
 
@@ -59,7 +59,7 @@ func (u *findSubcategoriesPaginatedUseCase) Execute(ctx context.Context, userID,
 		return nil, err
 	}
 	if category == nil {
-		return nil, customErrors.ErrCategoryNotFound
+		return nil, categorydomain.ErrCategoryNotFound
 	}
 
 	if limit <= 0 {

@@ -106,7 +106,13 @@ func (u *updateSpentAmountUseCase) Execute(ctx context.Context, userID, budgetID
 	})
 
 	if err != nil {
-		u.o11y.Logger().Error(ctx, "failed to update spent amount", observability.Error(err))
+		span.RecordError(err)
+		span.SetStatus(observability.StatusCodeError, "failed to update spent amount")
+		u.o11y.Logger().Error(ctx, "failed to update spent amount",
+			observability.String("operation", "update_spent_amount"),
+			observability.String("layer", "usecase"),
+			observability.String("entity", "budget"),
+			observability.Error(err))
 		return err
 	}
 

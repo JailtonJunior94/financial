@@ -1,6 +1,3 @@
-//go:build integration
-// +build integration
-
 package vos_test
 
 import (

@@ -57,22 +57,22 @@ func TestErrorMapper_MapError_ValidationErrors(t *testing.T) {
 
 		// Base mappings from pkg/custom_errors (always present without extra)
 		{
-			name:           "customerrors.ErrBudgetInvalidTotal returns 400",
-			err:            customerrors.ErrBudgetInvalidTotal,
+			name:           "customerrors.ErrCannotBeEmpty returns 400",
+			err:            customerrors.ErrCannotBeEmpty,
 			expectedStatus: http.StatusBadRequest,
-			description:    "Custom error budget validation should return 400 Bad Request",
+			description:    "Shared validation error should return 400 Bad Request",
 		},
 		{
-			name:           "customerrors.ErrUserNotFound returns 404",
-			err:            customerrors.ErrUserNotFound,
+			name:           "customerrors.ErrSubcategoryNotFound returns 404",
+			err:            customerrors.ErrSubcategoryNotFound,
 			expectedStatus: http.StatusNotFound,
-			description:    "User not found should return 404 Not Found",
+			description:    "Subcategory not found should return 404 Not Found",
 		},
 		{
-			name:           "customerrors.ErrEmailAlreadyExists returns 409",
-			err:            customerrors.ErrEmailAlreadyExists,
+			name:           "customerrors.ErrInvalidParentCategory returns 409",
+			err:            customerrors.ErrInvalidParentCategory,
 			expectedStatus: http.StatusConflict,
-			description:    "Email already exists should return 409 Conflict",
+			description:    "Invalid parent category should return 409 Conflict",
 		},
 		{
 			name:           "customerrors.ErrUnauthorized returns 401",
@@ -139,10 +139,10 @@ func TestErrorMapper_MapError_UnmappedErrors(t *testing.T) {
 func TestErrorMapper_ExtraMappingsOverrideBase(t *testing.T) {
 	// Verify that extra mappings can override base mappings.
 	mapper := NewErrorMapper(map[error]ErrorMapping{
-		customerrors.ErrUserNotFound: {Status: http.StatusBadRequest, Message: "Custom override"},
+		customerrors.ErrSubcategoryNotFound: {Status: http.StatusBadRequest, Message: "Custom override"},
 	})
 
-	mapping := mapper.MapError(customerrors.ErrUserNotFound)
+	mapping := mapper.MapError(customerrors.ErrSubcategoryNotFound)
 	if mapping.Status != http.StatusBadRequest {
 		t.Errorf("extra mapping should override base: expected 400, got %d", mapping.Status)
 	}

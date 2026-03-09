@@ -5,6 +5,7 @@ import (
 	"time"
 
 	"github.com/jailtonjunior94/financial/internal/card/application/dtos"
+	cardDomain "github.com/jailtonjunior94/financial/internal/card/domain"
 	"github.com/jailtonjunior94/financial/internal/card/domain/interfaces"
 	customErrors "github.com/jailtonjunior94/financial/pkg/custom_errors"
 	"github.com/jailtonjunior94/financial/pkg/observability/metrics"
@@ -95,7 +96,7 @@ func (u *findCardByUseCase) Execute(ctx context.Context, userID, id string) (*dt
 			observability.String("user_id", userID),
 			observability.String("card_id", id),
 		)
-		return nil, customErrors.ErrCardNotFound
+		return nil, cardDomain.ErrCardNotFound
 	}
 
 	if card.UserID.String() != user.String() {

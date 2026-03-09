@@ -219,7 +219,7 @@ func (g *Group) Shutdown(ctx context.Context) error {
 		servicesCount := len(g.services) // Capture value before spawning to avoid race
 
 		// Create context with extended timeout for monitoring goroutine
-		monitorCtx, cancel := context.WithTimeout(context.Background(), 5*time.Minute)
+		monitorCtx, cancel := context.WithTimeout(context.Background(), 5*time.Minute) //nolint:gosec
 
 		go func() {
 			defer cancel()

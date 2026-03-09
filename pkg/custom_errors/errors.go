@@ -13,32 +13,21 @@ var (
 	ErrInvalidTokenClaims   = errors.New("invalid token claims")
 	ErrInvalidSigningMethod = errors.New("invalid token signing method")
 
-	// Domain errors.
-	ErrBudgetNotFound        = errors.New("budget not found")
-	ErrCardNotFound          = errors.New("card not found")
-	ErrCategoryNotFound      = errors.New("category not found")
-	ErrPaymentMethodNotFound = errors.New("payment method not found")
+	// Domain errors (cross-cutting — not owned by a single module).
 	ErrCannotBeEmpty         = errors.New("name cannot be empty")
 	ErrInvalidEmail          = errors.New("invalid email format")
-	ErrEmailAlreadyExists    = errors.New("email already exists")
 	ErrTooLong               = errors.New("name cannot be more than 255 characters")
 	ErrNameTooLong           = errors.New("name cannot be more than 100 characters")
 	ErrPasswordIsRequired    = errors.New("password is required")
-	ErrUserNotFound          = errors.New("user not found")
 	ErrCheckHash             = errors.New("error checking hash")
 	ErrNameIsRequired        = errors.New("name is required")
 	ErrUserIDIsRequired      = errors.New("user_id is required")
 	ErrSequenceIsRequired    = errors.New("sequence is required")
 	ErrSequenceTooLarge      = errors.New("sequence cannot be greater than 1000")
 	ErrCategoryCycle         = errors.New("category cannot be its own parent or create a cycle")
-	ErrBudgetInvalidTotal    = errors.New("sum of budget item percentages must equal 100%")
 	ErrInvalidParentCategory = errors.New("parent category not found or belongs to different user")
 	ErrSubcategoryNotFound   = errors.New("subcategory not found")
 
 	// Authorization errors.
 	ErrForbidden = errors.New("you do not have permission to access this resource")
-
-	// Validation errors (shared across modules).
-	ErrNegativeAmount    = errors.New("amount cannot be negative")
-	ErrInvalidCategoryID = errors.New("invalid category ID")
 )

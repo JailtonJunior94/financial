@@ -6,6 +6,7 @@ import (
 	"github.com/JailtonJunior94/devkit-go/pkg/observability"
 	"github.com/jailtonjunior94/financial/configs"
 	"github.com/jailtonjunior94/financial/internal/user/application/usecase"
+	userdomain "github.com/jailtonjunior94/financial/internal/user/domain"
 	userHttp "github.com/jailtonjunior94/financial/internal/user/infrastructure/http"
 	"github.com/jailtonjunior94/financial/internal/user/infrastructure/repositories"
 	"github.com/jailtonjunior94/financial/pkg/api/httperrors"
@@ -20,7 +21,7 @@ type UserModule struct {
 
 func NewUserModule(db database.DBTX, cfg *configs.Config, o11y observability.Observability, tokenGenerator auth.TokenGenerator, tokenValidator auth.TokenValidator) UserModule {
 	hash := encrypt.NewHashAdapter()
-	errorHandler := httperrors.NewErrorHandler(o11y)
+	errorHandler := httperrors.NewErrorHandler(o11y, userdomain.ErrorMappings())
 	financialMetrics := metrics.NewFinancialMetrics(o11y)
 	userRepository := repositories.NewUserRepository(db, o11y, financialMetrics)
 	authUseCase := usecase.NewTokenUseCase(cfg, o11y, financialMetrics, hash, tokenGenerator, userRepository)

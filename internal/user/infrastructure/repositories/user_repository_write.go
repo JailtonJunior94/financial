@@ -6,7 +6,6 @@ import (
 	"time"
 
 	"github.com/jailtonjunior94/financial/internal/user/domain/entities"
-	customerrors "github.com/jailtonjunior94/financial/pkg/custom_errors"
 	"github.com/jailtonjunior94/financial/pkg/pagination"
 
 	"github.com/JailtonJunior94/devkit-go/pkg/observability"
@@ -210,7 +209,7 @@ func (r *userRepository) Update(ctx context.Context, user *entities.User) (*enti
 	}
 	if rowsAffected == 0 {
 		r.fm.RecordRepositoryQuery(ctx, "update", "user", time.Since(start))
-		return nil, customerrors.ErrUserNotFound
+		return nil, nil
 	}
 	r.o11y.Logger().Debug(ctx, "query_completed",
 		observability.String("operation", "update"),
@@ -281,7 +280,7 @@ func (r *userRepository) SoftDelete(ctx context.Context, id string) error {
 	}
 	if rowsAffected == 0 {
 		r.fm.RecordRepositoryQuery(ctx, "soft_delete", "user", time.Since(start))
-		return customerrors.ErrUserNotFound
+		return nil
 	}
 	r.o11y.Logger().Debug(ctx, "query_completed",
 		observability.String("operation", "soft_delete"),

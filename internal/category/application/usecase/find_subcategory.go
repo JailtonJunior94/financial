@@ -5,6 +5,7 @@ import (
 	"time"
 
 	"github.com/jailtonjunior94/financial/internal/category/application/dtos"
+	categorydomain "github.com/jailtonjunior94/financial/internal/category/domain"
 	"github.com/jailtonjunior94/financial/internal/category/domain/interfaces"
 	customErrors "github.com/jailtonjunior94/financial/pkg/custom_errors"
 	"github.com/jailtonjunior94/financial/pkg/observability/metrics"
@@ -58,7 +59,7 @@ func (u *findSubcategoryByUseCase) Execute(ctx context.Context, userID, category
 		return nil, err
 	}
 	if category == nil {
-		return nil, customErrors.ErrCategoryNotFound
+		return nil, categorydomain.ErrCategoryNotFound
 	}
 
 	subcategory, err := u.subcategoryRepo.FindByID(ctx, user, catID, subID)

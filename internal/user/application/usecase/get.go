@@ -5,8 +5,8 @@ import (
 	"time"
 
 	"github.com/jailtonjunior94/financial/internal/user/application/dtos"
+	userdomain "github.com/jailtonjunior94/financial/internal/user/domain"
 	"github.com/jailtonjunior94/financial/internal/user/domain/interfaces"
-	customerrors "github.com/jailtonjunior94/financial/pkg/custom_errors"
 	"github.com/jailtonjunior94/financial/pkg/observability/metrics"
 
 	"github.com/JailtonJunior94/devkit-go/pkg/observability"
@@ -52,7 +52,7 @@ func (u *getUserUseCase) Execute(ctx context.Context, id string) (*dtos.UserOutp
 
 	if user == nil {
 		u.fm.RecordUsecaseFailure(ctx, "get_user", "user", "not_found", time.Since(start))
-		return nil, customerrors.ErrUserNotFound
+		return nil, userdomain.ErrUserNotFound
 	}
 
 	u.fm.RecordUsecaseOperation(ctx, "get_user", "user", time.Since(start))

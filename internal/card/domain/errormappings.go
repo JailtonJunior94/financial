@@ -8,6 +8,7 @@ import (
 
 func ErrorMappings() map[error]httperrors.ErrorMapping {
 	return map[error]httperrors.ErrorMapping{
+		ErrCardNotFound:          {Status: http.StatusNotFound, Message: "Card not found"},
 		ErrCardHasOpenInvoices:   {Status: http.StatusUnprocessableEntity, Message: "Card has open invoices and cannot be deleted"},
 		ErrInvalidCardType:       {Status: http.StatusBadRequest, Message: "Invalid card type"},
 		ErrInvalidCardFlag:       {Status: http.StatusBadRequest, Message: "Invalid card flag"},

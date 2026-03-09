@@ -114,7 +114,7 @@ func (s *RemoveCardUseCaseSuite) TestExecute() {
 			},
 			expect: func(err error) {
 				s.Error(err)
-				s.ErrorIs(err, customErrors.ErrCardNotFound)
+				s.ErrorIs(err, domain.ErrCardNotFound)
 			},
 		},
 		{

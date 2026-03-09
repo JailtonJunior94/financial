@@ -13,11 +13,11 @@ import (
 	"github.com/go-chi/chi/v5"
 	"github.com/jailtonjunior94/financial/internal/user/application/dtos"
 	"github.com/jailtonjunior94/financial/internal/user/application/usecase"
+	userdomain "github.com/jailtonjunior94/financial/internal/user/domain"
 	userHttp "github.com/jailtonjunior94/financial/internal/user/infrastructure/http"
 	"github.com/jailtonjunior94/financial/pkg/api/httperrors"
 	"github.com/jailtonjunior94/financial/pkg/api/middlewares"
 	"github.com/jailtonjunior94/financial/pkg/auth"
-	customerrors "github.com/jailtonjunior94/financial/pkg/custom_errors"
 	"github.com/jailtonjunior94/financial/pkg/observability/metrics"
 
 	"github.com/stretchr/testify/assert"
@@ -80,7 +80,7 @@ func newTestHandler(
 ) *userHttp.UserHandler {
 	obs := fake.NewProvider()
 	fm := metrics.NewTestFinancialMetrics()
-	errorHandler := httperrors.NewErrorHandler(obs)
+	errorHandler := httperrors.NewErrorHandler(obs, userdomain.ErrorMappings())
 	return userHttp.NewUserHandler(userHttp.UserHandlerDeps{
 		O11y:              obs,
 		FM:                fm,
@@ -144,7 +144,7 @@ func TestUserHandler_GetByID_Success(t *testing.T) {
 func TestUserHandler_GetByID_NotFound(t *testing.T) {
 	handler := newTestHandler(
 		&stubCreateUser{},
-		&stubGetUser{err: customerrors.ErrUserNotFound},
+		&stubGetUser{err: userdomain.ErrUserNotFound},
 		&stubListUsers{},
 		&stubUpdateUser{},
 		&stubDeleteUser{},
@@ -283,7 +283,7 @@ func TestUserHandler_Update_Conflict(t *testing.T) {
 		&stubCreateUser{},
 		&stubGetUser{},
 		&stubListUsers{},
-		&stubUpdateUser{err: customerrors.ErrEmailAlreadyExists},
+		&stubUpdateUser{err: userdomain.ErrEmailAlreadyExists},
 		&stubDeleteUser{},
 	)
 
@@ -339,7 +339,7 @@ func TestUserHandler_Delete_NotFound(t *testing.T) {
 		&stubGetUser{},
 		&stubListUsers{},
 		&stubUpdateUser{},
-		&stubDeleteUser{err: customerrors.ErrUserNotFound},
+		&stubDeleteUser{err: userdomain.ErrUserNotFound},
 	)
 
 	req := makeAuthenticatedChiRequest(http.MethodDelete, "/api/v1/users/user-1", "id", "user-1", nil, "user-1")

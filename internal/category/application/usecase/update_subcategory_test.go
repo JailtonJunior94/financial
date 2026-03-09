@@ -12,6 +12,7 @@ import (
 	"github.com/JailtonJunior94/devkit-go/pkg/observability/fake"
 	"github.com/JailtonJunior94/devkit-go/pkg/vos"
 	"github.com/jailtonjunior94/financial/internal/category/application/dtos"
+	categorydomain "github.com/jailtonjunior94/financial/internal/category/domain"
 	mocks "github.com/jailtonjunior94/financial/internal/category/infrastructure/repositories/mocks"
 	customErrors "github.com/jailtonjunior94/financial/pkg/custom_errors"
 	"github.com/jailtonjunior94/financial/pkg/observability/metrics"
@@ -153,7 +154,7 @@ func (s *UpdateSubcategoryUseCaseSuite) TestExecute() {
 			expect: func(output *dtos.SubcategoryOutput, err error) {
 				s.Error(err)
 				s.Nil(output)
-				s.Equal(customErrors.ErrCategoryNotFound, err)
+				s.Equal(categorydomain.ErrCategoryNotFound, err)
 			},
 		},
 		{
