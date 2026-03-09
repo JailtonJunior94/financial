@@ -23,6 +23,26 @@ type paymentMethodRepository struct {
 	fm   *metrics.FinancialMetrics
 }
 
+type paymentMethodScanner interface {
+	Scan(dest ...interface{}) error
+}
+
+func scanPaymentMethod(scanner paymentMethodScanner) (entities.PaymentMethod, error) {
+	var paymentMethod entities.PaymentMethod
+
+	err := scanner.Scan(
+		&paymentMethod.ID.Value,
+		&paymentMethod.Name.Value,
+		&paymentMethod.Code.Value,
+		&paymentMethod.Description.Value,
+		&paymentMethod.CreatedAt,
+		&paymentMethod.UpdatedAt,
+		&paymentMethod.DeletedAt,
+	)
+
+	return paymentMethod, err
+}
+
 func NewPaymentMethodRepository(db database.DBTX, o11y observability.Observability, fm *metrics.FinancialMetrics) interfaces.PaymentMethodRepository {
 	return &paymentMethodRepository{
 		db:   db,
@@ -65,16 +85,7 @@ func (r *paymentMethodRepository) List(ctx context.Context) ([]*entities.Payment
 
 	var paymentMethods []*entities.PaymentMethod
 	for rows.Next() {
-		var pm entities.PaymentMethod
-		err := rows.Scan(
-			&pm.ID.Value,
-			&pm.Name.Value,
-			&pm.Code.Value,
-			&pm.Description.Value,
-			&pm.CreatedAt,
-			&pm.UpdatedAt,
-			&pm.DeletedAt,
-		)
+		pm, err := scanPaymentMethod(rows)
 		if err != nil {
 			span.RecordError(err)
 			r.fm.RecordRepositoryFailure(ctx, "list", "payment_method", "infra", time.Since(start))
@@ -105,16 +116,7 @@ func (r *paymentMethodRepository) FindByID(ctx context.Context, id vos.UUID) (*e
 				deleted_at is null
 				and id = $1;`
 
-	var pm entities.PaymentMethod
-	err := r.db.QueryRowContext(ctx, query, id.String()).Scan(
-		&pm.ID.Value,
-		&pm.Name.Value,
-		&pm.Code.Value,
-		&pm.Description.Value,
-		&pm.CreatedAt,
-		&pm.UpdatedAt,
-		&pm.DeletedAt,
-	)
+	pm, err := scanPaymentMethod(r.db.QueryRowContext(ctx, query, id.String()))
 
 	if err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
@@ -151,16 +153,7 @@ func (r *paymentMethodRepository) FindByCode(ctx context.Context, code string) (
 				deleted_at is null
 				and code = $1;`
 
-	var pm entities.PaymentMethod
-	err := r.db.QueryRowContext(ctx, query, normalizedCode).Scan(
-		&pm.ID.Value,
-		&pm.Name.Value,
-		&pm.Code.Value,
-		&pm.Description.Value,
-		&pm.CreatedAt,
-		&pm.UpdatedAt,
-		&pm.DeletedAt,
-	)
+	pm, err := scanPaymentMethod(r.db.QueryRowContext(ctx, query, normalizedCode))
 
 	if err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
@@ -337,16 +330,7 @@ func (r *paymentMethodRepository) ListPaginated(
 
 	var paymentMethods []*entities.PaymentMethod
 	for rows.Next() {
-		var pm entities.PaymentMethod
-		err := rows.Scan(
-			&pm.ID.Value,
-			&pm.Name.Value,
-			&pm.Code.Value,
-			&pm.Description.Value,
-			&pm.CreatedAt,
-			&pm.UpdatedAt,
-			&pm.DeletedAt,
-		)
+		pm, err := scanPaymentMethod(rows)
 		if err != nil {
 			span.RecordError(err)
 			r.fm.RecordRepositoryFailure(ctx, "list_paginated", "payment_method", "infra", time.Since(start))

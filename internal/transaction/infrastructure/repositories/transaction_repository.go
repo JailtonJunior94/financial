@@ -440,7 +440,7 @@ func (r *transactionRepository) ListPaginated(ctx context.Context, params interf
 		c := pagination.Cursor{
 			Fields: map[string]any{
 				"transaction_date": last.TransactionDate.Format("2006-01-02"),
-				"id":              last.ID.String(),
+				"id":               last.ID.String(),
 			},
 		}
 		encoded, encErr := pagination.EncodeCursor(c)

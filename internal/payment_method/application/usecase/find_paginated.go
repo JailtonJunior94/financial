@@ -2,14 +2,11 @@ package usecase
 
 import (
 	"context"
-	"time"
 
 	"github.com/jailtonjunior94/financial/internal/payment_method/application/dtos"
-	"github.com/jailtonjunior94/financial/internal/payment_method/domain/entities"
 	"github.com/jailtonjunior94/financial/internal/payment_method/domain/interfaces"
 	"github.com/jailtonjunior94/financial/pkg/pagination"
 
-	"github.com/JailtonJunior94/devkit-go/pkg/linq"
 	"github.com/JailtonJunior94/devkit-go/pkg/observability"
 )
 
@@ -100,19 +97,10 @@ func (u *findPaymentMethodPaginatedUseCase) Execute(
 	}
 
 	// Converter para DTOs
-	paymentMethodsOutput := linq.Map(paymentMethods, func(pm *entities.PaymentMethod) *dtos.PaymentMethodOutput {
-		output := &dtos.PaymentMethodOutput{
-			ID:          pm.ID.String(),
-			Name:        pm.Name.String(),
-			Code:        pm.Code.String(),
-			Description: pm.Description.String(),
-			CreatedAt:   pm.CreatedAt.ValueOr(time.Time{}),
-		}
-		if !pm.UpdatedAt.ValueOr(time.Time{}).IsZero() {
-			output.UpdatedAt = pm.UpdatedAt.ValueOr(time.Time{})
-		}
-		return output
-	})
+	paymentMethodsOutput := make([]*dtos.PaymentMethodOutput, 0, len(paymentMethods))
+	for _, paymentMethod := range paymentMethods {
+		paymentMethodsOutput = append(paymentMethodsOutput, toPaymentMethodOutput(paymentMethod))
+	}
 
 	return &FindPaymentMethodPaginatedOutput{
 		PaymentMethods: paymentMethodsOutput,

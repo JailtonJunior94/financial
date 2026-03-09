@@ -13,7 +13,6 @@ func date(year, month, day int) time.Time {
 	return time.Date(year, time.Month(month), day, 0, 0, 0, 0, time.UTC)
 }
 
-
 func TestInvoiceCalculator(t *testing.T) {
 	t.Run("should create calculator and return correct closing day", func(t *testing.T) {
 		calc, err := factories.NewInvoiceCalculator(10, 7)

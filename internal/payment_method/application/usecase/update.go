@@ -2,7 +2,6 @@ package usecase
 
 import (
 	"context"
-	"time"
 
 	"github.com/jailtonjunior94/financial/internal/payment_method/application/dtos"
 	"github.com/jailtonjunior94/financial/internal/payment_method/domain/interfaces"
@@ -96,15 +95,5 @@ func (u *updatePaymentMethodUseCase) Execute(ctx context.Context, id string, inp
 		return nil, err
 	}
 
-	output := &dtos.PaymentMethodOutput{
-		ID:          paymentMethod.ID.String(),
-		Name:        paymentMethod.Name.String(),
-		Code:        paymentMethod.Code.String(),
-		Description: paymentMethod.Description.String(),
-	}
-	if !paymentMethod.UpdatedAt.ValueOr(time.Time{}).IsZero() {
-		output.UpdatedAt = paymentMethod.UpdatedAt.ValueOr(time.Time{})
-	}
-
-	return output, nil
+	return toPaymentMethodOutput(paymentMethod), nil
 }

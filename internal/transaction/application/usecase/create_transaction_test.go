@@ -12,12 +12,12 @@ import (
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/suite"
 
-	"github.com/jailtonjunior94/financial/internal/transaction/application/dtos"
-	transactionDomain "github.com/jailtonjunior94/financial/internal/transaction/domain"
-	transactionMocks "github.com/jailtonjunior94/financial/internal/transaction/domain/interfaces/mocks"
 	invoiceInterfaces "github.com/jailtonjunior94/financial/internal/invoice/domain/interfaces"
 	invoiceMocks "github.com/jailtonjunior94/financial/internal/invoice/domain/interfaces/mocks"
+	"github.com/jailtonjunior94/financial/internal/transaction/application/dtos"
+	transactionDomain "github.com/jailtonjunior94/financial/internal/transaction/domain"
 	transactionInterfaces "github.com/jailtonjunior94/financial/internal/transaction/domain/interfaces"
+	transactionMocks "github.com/jailtonjunior94/financial/internal/transaction/domain/interfaces/mocks"
 	outboxMocks "github.com/jailtonjunior94/financial/pkg/outbox/mocks"
 )
 

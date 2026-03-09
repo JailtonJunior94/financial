@@ -97,13 +97,5 @@ func (u *createPaymentMethodUseCase) Execute(ctx context.Context, input *dtos.Pa
 		observability.String("payment_method_id", paymentMethod.ID.String()),
 	)
 
-	output := &dtos.PaymentMethodOutput{
-		ID:          paymentMethod.ID.String(),
-		Name:        paymentMethod.Name.String(),
-		Code:        paymentMethod.Code.String(),
-		Description: paymentMethod.Description.String(),
-		CreatedAt:   paymentMethod.CreatedAt.ValueOr(time.Time{}),
-	}
-
-	return output, nil
+	return toPaymentMethodOutput(paymentMethod), nil
 }

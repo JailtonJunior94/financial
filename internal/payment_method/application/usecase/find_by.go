@@ -113,17 +113,6 @@ func (u *findPaymentMethodByUseCase) Execute(ctx context.Context, id string) (*d
 		return nil, customErrors.ErrPaymentMethodNotFound
 	}
 
-	output := &dtos.PaymentMethodOutput{
-		ID:          paymentMethod.ID.String(),
-		Name:        paymentMethod.Name.String(),
-		Code:        paymentMethod.Code.String(),
-		Description: paymentMethod.Description.String(),
-		CreatedAt:   paymentMethod.CreatedAt.ValueOr(time.Time{}),
-	}
-	if !paymentMethod.UpdatedAt.ValueOr(time.Time{}).IsZero() {
-		output.UpdatedAt = paymentMethod.UpdatedAt.ValueOr(time.Time{})
-	}
-
 	u.fm.RecordUsecaseOperation(ctx, "FindPaymentMethodBy", "payment_method", time.Since(start))
 	u.o11y.Logger().Info(ctx, "execution_completed",
 		observability.String("operation", "FindPaymentMethodBy"),
@@ -133,5 +122,5 @@ func (u *findPaymentMethodByUseCase) Execute(ctx context.Context, id string) (*d
 		observability.String("payment_method_id", id),
 	)
 
-	return output, nil
+	return toPaymentMethodOutput(paymentMethod), nil
 }

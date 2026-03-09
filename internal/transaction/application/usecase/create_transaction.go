@@ -11,14 +11,14 @@ import (
 	"github.com/JailtonJunior94/devkit-go/pkg/vos"
 	"github.com/google/uuid"
 
+	invoiceFactories "github.com/jailtonjunior94/financial/internal/invoice/domain/factories"
+	invoiceInterfaces "github.com/jailtonjunior94/financial/internal/invoice/domain/interfaces"
 	"github.com/jailtonjunior94/financial/internal/transaction/application/dtos"
 	"github.com/jailtonjunior94/financial/internal/transaction/domain/entities"
 	"github.com/jailtonjunior94/financial/internal/transaction/domain/events"
 	"github.com/jailtonjunior94/financial/internal/transaction/domain/factories"
 	transactionInterfaces "github.com/jailtonjunior94/financial/internal/transaction/domain/interfaces"
 	transactionVos "github.com/jailtonjunior94/financial/internal/transaction/domain/vos"
-	invoiceFactories "github.com/jailtonjunior94/financial/internal/invoice/domain/factories"
-	invoiceInterfaces "github.com/jailtonjunior94/financial/internal/invoice/domain/interfaces"
 	"github.com/jailtonjunior94/financial/pkg/outbox"
 )
 

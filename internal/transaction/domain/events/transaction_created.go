@@ -68,18 +68,18 @@ func (e *TransactionCreatedEvent) IdempotencyKey() string {
 // Payload returns the event data as a map for outbox serialization.
 func (e *TransactionCreatedEvent) Payload() map[string]any {
 	payload := map[string]any{
-		"version":          TransactionCreatedSchemaVersion,
-		"transaction_id":   e.transactionID.String(),
-		"user_id":          e.userID.String(),
-		"category_id":      e.categoryID.String(),
-		"amount":           e.amount.Cents(),
-		"currency":         e.amount.Currency().String(),
-		"payment_method":   e.paymentMethod.String(),
-		"transaction_date": e.transactionDate.Format("2006-01-02"),
-		"reference_month":  e.referenceMonth.String(),
-		"invoice_id":       nil,
-		"installment_number": nil,
-		"installment_total":  nil,
+		"version":              TransactionCreatedSchemaVersion,
+		"transaction_id":       e.transactionID.String(),
+		"user_id":              e.userID.String(),
+		"category_id":          e.categoryID.String(),
+		"amount":               e.amount.Cents(),
+		"currency":             e.amount.Currency().String(),
+		"payment_method":       e.paymentMethod.String(),
+		"transaction_date":     e.transactionDate.Format("2006-01-02"),
+		"reference_month":      e.referenceMonth.String(),
+		"invoice_id":           nil,
+		"installment_number":   nil,
+		"installment_total":    nil,
 		"installment_group_id": nil,
 	}
 	if e.invoiceID != nil {
