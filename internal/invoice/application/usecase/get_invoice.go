@@ -49,12 +49,15 @@ func (u *getInvoiceUseCase) Execute(ctx context.Context, userID, cardID, invoice
 			observability.String("entity", "invoice"),
 			observability.Error(err),
 		)
+		span.RecordError(err)
 		return nil, err
 	}
 	if invoice == nil {
+		span.RecordError(domain.ErrInvoiceNotFound)
 		return nil, domain.ErrInvoiceNotFound
 	}
 	if invoice.UserID.String() != userID || invoice.CardID.String() != cardID {
+		span.RecordError(domain.ErrInvoiceNotOwned)
 		return nil, domain.ErrInvoiceNotOwned
 	}
 	return u.toInvoiceOutput(invoice), nil

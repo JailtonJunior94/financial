@@ -11,6 +11,7 @@ import (
 	"github.com/JailtonJunior94/devkit-go/pkg/observability/fake"
 	"github.com/JailtonJunior94/devkit-go/pkg/vos"
 	categorydomain "github.com/jailtonjunior94/financial/internal/category/domain"
+	"github.com/jailtonjunior94/financial/internal/category/domain/interfaces"
 	mocks "github.com/jailtonjunior94/financial/internal/category/infrastructure/repositories/mocks"
 	"github.com/jailtonjunior94/financial/pkg/observability/metrics"
 )
@@ -135,7 +136,9 @@ func (s *RemoveCategoryUseCaseSuite) TestExecute() {
 
 	for _, scenario := range scenarios {
 		s.Run(scenario.name, func() {
-			uc := NewRemoveCategoryUseCase(s.obs, s.fm, scenario.dependencies.uow, scenario.dependencies.categoryRepository)
+			catFactory := func(tx database.DBTX) interfaces.CategoryRepository { return scenario.dependencies.categoryRepository }
+			subcatFactory := func(tx database.DBTX) interfaces.SubcategoryRepository { return nil }
+			uc := NewRemoveCategoryUseCase(s.obs, s.fm, scenario.dependencies.uow, scenario.dependencies.categoryRepository, catFactory, subcatFactory)
 			err := uc.Execute(s.ctx, scenario.args.userID, scenario.args.categoryID)
 			scenario.expect(err)
 		})

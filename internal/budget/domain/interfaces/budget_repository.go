@@ -3,6 +3,7 @@ package interfaces
 import (
 	"context"
 
+	"github.com/JailtonJunior94/devkit-go/pkg/database"
 	"github.com/JailtonJunior94/devkit-go/pkg/vos"
 
 	"github.com/jailtonjunior94/financial/internal/budget/domain/entities"
@@ -16,6 +17,9 @@ type ListBudgetsParams struct {
 	Limit  int
 	Cursor pagination.Cursor
 }
+
+// BudgetRepositoryFactory creates a BudgetRepository from a database transaction.
+type BudgetRepositoryFactory func(tx database.DBTX) BudgetRepository
 
 type BudgetRepository interface {
 	Insert(ctx context.Context, budget *entities.Budget) error

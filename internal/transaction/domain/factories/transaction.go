@@ -84,7 +84,10 @@ func (f *TransactionFactory) Create(params CreateParams) (*entities.Transaction,
 		installments = 1
 	}
 	installmentNumber := 1
-	status, _ := transactionVos.NewTransactionStatus(transactionVos.TransactionStatusActive)
+	status, err := transactionVos.NewTransactionStatus(transactionVos.TransactionStatusActive)
+	if err != nil {
+		return nil, fmt.Errorf("invalid transaction status: %w", err)
+	}
 	return entities.NewTransaction(entities.TransactionParams{
 		ID:                txID,
 		UserID:            userID,
@@ -148,7 +151,10 @@ func (f *TransactionFactory) CreateInstallments(params InstallmentParams) ([]*en
 	if err != nil {
 		return nil, fmt.Errorf("invalid subcategory_id: %w", err)
 	}
-	status, _ := transactionVos.NewTransactionStatus(transactionVos.TransactionStatusActive)
+	status, err := transactionVos.NewTransactionStatus(transactionVos.TransactionStatusActive)
+	if err != nil {
+		return nil, fmt.Errorf("invalid transaction status: %w", err)
+	}
 	totalCents := totalAmount.Cents()
 	perInstallmentCents := totalCents / int64(n)
 	transactions := make([]*entities.Transaction, 0, n)

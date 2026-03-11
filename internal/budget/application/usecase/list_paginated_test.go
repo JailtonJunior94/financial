@@ -14,12 +14,14 @@ import (
 	"github.com/jailtonjunior94/financial/internal/budget/domain/interfaces"
 	repositoryMock "github.com/jailtonjunior94/financial/internal/budget/infrastructure/repositories/mocks"
 	pkgVos "github.com/jailtonjunior94/financial/pkg/domain/vos"
+	"github.com/jailtonjunior94/financial/pkg/observability/metrics"
 )
 
 type ListBudgetsPaginatedUseCaseSuite struct {
 	suite.Suite
 	ctx  context.Context
 	obs  *fake.Provider
+	fm   *metrics.FinancialMetrics
 	repo *repositoryMock.BudgetRepository
 }
 
@@ -30,6 +32,7 @@ func TestListBudgetsPaginatedUseCaseSuite(t *testing.T) {
 func (s *ListBudgetsPaginatedUseCaseSuite) SetupTest() {
 	s.obs = fake.NewProvider()
 	s.ctx = context.Background()
+	s.fm = metrics.NewTestFinancialMetrics()
 	s.repo = repositoryMock.NewBudgetRepository(s.T())
 }
 
@@ -179,7 +182,7 @@ func (s *ListBudgetsPaginatedUseCaseSuite) TestExecute() {
 	for _, scenario := range scenarios {
 		s.Run(scenario.name, func() {
 			scenario.dependencies()
-			uc := NewListBudgetsPaginatedUseCase(s.obs, s.repo)
+			uc := NewListBudgetsPaginatedUseCase(s.obs, s.fm, s.repo)
 			output, err := uc.Execute(s.ctx, scenario.args.input)
 			scenario.expect(output, err)
 		})

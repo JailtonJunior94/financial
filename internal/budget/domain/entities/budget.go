@@ -1,6 +1,7 @@
 package entities
 
 import (
+	"fmt"
 	"slices"
 	"time"
 
@@ -88,7 +89,9 @@ func (b *Budget) AddItems(items []*BudgetItem) error {
 
 	// Adiciona os itens
 	b.Items = append(b.Items, items...)
-	b.recalculateSpentAmount()
+	if err := b.recalculateSpentAmount(); err != nil {
+		return err
+	}
 	b.recalculatePercentageUsed()
 
 	return nil
@@ -124,7 +127,9 @@ func (b *Budget) AddItem(item *BudgetItem) error {
 
 	// Adiciona o item
 	b.Items = append(b.Items, item)
-	b.recalculateSpentAmount()
+	if err := b.recalculateSpentAmount(); err != nil {
+		return err
+	}
 	b.recalculatePercentageUsed()
 
 	return nil
@@ -151,7 +156,9 @@ func (b *Budget) UpdateItemSpentAmount(itemID vos.UUID, newSpentAmount vos.Money
 	item.UpdatedAt = vos.NewNullableTime(time.Now().UTC())
 
 	// Recalcula os totais do budget
-	b.recalculateSpentAmount()
+	if err := b.recalculateSpentAmount(); err != nil {
+		return err
+	}
 	b.recalculatePercentageUsed()
 
 	return nil
@@ -181,16 +188,22 @@ func (b *Budget) findItemByID(itemID vos.UUID) *BudgetItem {
 }
 
 // recalculateSpentAmount recalcula o valor total gasto.
-func (b *Budget) recalculateSpentAmount() {
+func (b *Budget) recalculateSpentAmount() error {
 	zeroCurrency := b.TotalAmount.Currency()
-	total, _ := vos.NewMoney(0, zeroCurrency)
+	total, err := vos.NewMoney(0, zeroCurrency)
+	if err != nil {
+		return err
+	}
 
 	for _, item := range b.Items {
-		if sum, err := total.Add(item.SpentAmount); err == nil {
-			total = sum
+		sum, err := total.Add(item.SpentAmount)
+		if err != nil {
+			return fmt.Errorf("recalculate spent amount: %w", err)
 		}
+		total = sum
 	}
 	b.SpentAmount = total
+	return nil
 }
 
 // recalculatePercentageUsed recalcula a porcentagem total utilizada.
@@ -225,9 +238,12 @@ func (b *Budget) recalculatePercentageUsed() {
 
 // RecalculateTotals recalcula todos os totais do budget.
 // Útil após modificações manuais nos items ou quando sincronizando com eventos externos.
-func (b *Budget) RecalculateTotals() {
-	b.recalculateSpentAmount()
+func (b *Budget) RecalculateTotals() error {
+	if err := b.recalculateSpentAmount(); err != nil {
+		return err
+	}
 	b.recalculatePercentageUsed()
+	return nil
 }
 
 // TotalPercentageAllocated retorna a porcentagem total alocada nos itens.

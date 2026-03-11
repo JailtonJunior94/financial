@@ -72,7 +72,20 @@ func (u *createBudgetUseCase) Execute(ctx context.Context, userID string, input 
 		return nil, err
 	}
 
-	newBudget, err := factories.CreateBudget(userID, input)
+	factoryItems := make([]factories.CreateBudgetItemParams, len(input.Items))
+	for i, item := range input.Items {
+		factoryItems[i] = factories.CreateBudgetItemParams{
+			CategoryID:     item.CategoryID,
+			PercentageGoal: item.PercentageGoal,
+		}
+	}
+
+	newBudget, err := factories.CreateBudget(userID, &factories.CreateBudgetParams{
+		ReferenceMonth: input.ReferenceMonth,
+		TotalAmount:    input.TotalAmount,
+		Currency:       input.Currency,
+		Items:          factoryItems,
+	})
 	if err != nil {
 		span.RecordError(err)
 		return nil, err

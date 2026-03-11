@@ -13,6 +13,7 @@ import (
 	"github.com/go-chi/chi/v5"
 	"github.com/jailtonjunior94/financial/internal/category/application/dtos"
 	"github.com/jailtonjunior94/financial/internal/category/application/usecase"
+	categorymodule "github.com/jailtonjunior94/financial/internal/category"
 	categorydomain "github.com/jailtonjunior94/financial/internal/category/domain"
 	categoryHttp "github.com/jailtonjunior94/financial/internal/category/infrastructure/http"
 	"github.com/jailtonjunior94/financial/pkg/api/httperrors"
@@ -82,7 +83,7 @@ func newCategoryTestHandler(
 ) *categoryHttp.CategoryHandler {
 	obs := fake.NewProvider()
 	fm := metrics.NewTestFinancialMetrics()
-	errorHandler := httperrors.NewErrorHandler(obs, categorydomain.ErrorMappings())
+	errorHandler := httperrors.NewErrorHandler(obs, categorymodule.ErrorMappings())
 	return categoryHttp.NewCategoryHandler(categoryHttp.CategoryHandlerDeps{
 		O11y:                         obs,
 		FM:                           fm,

@@ -37,11 +37,7 @@ func (u *findPaymentMethodByCodeUseCase) Execute(ctx context.Context, code strin
 
 	paymentMethod, err := u.repository.FindByCode(ctx, code)
 	if err != nil {
-		span.AddEvent(
-			"error finding payment method by code",
-			observability.Field{Key: "code", Value: code},
-			observability.Field{Key: "error", Value: err},
-		)
+		span.RecordError(err)
 		u.o11y.Logger().Error(ctx, "error finding payment method by code",
 			observability.Error(err),
 			observability.String("code", code))
@@ -49,10 +45,7 @@ func (u *findPaymentMethodByCodeUseCase) Execute(ctx context.Context, code strin
 	}
 
 	if paymentMethod == nil {
-		span.AddEvent(
-			"payment method not found",
-			observability.Field{Key: "code", Value: code},
-		)
+		span.RecordError(pmdomain.ErrPaymentMethodNotFound)
 		u.o11y.Logger().Error(ctx, "payment method not found",
 			observability.Error(pmdomain.ErrPaymentMethodNotFound),
 			observability.String("code", code))

@@ -9,6 +9,7 @@ import (
 
 	"github.com/jailtonjunior94/financial/internal/budget/application/dtos"
 	"github.com/jailtonjunior94/financial/internal/budget/domain/interfaces"
+	"github.com/jailtonjunior94/financial/pkg/observability/metrics"
 	"github.com/jailtonjunior94/financial/pkg/pagination"
 )
 
@@ -33,6 +34,7 @@ type (
 
 	listBudgetsPaginatedUseCase struct {
 		o11y       observability.Observability
+		fm         *metrics.FinancialMetrics
 		repository interfaces.BudgetRepository
 	}
 )
@@ -40,10 +42,12 @@ type (
 // NewListBudgetsPaginatedUseCase cria uma nova instância do use case.
 func NewListBudgetsPaginatedUseCase(
 	o11y observability.Observability,
+	fm *metrics.FinancialMetrics,
 	repository interfaces.BudgetRepository,
 ) ListBudgetsPaginatedUseCase {
 	return &listBudgetsPaginatedUseCase{
 		o11y:       o11y,
+		fm:         fm,
 		repository: repository,
 	}
 }
@@ -59,12 +63,14 @@ func (u *listBudgetsPaginatedUseCase) Execute(
 	// Parse user ID
 	userID, err := vos.NewUUIDFromString(input.UserID)
 	if err != nil {
+		span.RecordError(err)
 		return nil, err
 	}
 
 	// Decode cursor
 	cursor, err := pagination.DecodeCursor(input.Cursor)
 	if err != nil {
+		span.RecordError(err)
 		return nil, err
 	}
 
@@ -75,6 +81,7 @@ func (u *listBudgetsPaginatedUseCase) Execute(
 		Cursor: cursor,
 	})
 	if err != nil {
+		span.RecordError(err)
 		return nil, err
 	}
 

@@ -22,12 +22,12 @@ type CreateCardParams struct {
 func CreateCard(params CreateCardParams) (*entities.Card, error) {
 	id, err := sharedVos.NewUUID()
 	if err != nil {
-		return nil, fmt.Errorf("error generating card id: %v", err)
+		return nil, fmt.Errorf("error generating card id: %w", err)
 	}
 
 	user, err := sharedVos.NewUUIDFromString(params.UserID)
 	if err != nil {
-		return nil, fmt.Errorf("invalid user_id: %s", params.UserID)
+		return nil, fmt.Errorf("invalid user_id %s: %w", params.UserID, err)
 	}
 
 	cardName, err := vos.NewCardName(params.Name)

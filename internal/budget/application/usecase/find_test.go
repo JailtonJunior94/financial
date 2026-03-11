@@ -52,7 +52,7 @@ func buildBudgetWithItem(userID vos.UUID, totalAmountFloat float64, referenceMon
 	}
 
 	budget.Items = append(budget.Items, item)
-	budget.RecalculateTotals()
+	_ = budget.RecalculateTotals()
 	return budget
 }
 

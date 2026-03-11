@@ -11,7 +11,7 @@ import (
 	invoiceInterfaces "github.com/jailtonjunior94/financial/internal/invoice/domain/interfaces"
 )
 
-type CardProviderAdapter struct {
+type cardProviderAdapter struct {
 	cardRepository interfaces.CardRepository
 	o11y           observability.Observability
 }
@@ -20,13 +20,13 @@ func NewCardProviderAdapter(
 	cardRepository interfaces.CardRepository,
 	o11y observability.Observability,
 ) invoiceInterfaces.CardProvider {
-	return &CardProviderAdapter{
+	return &cardProviderAdapter{
 		cardRepository: cardRepository,
 		o11y:           o11y,
 	}
 }
 
-func (a *CardProviderAdapter) GetCardBillingInfo(
+func (a *cardProviderAdapter) GetCardBillingInfo(
 	ctx context.Context,
 	userID vos.UUID,
 	cardID vos.UUID,

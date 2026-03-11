@@ -151,7 +151,9 @@ func (u *updateBudgetUseCase) performUpdate(ctx context.Context, uid, id vos.UUI
 	if err := budget.AddItems(allItems); err != nil {
 		return nil, err
 	}
-	budget.RecalculateTotals()
+	if err := budget.RecalculateTotals(); err != nil {
+		return nil, err
+	}
 
 	if err := u.persistBudgetUpdate(ctx, budget, existingItems, newItems); err != nil {
 		return nil, err

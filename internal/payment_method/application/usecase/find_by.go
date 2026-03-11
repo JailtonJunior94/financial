@@ -65,11 +65,7 @@ func (u *findPaymentMethodByUseCase) Execute(ctx context.Context, id string) (*d
 			observability.String("payment_method_id", id),
 			observability.Error(err),
 		)
-		span.AddEvent(
-			"error parsing payment method id",
-			observability.Field{Key: "payment_method_id", Value: id},
-			observability.Field{Key: "error", Value: err},
-		)
+		span.RecordError(err)
 		return nil, err
 	}
 
@@ -86,11 +82,7 @@ func (u *findPaymentMethodByUseCase) Execute(ctx context.Context, id string) (*d
 			observability.String("payment_method_id", id),
 			observability.Error(err),
 		)
-		span.AddEvent(
-			"error finding payment method by id",
-			observability.Field{Key: "payment_method_id", Value: id},
-			observability.Field{Key: "error", Value: err},
-		)
+		span.RecordError(err)
 		return nil, err
 	}
 
@@ -106,10 +98,7 @@ func (u *findPaymentMethodByUseCase) Execute(ctx context.Context, id string) (*d
 			observability.String("payment_method_id", id),
 			observability.Error(pmdomain.ErrPaymentMethodNotFound),
 		)
-		span.AddEvent(
-			"payment method not found",
-			observability.Field{Key: "payment_method_id", Value: id},
-		)
+		span.RecordError(pmdomain.ErrPaymentMethodNotFound)
 		return nil, pmdomain.ErrPaymentMethodNotFound
 	}
 

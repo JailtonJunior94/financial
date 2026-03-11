@@ -6,6 +6,8 @@ import (
 	"fmt"
 	"net/http"
 	"strconv"
+
+	"github.com/jailtonjunior94/financial/pkg/validation"
 )
 
 // CursorParams representa parâmetros de paginação extraídos da query string.
@@ -83,11 +85,15 @@ func ParseCursorParams(r *http.Request, defaultLimit int, maxLimit int) (CursorP
 	if limitStr := r.URL.Query().Get("limit"); limitStr != "" {
 		limit, err := strconv.Atoi(limitStr)
 		if err != nil {
-			return params, fmt.Errorf("invalid limit parameter: must be a number")
+			return params, validation.ValidationErrors{
+				validation.NewValidationError("limit", "must be a number"),
+			}
 		}
 
 		if limit < 1 {
-			return params, fmt.Errorf("limit must be greater than 0")
+			return params, validation.ValidationErrors{
+				validation.NewValidationError("limit", "must be greater than 0"),
+			}
 		}
 
 		if limit > maxLimit {

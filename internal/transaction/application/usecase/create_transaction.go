@@ -79,7 +79,11 @@ func (u *createTransactionUseCase) Execute(ctx context.Context, userID string, i
 		return nil, fmt.Errorf("invalid transaction_date: %w", err)
 	}
 
-	pm, _ := transactionVos.NewPaymentMethod(input.PaymentMethod)
+	pm, err := transactionVos.NewPaymentMethod(input.PaymentMethod)
+	if err != nil {
+		span.RecordError(err)
+		return nil, err
+	}
 
 	installments := input.Installments
 	if installments <= 0 {

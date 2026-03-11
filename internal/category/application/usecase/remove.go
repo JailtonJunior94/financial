@@ -5,7 +5,6 @@ import (
 
 	categorydomain "github.com/jailtonjunior94/financial/internal/category/domain"
 	"github.com/jailtonjunior94/financial/internal/category/domain/interfaces"
-	"github.com/jailtonjunior94/financial/internal/category/infrastructure/repositories"
 	"github.com/jailtonjunior94/financial/pkg/observability/metrics"
 
 	"github.com/JailtonJunior94/devkit-go/pkg/database"
@@ -20,10 +19,12 @@ type (
 	}
 
 	removeCategoryUseCase struct {
-		o11y         observability.Observability
-		fm           *metrics.FinancialMetrics
-		uow          uow.UnitOfWork
-		categoryRepo interfaces.CategoryRepository
+		o11y               observability.Observability
+		fm                 *metrics.FinancialMetrics
+		uow                uow.UnitOfWork
+		categoryRepo       interfaces.CategoryRepository
+		catRepoFactory     interfaces.CategoryRepositoryFactory
+		subcatRepoFactory  interfaces.SubcategoryRepositoryFactory
 	}
 )
 
@@ -32,12 +33,16 @@ func NewRemoveCategoryUseCase(
 	fm *metrics.FinancialMetrics,
 	unitOfWork uow.UnitOfWork,
 	categoryRepo interfaces.CategoryRepository,
+	catRepoFactory interfaces.CategoryRepositoryFactory,
+	subcatRepoFactory interfaces.SubcategoryRepositoryFactory,
 ) RemoveCategoryUseCase {
 	return &removeCategoryUseCase{
-		o11y:         o11y,
-		fm:           fm,
-		uow:          unitOfWork,
-		categoryRepo: categoryRepo,
+		o11y:               o11y,
+		fm:                 fm,
+		uow:                unitOfWork,
+		categoryRepo:       categoryRepo,
+		catRepoFactory:     catRepoFactory,
+		subcatRepoFactory:  subcatRepoFactory,
 	}
 }
 
@@ -65,8 +70,8 @@ func (u *removeCategoryUseCase) Execute(ctx context.Context, userID, id string) 
 	}
 
 	return u.uow.Do(ctx, func(ctx context.Context, tx database.DBTX) error {
-		subcatRepo := repositories.NewSubcategoryRepository(tx, u.o11y, u.fm)
-		catRepo := repositories.NewCategoryRepository(tx, u.o11y, u.fm)
+		subcatRepo := u.subcatRepoFactory(tx)
+		catRepo := u.catRepoFactory(tx)
 
 		if err := subcatRepo.SoftDeleteByCategoryID(ctx, category.ID); err != nil {
 			return err

@@ -8,7 +8,7 @@ import (
 	"github.com/jailtonjunior94/financial/internal/budget/application/dtos"
 	"github.com/jailtonjunior94/financial/internal/budget/domain"
 	"github.com/jailtonjunior94/financial/internal/budget/domain/entities"
-	"github.com/jailtonjunior94/financial/internal/budget/infrastructure/repositories"
+	"github.com/jailtonjunior94/financial/internal/budget/domain/interfaces"
 	"github.com/jailtonjunior94/financial/pkg/observability/metrics"
 
 	"github.com/JailtonJunior94/devkit-go/pkg/database"
@@ -24,9 +24,10 @@ type (
 	}
 
 	createBudgetItemUseCase struct {
-		uow     uow.UnitOfWork
-		o11y    observability.Observability
-		metrics *metrics.FinancialMetrics
+		uow         uow.UnitOfWork
+		o11y        observability.Observability
+		metrics     *metrics.FinancialMetrics
+		repoFactory interfaces.BudgetRepositoryFactory
 	}
 )
 
@@ -34,11 +35,13 @@ func NewCreateBudgetItemUseCase(
 	uow uow.UnitOfWork,
 	o11y observability.Observability,
 	fm *metrics.FinancialMetrics,
+	repoFactory interfaces.BudgetRepositoryFactory,
 ) CreateBudgetItemUseCase {
 	return &createBudgetItemUseCase{
-		uow:     uow,
-		o11y:    o11y,
-		metrics: fm,
+		uow:         uow,
+		o11y:        o11y,
+		metrics:     fm,
+		repoFactory: repoFactory,
 	}
 }
 
@@ -93,7 +96,7 @@ func (u *createBudgetItemUseCase) Execute(ctx context.Context, userID string, bu
 	}
 
 	err = u.uow.Do(ctx, func(ctx context.Context, tx database.DBTX) error {
-		budgetRepository := repositories.NewBudgetRepository(tx, u.o11y, u.metrics)
+		budgetRepository := u.repoFactory(tx)
 
 		// 1. Find the budget by ID (scoped by userID to prevent IDOR)
 		budget, err := budgetRepository.FindByID(ctx, uid, id)

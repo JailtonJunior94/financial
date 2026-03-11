@@ -48,10 +48,7 @@ func (u *findCardByUseCase) Execute(ctx context.Context, userID, id string) (*dt
 	if err != nil {
 		duration := time.Since(start)
 		u.metrics.RecordOperationFailure(ctx, metrics.OperationFindBy, duration, metrics.ClassifyError(err))
-		span.AddEvent("error parsing user id",
-			observability.String("user_id", userID),
-			observability.Error(err),
-		)
+		span.RecordError(err)
 		return nil, err
 	}
 
@@ -59,10 +56,7 @@ func (u *findCardByUseCase) Execute(ctx context.Context, userID, id string) (*dt
 	if err != nil {
 		duration := time.Since(start)
 		u.metrics.RecordOperationFailure(ctx, metrics.OperationFindBy, duration, metrics.ClassifyError(err))
-		span.AddEvent("error parsing card id",
-			observability.String("card_id", id),
-			observability.Error(err),
-		)
+		span.RecordError(err)
 		return nil, err
 	}
 
@@ -85,10 +79,7 @@ func (u *findCardByUseCase) Execute(ctx context.Context, userID, id string) (*dt
 	if card == nil {
 		duration := time.Since(start)
 		u.metrics.RecordOperationFailure(ctx, metrics.OperationFindBy, duration, metrics.ErrorTypeNotFound)
-		span.AddEvent("card not found",
-			observability.String("user_id", userID),
-			observability.String("card_id", id),
-		)
+		span.RecordError(cardDomain.ErrCardNotFound)
 		u.o11y.Logger().Warn(ctx, "card not found",
 			observability.String("operation", "FindCardBy"),
 			observability.String("layer", "usecase"),
@@ -102,10 +93,7 @@ func (u *findCardByUseCase) Execute(ctx context.Context, userID, id string) (*dt
 	if card.UserID.String() != user.String() {
 		duration := time.Since(start)
 		u.metrics.RecordOperationFailure(ctx, metrics.OperationFindBy, duration, "authorization")
-		span.AddEvent("card ownership mismatch",
-			observability.String("user_id", userID),
-			observability.String("card_id", id),
-		)
+		span.RecordError(customErrors.ErrForbidden)
 		u.o11y.Logger().Warn(ctx, "card ownership mismatch",
 			observability.String("operation", "FindCardBy"),
 			observability.String("layer", "usecase"),

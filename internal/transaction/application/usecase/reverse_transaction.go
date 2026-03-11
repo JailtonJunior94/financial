@@ -80,7 +80,10 @@ func (u *reverseTransactionUseCase) Execute(ctx context.Context, userID, transac
 
 	for _, t := range scope {
 		if t.InvoiceID == nil {
-			t.Cancel()
+			if err := t.Cancel(); err != nil {
+				span.RecordError(err)
+				return nil, err
+			}
 			cancelled = append(cancelled, t)
 			continue
 		}
@@ -90,7 +93,10 @@ func (u *reverseTransactionUseCase) Execute(ctx context.Context, userID, transac
 			return nil, err
 		}
 		if t.IsEditable(status) {
-			t.Cancel()
+			if err := t.Cancel(); err != nil {
+				span.RecordError(err)
+				return nil, err
+			}
 			cancelled = append(cancelled, t)
 		} else {
 			kept = append(kept, t)

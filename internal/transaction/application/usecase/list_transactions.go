@@ -64,15 +64,19 @@ func (u *listTransactionsUseCase) Execute(ctx context.Context, userID string, pa
 
 	if params.StartDate != "" {
 		t, err := time.Parse("2006-01-02", params.StartDate)
-		if err == nil {
-			repoParams.StartDate = &t
+		if err != nil {
+			span.RecordError(err)
+			return nil, fmt.Errorf("invalid start_date: %w", err)
 		}
+		repoParams.StartDate = &t
 	}
 	if params.EndDate != "" {
 		t, err := time.Parse("2006-01-02", params.EndDate)
-		if err == nil {
-			repoParams.EndDate = &t
+		if err != nil {
+			span.RecordError(err)
+			return nil, fmt.Errorf("invalid end_date: %w", err)
 		}
+		repoParams.EndDate = &t
 	}
 
 	transactions, nextCursor, err := u.repository.ListPaginated(ctx, repoParams)

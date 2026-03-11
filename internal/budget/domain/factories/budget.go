@@ -5,13 +5,27 @@ import (
 
 	"github.com/JailtonJunior94/devkit-go/pkg/vos"
 
-	"github.com/jailtonjunior94/financial/internal/budget/application/dtos"
 	"github.com/jailtonjunior94/financial/internal/budget/domain/entities"
 	pkgVos "github.com/jailtonjunior94/financial/pkg/domain/vos"
 	"github.com/jailtonjunior94/financial/pkg/money"
 )
 
-func CreateBudget(userID string, input *dtos.BudgetCreateInput) (*entities.Budget, error) {
+// CreateBudgetParams holds the raw input for creating a budget.
+type CreateBudgetParams struct {
+	UserID         string
+	ReferenceMonth string
+	TotalAmount    string
+	Currency       string
+	Items          []CreateBudgetItemParams
+}
+
+// CreateBudgetItemParams holds the raw input for a budget item.
+type CreateBudgetItemParams struct {
+	CategoryID     string
+	PercentageGoal string
+}
+
+func CreateBudget(userID string, params *CreateBudgetParams) (*entities.Budget, error) {
 	// Parse user ID
 	user, err := vos.NewUUIDFromString(userID)
 	if err != nil {
@@ -26,7 +40,7 @@ func CreateBudget(userID string, input *dtos.BudgetCreateInput) (*entities.Budge
 
 	// Map currency string to Currency type
 	var currency vos.Currency
-	switch input.Currency {
+	switch params.Currency {
 	case "BRL":
 		currency = vos.CurrencyBRL
 	case "USD":
@@ -34,17 +48,17 @@ func CreateBudget(userID string, input *dtos.BudgetCreateInput) (*entities.Budge
 	case "EUR":
 		currency = vos.CurrencyEUR
 	default:
-		return nil, fmt.Errorf("create_budget: unsupported currency: %s", input.Currency)
+		return nil, fmt.Errorf("create_budget: unsupported currency: %s", params.Currency)
 	}
 
 	// Parse total amount from string (half-even rounding)
-	totalAmount, err := money.NewMoney(input.TotalAmount, currency)
+	totalAmount, err := money.NewMoney(params.TotalAmount, currency)
 	if err != nil {
 		return nil, fmt.Errorf("create_budget: invalid total amount: %w", err)
 	}
 
 	// Parse reference month
-	referenceMonth, err := pkgVos.NewReferenceMonth(input.ReferenceMonth)
+	referenceMonth, err := pkgVos.NewReferenceMonth(params.ReferenceMonth)
 	if err != nil {
 		return nil, fmt.Errorf("create_budget: %w", err)
 	}
@@ -55,7 +69,7 @@ func CreateBudget(userID string, input *dtos.BudgetCreateInput) (*entities.Budge
 
 	// Create budget items
 	var budgetItems []*entities.BudgetItem
-	for _, itemInput := range input.Items {
+	for _, itemInput := range params.Items {
 		category, err := vos.NewUUIDFromString(itemInput.CategoryID)
 		if err != nil {
 			return nil, fmt.Errorf("create_budget: invalid category ID: %w", err)

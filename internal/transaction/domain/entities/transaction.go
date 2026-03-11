@@ -83,11 +83,15 @@ func NewTransaction(params TransactionParams) (*Transaction, error) {
 }
 
 // Cancel sets the transaction status to cancelled.
-func (t *Transaction) Cancel() {
-	status, _ := transactionVos.NewTransactionStatus(transactionVos.TransactionStatusCancelled)
+func (t *Transaction) Cancel() error {
+	status, err := transactionVos.NewTransactionStatus(transactionVos.TransactionStatusCancelled)
+	if err != nil {
+		return fmt.Errorf("cancel transaction: %w", err)
+	}
 	t.Status = status
 	now := time.Now().UTC()
 	t.UpdatedAt = &now
+	return nil
 }
 
 // UpdateDetails updates the transaction's mutable fields.

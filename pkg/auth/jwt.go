@@ -3,7 +3,6 @@ package auth
 import (
 	"context"
 	"errors"
-	"fmt"
 	"time"
 
 	"github.com/jailtonjunior94/financial/configs"
@@ -50,10 +49,7 @@ func (j *jwtAdapter) GenerateToken(ctx context.Context, id, email string) (strin
 	token := jwt.NewWithClaims(jwt.SigningMethodHS256, claims)
 	tokenSigned, err := token.SignedString([]byte(j.config.AuthConfig.AuthSecretKey))
 	if err != nil {
-		span.AddEvent(
-			"error trying to generate token",
-			observability.Field{Key: "error", Value: err.Error()},
-		)
+		span.RecordError(err)
 		j.obs.Logger().Error(ctx, "error trying to generate token", observability.Error(err))
 		return "", ErrGenerateToken
 	}
@@ -75,15 +71,11 @@ func (j *jwtAdapter) Validate(ctx context.Context, token string) (*Authenticated
 	parsedToken, err := jwt.Parse(token, func(t *jwt.Token) (any, error) {
 		// Valida o método de assinatura
 		if _, ok := t.Method.(*jwt.SigningMethodHMAC); !ok {
-			span.AddEvent(
-				"invalid token signing method",
-				observability.Field{Key: "method", Value: fmt.Sprintf("%v", t.Header["alg"])},
-			)
+			span.RecordError(customerrors.ErrInvalidSigningMethod)
 			j.obs.Logger().Error(
 				ctx,
 				"invalid token signing method",
 				observability.Error(customerrors.ErrInvalidSigningMethod),
-				observability.String("method", fmt.Sprintf("%v", t.Header["alg"])),
 			)
 			return nil, customerrors.ErrInvalidSigningMethod
 		}
@@ -114,7 +106,7 @@ func (j *jwtAdapter) Validate(ctx context.Context, token string) (*Authenticated
 	// Valida claim "sub" (user ID)
 	sub, ok := claims["sub"].(string)
 	if !ok || sub == "" {
-		span.AddEvent("invalid sub claim", observability.Field{Key: "sub", Value: claims["sub"]})
+		span.RecordError(customerrors.ErrInvalidTokenClaims)
 		j.obs.Logger().Error(ctx, "invalid sub claim", observability.Error(customerrors.ErrInvalidTokenClaims))
 		return nil, customerrors.ErrInvalidTokenClaims
 	}
@@ -122,7 +114,7 @@ func (j *jwtAdapter) Validate(ctx context.Context, token string) (*Authenticated
 	// Valida claim "email"
 	email, ok := claims["email"].(string)
 	if !ok || email == "" {
-		span.AddEvent("invalid email claim")
+		span.RecordError(customerrors.ErrInvalidTokenClaims)
 		j.obs.Logger().Error(ctx, "invalid email claim", observability.Error(customerrors.ErrInvalidTokenClaims))
 		return nil, customerrors.ErrInvalidTokenClaims
 	}

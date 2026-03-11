@@ -13,6 +13,7 @@ import (
 	"github.com/go-chi/chi/v5"
 	"github.com/jailtonjunior94/financial/internal/user/application/dtos"
 	"github.com/jailtonjunior94/financial/internal/user/application/usecase"
+	usermodule "github.com/jailtonjunior94/financial/internal/user"
 	userdomain "github.com/jailtonjunior94/financial/internal/user/domain"
 	userHttp "github.com/jailtonjunior94/financial/internal/user/infrastructure/http"
 	"github.com/jailtonjunior94/financial/pkg/api/httperrors"
@@ -80,7 +81,7 @@ func newTestHandler(
 ) *userHttp.UserHandler {
 	obs := fake.NewProvider()
 	fm := metrics.NewTestFinancialMetrics()
-	errorHandler := httperrors.NewErrorHandler(obs, userdomain.ErrorMappings())
+	errorHandler := httperrors.NewErrorHandler(obs, usermodule.ErrorMappings())
 	return userHttp.NewUserHandler(userHttp.UserHandlerDeps{
 		O11y:              obs,
 		FM:                fm,

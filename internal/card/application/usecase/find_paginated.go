@@ -67,11 +67,7 @@ func (u *findCardPaginatedUseCase) Execute(
 		duration := time.Since(start)
 		u.metrics.RecordOperationFailure(ctx, metrics.OperationFind, duration, metrics.ClassifyError(err))
 
-		span.AddEvent(
-			"error parsing user id",
-			observability.String("user_id", input.UserID),
-			observability.Error(err),
-		)
+		span.RecordError(err)
 
 		return nil, err
 	}
@@ -81,11 +77,7 @@ func (u *findCardPaginatedUseCase) Execute(
 		duration := time.Since(start)
 		u.metrics.RecordOperationFailure(ctx, metrics.OperationFind, duration, metrics.ClassifyError(err))
 
-		span.AddEvent(
-			"error decoding cursor",
-			observability.String("cursor", input.Cursor),
-			observability.Error(err),
-		)
+		span.RecordError(err)
 
 		return nil, err
 	}
@@ -99,11 +91,7 @@ func (u *findCardPaginatedUseCase) Execute(
 		duration := time.Since(start)
 		u.metrics.RecordOperationFailure(ctx, metrics.OperationFind, duration, metrics.ClassifyError(err))
 
-		span.AddEvent(
-			"error listing cards from repository",
-			observability.String("user_id", input.UserID),
-			observability.Error(err),
-		)
+		span.RecordError(err)
 
 		return nil, err
 	}
@@ -129,10 +117,7 @@ func (u *findCardPaginatedUseCase) Execute(
 			duration := time.Since(start)
 			u.metrics.RecordOperationFailure(ctx, metrics.OperationFind, duration, metrics.ClassifyError(err))
 
-			span.AddEvent(
-				"error encoding cursor",
-				observability.Error(err),
-			)
+			span.RecordError(err)
 
 			return nil, err
 		}

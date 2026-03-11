@@ -65,11 +65,7 @@ func (u *createCardUseCase) Execute(ctx context.Context, userID string, input *d
 		duration := time.Since(start)
 		u.metrics.RecordOperationFailure(ctx, metrics.OperationCreate, duration, metrics.ClassifyError(err))
 
-		span.AddEvent(
-			"error creating card entity",
-			observability.String("user_id", userID),
-			observability.Error(err),
-		)
+		span.RecordError(err)
 
 		return nil, err
 	}
@@ -78,11 +74,7 @@ func (u *createCardUseCase) Execute(ctx context.Context, userID string, input *d
 		duration := time.Since(start)
 		u.metrics.RecordOperationFailure(ctx, metrics.OperationCreate, duration, metrics.ClassifyError(err))
 
-		span.AddEvent(
-			"error saving card to repository",
-			observability.String("user_id", userID),
-			observability.Error(err),
-		)
+		span.RecordError(err)
 
 		return nil, err
 	}

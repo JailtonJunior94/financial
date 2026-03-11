@@ -63,10 +63,7 @@ func (u *createPaymentMethodUseCase) Execute(ctx context.Context, input *dtos.Pa
 			observability.String("error_code", "CREATE_PAYMENT_METHOD_ENTITY_FAILED"),
 			observability.Error(err),
 		)
-		span.AddEvent(
-			"error creating payment method entity",
-			observability.Field{Key: "error", Value: err},
-		)
+		span.RecordError(err)
 		return nil, err
 	}
 
@@ -81,10 +78,7 @@ func (u *createPaymentMethodUseCase) Execute(ctx context.Context, input *dtos.Pa
 			observability.String("error_code", "SAVE_PAYMENT_METHOD_FAILED"),
 			observability.Error(err),
 		)
-		span.AddEvent(
-			"error saving payment method to repository",
-			observability.Field{Key: "error", Value: err},
-		)
+		span.RecordError(err)
 		return nil, err
 	}
 

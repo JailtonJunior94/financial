@@ -51,11 +51,7 @@ func (u *removeCardUseCase) Execute(ctx context.Context, userID, id string) erro
 		duration := time.Since(start)
 		u.metrics.RecordOperationFailure(ctx, metrics.OperationDelete, duration, metrics.ClassifyError(err))
 
-		span.AddEvent(
-			"error parsing user id",
-			observability.String("user_id", userID),
-			observability.Error(err),
-		)
+		span.RecordError(err)
 
 		return err
 	}
@@ -65,11 +61,7 @@ func (u *removeCardUseCase) Execute(ctx context.Context, userID, id string) erro
 		duration := time.Since(start)
 		u.metrics.RecordOperationFailure(ctx, metrics.OperationDelete, duration, metrics.ClassifyError(err))
 
-		span.AddEvent(
-			"error parsing card id",
-			observability.String("card_id", id),
-			observability.Error(err),
-		)
+		span.RecordError(err)
 
 		return err
 	}
@@ -79,12 +71,7 @@ func (u *removeCardUseCase) Execute(ctx context.Context, userID, id string) erro
 		duration := time.Since(start)
 		u.metrics.RecordOperationFailure(ctx, metrics.OperationDelete, duration, metrics.ClassifyError(err))
 
-		span.AddEvent(
-			"error finding card by id",
-			observability.String("user_id", userID),
-			observability.String("card_id", id),
-			observability.Error(err),
-		)
+		span.RecordError(err)
 		u.o11y.Logger().Error(ctx, "query_failed",
 			observability.String("operation", "RemoveCard"),
 			observability.String("layer", "usecase"),
@@ -100,11 +87,7 @@ func (u *removeCardUseCase) Execute(ctx context.Context, userID, id string) erro
 		duration := time.Since(start)
 		u.metrics.RecordOperationFailure(ctx, metrics.OperationDelete, duration, metrics.ErrorTypeNotFound)
 
-		span.AddEvent(
-			"card not found",
-			observability.String("user_id", userID),
-			observability.String("card_id", id),
-		)
+		span.RecordError(domain.ErrCardNotFound)
 		u.o11y.Logger().Warn(ctx, "card not found",
 			observability.String("operation", "RemoveCard"),
 			observability.String("layer", "usecase"),
@@ -119,11 +102,7 @@ func (u *removeCardUseCase) Execute(ctx context.Context, userID, id string) erro
 		duration := time.Since(start)
 		u.metrics.RecordOperationFailure(ctx, metrics.OperationDelete, duration, "authorization")
 
-		span.AddEvent(
-			"card ownership mismatch",
-			observability.String("user_id", userID),
-			observability.String("card_id", id),
-		)
+		span.RecordError(customErrors.ErrForbidden)
 		u.o11y.Logger().Warn(ctx, "card ownership mismatch",
 			observability.String("operation", "RemoveCard"),
 			observability.String("layer", "usecase"),
@@ -140,12 +119,7 @@ func (u *removeCardUseCase) Execute(ctx context.Context, userID, id string) erro
 			duration := time.Since(start)
 			u.metrics.RecordOperationFailure(ctx, metrics.OperationDelete, duration, metrics.ClassifyError(err))
 
-			span.AddEvent(
-				"error checking open invoices",
-				observability.String("user_id", userID),
-				observability.String("card_id", id),
-				observability.Error(err),
-			)
+			span.RecordError(err)
 			u.o11y.Logger().Error(ctx, "invoice_check_failed",
 				observability.String("operation", "RemoveCard"),
 				observability.String("layer", "usecase"),
@@ -176,12 +150,7 @@ func (u *removeCardUseCase) Execute(ctx context.Context, userID, id string) erro
 		duration := time.Since(start)
 		u.metrics.RecordOperationFailure(ctx, metrics.OperationDelete, duration, metrics.ClassifyError(err))
 
-		span.AddEvent(
-			"error deleting card in repository",
-			observability.String("user_id", userID),
-			observability.String("card_id", id),
-			observability.Error(err),
-		)
+		span.RecordError(err)
 		u.o11y.Logger().Error(ctx, "query_failed",
 			observability.String("operation", "RemoveCard"),
 			observability.String("layer", "usecase"),

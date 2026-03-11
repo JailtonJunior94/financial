@@ -3,11 +3,18 @@ package interfaces
 import (
 	"context"
 
+	"github.com/JailtonJunior94/devkit-go/pkg/database"
+	"github.com/JailtonJunior94/devkit-go/pkg/vos"
+
 	"github.com/jailtonjunior94/financial/internal/category/domain/entities"
 	"github.com/jailtonjunior94/financial/pkg/pagination"
-
-	"github.com/JailtonJunior94/devkit-go/pkg/vos"
 )
+
+// CategoryRepositoryFactory creates a CategoryRepository from a database transaction.
+type CategoryRepositoryFactory func(tx database.DBTX) CategoryRepository
+
+// SubcategoryRepositoryFactory creates a SubcategoryRepository from a database transaction.
+type SubcategoryRepositoryFactory func(tx database.DBTX) SubcategoryRepository
 
 type ListCategoriesParams struct {
 	UserID vos.UUID

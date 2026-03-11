@@ -38,22 +38,14 @@ func (u *updatePaymentMethodUseCase) Execute(ctx context.Context, id string, inp
 
 	paymentMethodID, err := vos.NewUUIDFromString(id)
 	if err != nil {
-		span.AddEvent(
-			"error parsing payment method id",
-			observability.Field{Key: "payment_method_id", Value: id},
-			observability.Field{Key: "error", Value: err},
-		)
+		span.RecordError(err)
 
 		return nil, err
 	}
 
 	paymentMethod, err := u.repository.FindByID(ctx, paymentMethodID)
 	if err != nil {
-		span.AddEvent(
-			"error finding payment method by id",
-			observability.Field{Key: "payment_method_id", Value: id},
-			observability.Field{Key: "error", Value: err},
-		)
+		span.RecordError(err)
 		u.o11y.Logger().Error(ctx, "error finding payment method by id",
 			observability.Error(err),
 			observability.String("payment_method_id", id))
@@ -61,10 +53,7 @@ func (u *updatePaymentMethodUseCase) Execute(ctx context.Context, id string, inp
 	}
 
 	if paymentMethod == nil {
-		span.AddEvent(
-			"payment method not found",
-			observability.Field{Key: "payment_method_id", Value: id},
-		)
+		span.RecordError(pmdomain.ErrPaymentMethodNotFound)
 		u.o11y.Logger().Error(ctx, "payment method not found",
 			observability.Error(pmdomain.ErrPaymentMethodNotFound),
 			observability.String("payment_method_id", id))
@@ -72,11 +61,7 @@ func (u *updatePaymentMethodUseCase) Execute(ctx context.Context, id string, inp
 	}
 
 	if err := paymentMethod.Update(input.Name, input.Description); err != nil {
-		span.AddEvent(
-			"error validating payment method update",
-			observability.Field{Key: "payment_method_id", Value: id},
-			observability.Field{Key: "error", Value: err},
-		)
+		span.RecordError(err)
 		u.o11y.Logger().Error(ctx, "error validating payment method update",
 			observability.Error(err),
 			observability.String("payment_method_id", id))
@@ -84,11 +69,7 @@ func (u *updatePaymentMethodUseCase) Execute(ctx context.Context, id string, inp
 	}
 
 	if err := u.repository.Update(ctx, paymentMethod); err != nil {
-		span.AddEvent(
-			"error updating payment method in repository",
-			observability.Field{Key: "payment_method_id", Value: id},
-			observability.Field{Key: "error", Value: err},
-		)
+		span.RecordError(err)
 		u.o11y.Logger().Error(ctx, "error updating payment method in repository",
 			observability.Error(err),
 			observability.String("payment_method_id", id))
