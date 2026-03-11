@@ -5,7 +5,6 @@ import (
 	"fmt"
 
 	"github.com/jailtonjunior94/financial/internal/budget/application/usecase"
-	budgetdomain "github.com/jailtonjunior94/financial/internal/budget/domain"
 	"github.com/jailtonjunior94/financial/internal/budget/domain/interfaces"
 	budgethttp "github.com/jailtonjunior94/financial/internal/budget/infrastructure/http"
 	"github.com/jailtonjunior94/financial/internal/budget/infrastructure/messaging"
@@ -32,12 +31,12 @@ func NewBudgetModule(
 	tokenValidator auth.TokenValidator,
 	invoiceCategoryTotal interfaces.InvoiceCategoryTotalProvider,
 ) (BudgetModule, error) {
-	errorHandler := httperrors.NewErrorHandler(o11y, budgetdomain.ErrorMappings())
+	errorHandler := httperrors.NewErrorHandler(o11y, ErrorMappings())
 	authMiddleware := middlewares.NewAuthorization(tokenValidator, o11y, errorHandler)
 
 	unitOfWork, err := uow.NewUnitOfWork(db)
 	if err != nil {
-		return BudgetModule{}, fmt.Errorf("budget module: failed to create unit of work: %v", err)
+		return BudgetModule{}, fmt.Errorf("budget module: failed to create unit of work: %w", err)
 	}
 
 	financialMetrics := metrics.NewFinancialMetrics(o11y)
@@ -49,7 +48,7 @@ func NewBudgetModule(
 	updateBudgetUseCase := usecase.NewUpdateBudgetUseCase(unitOfWork, o11y, financialMetrics, budgetRepository, categoryProvider, replicateBudgetUseCase)
 	deleteBudgetUseCase := usecase.NewDeleteBudgetUseCase(unitOfWork, o11y, financialMetrics, budgetRepository)
 	findBudgetUseCase := usecase.NewFindBudgetUseCase(budgetRepository, o11y, financialMetrics)
-	listBudgetsPaginatedUseCase := usecase.NewListBudgetsPaginatedUseCase(o11y, budgetRepository)
+	listBudgetsPaginatedUseCase := usecase.NewListBudgetsPaginatedUseCase(o11y, financialMetrics, budgetRepository)
 
 	budgetHandler := budgethttp.NewBudgetHandler(
 		o11y,

@@ -61,7 +61,7 @@ func (h *errorHandler) HandleError(w http.ResponseWriter, r *http.Request, err e
 	span.SetAttributes(
 		attribute.Int("http.status_code", mapping.Status),
 		attribute.String("error.type", fmt.Sprintf("%T", originalErr)),
-		attribute.String("error.message", originalErr.Error()),
+		attribute.String("error.message", mapping.Message),
 	)
 
 	// 4. Log error once with appropriate level

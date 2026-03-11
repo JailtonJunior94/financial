@@ -69,10 +69,10 @@ func TestErrorMapper_MapError_ValidationErrors(t *testing.T) {
 			description:    "Subcategory not found should return 404 Not Found",
 		},
 		{
-			name:           "customerrors.ErrInvalidParentCategory returns 409",
+			name:           "customerrors.ErrInvalidParentCategory returns 422",
 			err:            customerrors.ErrInvalidParentCategory,
-			expectedStatus: http.StatusConflict,
-			description:    "Invalid parent category should return 409 Conflict",
+			expectedStatus: http.StatusUnprocessableEntity,
+			description:    "Invalid parent category should return 422 Unprocessable Entity",
 		},
 		{
 			name:           "customerrors.ErrUnauthorized returns 401",

@@ -1,20 +1,20 @@
-package domain
+package user
 
 import (
 	"net/http"
 
+	"github.com/jailtonjunior94/financial/internal/user/domain"
 	"github.com/jailtonjunior94/financial/pkg/api/httperrors"
 )
 
 // ErrorMappings returns the HTTP status mappings for user domain errors.
-// Call NewErrorHandler(o11y, domain.ErrorMappings()) in the user module.
 func ErrorMappings() map[error]httperrors.ErrorMapping {
 	return map[error]httperrors.ErrorMapping{
-		ErrUserNotFound: {
+		domain.ErrUserNotFound: {
 			Status:  http.StatusNotFound,
 			Message: "User not found",
 		},
-		ErrEmailAlreadyExists: {
+		domain.ErrEmailAlreadyExists: {
 			Status:  http.StatusConflict,
 			Message: "Email already exists",
 		},

@@ -1,10 +1,9 @@
 package payment_method
 
 import (
-	"database/sql"
+	"github.com/JailtonJunior94/devkit-go/pkg/database"
 
 	"github.com/jailtonjunior94/financial/internal/payment_method/application/usecase"
-	pmdomain "github.com/jailtonjunior94/financial/internal/payment_method/domain"
 	"github.com/jailtonjunior94/financial/internal/payment_method/infrastructure/http"
 	"github.com/jailtonjunior94/financial/internal/payment_method/infrastructure/repositories"
 	"github.com/jailtonjunior94/financial/pkg/api/httperrors"
@@ -17,8 +16,8 @@ type PaymentMethodModule struct {
 	PaymentMethodRouter *http.PaymentMethodRouter
 }
 
-func NewPaymentMethodModule(db *sql.DB, o11y observability.Observability) PaymentMethodModule {
-	errorHandler := httperrors.NewErrorHandler(o11y, pmdomain.ErrorMappings())
+func NewPaymentMethodModule(db database.DBTX, o11y observability.Observability) PaymentMethodModule {
+	errorHandler := httperrors.NewErrorHandler(o11y, ErrorMappings())
 
 	financialMetrics := metrics.NewFinancialMetrics(o11y)
 

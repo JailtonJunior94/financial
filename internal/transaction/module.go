@@ -8,7 +8,6 @@ import (
 
 	invoiceInterfaces "github.com/jailtonjunior94/financial/internal/invoice/domain/interfaces"
 	"github.com/jailtonjunior94/financial/internal/transaction/application/usecase"
-	transactionDomain "github.com/jailtonjunior94/financial/internal/transaction/domain"
 	transactionInterfaces "github.com/jailtonjunior94/financial/internal/transaction/domain/interfaces"
 	transactionhttp "github.com/jailtonjunior94/financial/internal/transaction/infrastructure/http"
 	"github.com/jailtonjunior94/financial/internal/transaction/infrastructure/repositories"
@@ -33,7 +32,7 @@ func NewTransactionModule(
 	cardProvider invoiceInterfaces.CardProvider,
 	outboxService outbox.Service,
 ) (TransactionModule, error) {
-	errorHandler := httperrors.NewErrorHandler(o11y, transactionDomain.ErrorMappings())
+	errorHandler := httperrors.NewErrorHandler(o11y, ErrorMappings())
 	authMiddleware := middlewares.NewAuthorization(tokenValidator, o11y, errorHandler)
 
 	transactionMetrics := metrics.NewTransactionMetrics(o11y)

@@ -1,10 +1,9 @@
 package card
 
 import (
-	"database/sql"
+	"github.com/JailtonJunior94/devkit-go/pkg/database"
 
 	"github.com/jailtonjunior94/financial/internal/card/application/usecase"
-	cardDomain "github.com/jailtonjunior94/financial/internal/card/domain"
 	"github.com/jailtonjunior94/financial/internal/card/infrastructure/adapters"
 	"github.com/jailtonjunior94/financial/internal/card/infrastructure/http"
 	"github.com/jailtonjunior94/financial/internal/card/infrastructure/repositories"
@@ -23,12 +22,12 @@ type CardModule struct {
 }
 
 func NewCardModule(
-	db *sql.DB,
+	db database.DBTX,
 	o11y observability.Observability,
 	tokenValidator auth.TokenValidator,
 	invoiceRepo invoiceInterfaces.InvoiceRepository,
 ) CardModule {
-	errorHandler := httperrors.NewErrorHandler(o11y, cardDomain.ErrorMappings())
+	errorHandler := httperrors.NewErrorHandler(o11y, ErrorMappings())
 	authMiddleware := middlewares.NewAuthorization(tokenValidator, o11y, errorHandler)
 
 	cardMetrics := metrics.NewCardMetrics(o11y)

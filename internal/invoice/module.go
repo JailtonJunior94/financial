@@ -1,12 +1,10 @@
 package invoice
 
 import (
-	"database/sql"
-
+	"github.com/JailtonJunior94/devkit-go/pkg/database"
 	"github.com/JailtonJunior94/devkit-go/pkg/observability"
 
 	"github.com/jailtonjunior94/financial/internal/invoice/application/usecase"
-	invoicedomain "github.com/jailtonjunior94/financial/internal/invoice/domain"
 	"github.com/jailtonjunior94/financial/internal/invoice/infrastructure/adapters"
 	"github.com/jailtonjunior94/financial/internal/invoice/infrastructure/http"
 	"github.com/jailtonjunior94/financial/internal/invoice/infrastructure/repositories"
@@ -27,11 +25,11 @@ type InvoiceModule struct {
 
 // NewInvoiceModule creates and wires all dependencies for the invoice module.
 func NewInvoiceModule(
-	db *sql.DB,
+	db database.DBTX,
 	o11y observability.Observability,
 	tokenValidator auth.TokenValidator,
 ) InvoiceModule {
-	errorHandler := httperrors.NewErrorHandler(o11y, invoicedomain.ErrorMappings())
+	errorHandler := httperrors.NewErrorHandler(o11y, ErrorMappings())
 	authMiddleware := middlewares.NewAuthorization(tokenValidator, o11y, errorHandler)
 
 	financialMetrics := metrics.NewFinancialMetrics(o11y)

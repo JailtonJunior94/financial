@@ -5,7 +5,7 @@ import (
 	"fmt"
 
 	"github.com/jailtonjunior94/financial/internal/category/application/usecase"
-	categorydomain "github.com/jailtonjunior94/financial/internal/category/domain"
+	"github.com/jailtonjunior94/financial/internal/category/domain/interfaces"
 	"github.com/jailtonjunior94/financial/internal/category/infrastructure/adapters"
 	"github.com/jailtonjunior94/financial/internal/category/infrastructure/http"
 	"github.com/jailtonjunior94/financial/internal/category/infrastructure/repositories"
@@ -15,6 +15,7 @@ import (
 	pkginterfaces "github.com/jailtonjunior94/financial/pkg/domain/interfaces"
 	"github.com/jailtonjunior94/financial/pkg/observability/metrics"
 
+	"github.com/JailtonJunior94/devkit-go/pkg/database"
 	"github.com/JailtonJunior94/devkit-go/pkg/database/uow"
 	"github.com/JailtonJunior94/devkit-go/pkg/observability"
 )
@@ -25,7 +26,7 @@ type CategoryModule struct {
 }
 
 func NewCategoryModule(db *sql.DB, o11y observability.Observability, tokenValidator auth.TokenValidator) (CategoryModule, error) {
-	errorHandler := httperrors.NewErrorHandler(o11y, categorydomain.ErrorMappings())
+	errorHandler := httperrors.NewErrorHandler(o11y, ErrorMappings())
 	fm := metrics.NewFinancialMetrics(o11y)
 
 	unitOfWork, err := uow.NewUnitOfWork(db)
@@ -40,7 +41,13 @@ func NewCategoryModule(db *sql.DB, o11y observability.Observability, tokenValida
 	findCategoryPaginated := usecase.NewFindCategoryPaginatedUseCase(o11y, fm, categoryRepo)
 	findCategoryBy := usecase.NewFindCategoryByUseCase(o11y, fm, categoryRepo, subcategoryRepo)
 	updateCategory := usecase.NewUpdateCategoryUseCase(o11y, fm, categoryRepo)
-	removeCategory := usecase.NewRemoveCategoryUseCase(o11y, fm, unitOfWork, categoryRepo)
+	catRepoFactory := interfaces.CategoryRepositoryFactory(func(tx database.DBTX) interfaces.CategoryRepository {
+		return repositories.NewCategoryRepository(tx, o11y, fm)
+	})
+	subcatRepoFactory := interfaces.SubcategoryRepositoryFactory(func(tx database.DBTX) interfaces.SubcategoryRepository {
+		return repositories.NewSubcategoryRepository(tx, o11y, fm)
+	})
+	removeCategory := usecase.NewRemoveCategoryUseCase(o11y, fm, unitOfWork, categoryRepo, catRepoFactory, subcatRepoFactory)
 
 	createSubcategory := usecase.NewCreateSubcategoryUseCase(o11y, fm, categoryRepo, subcategoryRepo)
 	findSubcategoryBy := usecase.NewFindSubcategoryByUseCase(o11y, fm, categoryRepo, subcategoryRepo)

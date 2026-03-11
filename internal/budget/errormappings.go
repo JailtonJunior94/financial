@@ -1,67 +1,67 @@
-package domain
+package budget
 
 import (
 	"net/http"
 
+	"github.com/jailtonjunior94/financial/internal/budget/domain"
 	"github.com/jailtonjunior94/financial/pkg/api/httperrors"
 )
 
 // ErrorMappings returns the HTTP status mappings for budget domain errors.
-// Call NewErrorHandler(o11y, domain.ErrorMappings()) in the budget module.
 func ErrorMappings() map[error]httperrors.ErrorMapping {
 	return map[error]httperrors.ErrorMapping{
-		// Category validation errors → 400 Bad Request
-		ErrCategoryNotFound: {
+		// Category validation errors -> 400 Bad Request
+		domain.ErrCategoryNotFound: {
 			Status:  http.StatusBadRequest,
 			Message: "One or more categories not found",
 		},
-		ErrCategoryNotOwnedByUser: {
+		domain.ErrCategoryNotOwnedByUser: {
 			Status:  http.StatusBadRequest,
 			Message: "One or more categories do not belong to user",
 		},
 
-		// Validation errors → 400 Bad Request
-		ErrBudgetInvalidTotal: {
+		// Validation errors -> 400 Bad Request
+		domain.ErrBudgetInvalidTotal: {
 			Status:  http.StatusBadRequest,
 			Message: "Sum of budget item percentages must equal 100%",
 		},
-		ErrBudgetPercentageExceeds100: {
+		domain.ErrBudgetPercentageExceeds100: {
 			Status:  http.StatusBadRequest,
 			Message: "Sum of budget item percentages exceeds 100%",
 		},
-		ErrBudgetNoItems: {
+		domain.ErrBudgetNoItems: {
 			Status:  http.StatusBadRequest,
 			Message: "Budget must have at least one item",
 		},
-		ErrInvalidPercentage: {
+		domain.ErrInvalidPercentage: {
 			Status:  http.StatusBadRequest,
 			Message: "Percentage must be between 0 and 100",
 		},
-		ErrNegativeAmount: {
+		domain.ErrNegativeAmount: {
 			Status:  http.StatusBadRequest,
 			Message: "Amount cannot be negative",
 		},
-		ErrInvalidCategoryID: {
+		domain.ErrInvalidCategoryID: {
 			Status:  http.StatusBadRequest,
 			Message: "Invalid category ID",
 		},
 
-		// Not found errors → 404 Not Found
-		ErrBudgetNotFound: {
+		// Not found errors -> 404 Not Found
+		domain.ErrBudgetNotFound: {
 			Status:  http.StatusNotFound,
 			Message: "Budget not found",
 		},
-		ErrBudgetItemNotFound: {
+		domain.ErrBudgetItemNotFound: {
 			Status:  http.StatusNotFound,
 			Message: "Budget item not found",
 		},
 
-		// Conflict errors → 409 Conflict
-		ErrBudgetAlreadyExistsForMonth: {
+		// Conflict errors -> 409 Conflict
+		domain.ErrBudgetAlreadyExistsForMonth: {
 			Status:  http.StatusConflict,
 			Message: "Budget already exists for this month",
 		},
-		ErrDuplicateCategory: {
+		domain.ErrDuplicateCategory: {
 			Status:  http.StatusConflict,
 			Message: "Category already exists in budget",
 		},

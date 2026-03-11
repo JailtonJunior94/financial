@@ -1,71 +1,71 @@
-package domain
+package invoice
 
 import (
 	"net/http"
 
+	"github.com/jailtonjunior94/financial/internal/invoice/domain"
 	"github.com/jailtonjunior94/financial/pkg/api/httperrors"
 )
 
 // ErrorMappings returns the HTTP status mappings for invoice domain errors.
-// Call NewErrorHandler(o11y, domain.ErrorMappings()) in the invoice module.
 func ErrorMappings() map[error]httperrors.ErrorMapping {
 	return map[error]httperrors.ErrorMapping{
-		// Validation errors → 400 Bad Request
-		ErrNegativeAmount: {
+		// Validation errors -> 400 Bad Request
+		domain.ErrNegativeAmount: {
 			Status:  http.StatusBadRequest,
 			Message: "Amount cannot be negative",
 		},
-		ErrInvalidInstallment: {
+		domain.ErrInvalidInstallment: {
 			Status:  http.StatusBadRequest,
 			Message: "Installment number must be between 1 and installment total",
 		},
-		ErrInvalidInstallmentTotal: {
+		domain.ErrInvalidInstallmentTotal: {
 			Status:  http.StatusBadRequest,
 			Message: "Installment total must be at least 1",
 		},
-		ErrInstallmentAmountInvalid: {
+		domain.ErrInstallmentAmountInvalid: {
 			Status:  http.StatusBadRequest,
 			Message: "Installment amount must equal total amount divided by installments",
 		},
-		ErrInvalidCategoryID: {
+		domain.ErrInvalidCategoryID: {
 			Status:  http.StatusBadRequest,
 			Message: "Invalid category ID",
 		},
-		ErrInvalidCardID: {
+		domain.ErrInvalidCardID: {
 			Status:  http.StatusBadRequest,
 			Message: "Invalid card ID",
 		},
-		ErrEmptyDescription: {
+		domain.ErrEmptyDescription: {
 			Status:  http.StatusBadRequest,
 			Message: "Description cannot be empty",
 		},
-		ErrInvoiceHasNoItems: {
+		domain.ErrInvoiceHasNoItems: {
 			Status:  http.StatusBadRequest,
 			Message: "Invoice must have at least one item",
 		},
-		ErrInvoiceNegativeTotal: {
+		domain.ErrInvoiceNegativeTotal: {
 			Status:  http.StatusBadRequest,
 			Message: "Invoice total amount cannot be negative",
 		},
 
-		// Ownership errors → 403 Forbidden
-		ErrInvoiceNotOwned: {
+		// Ownership errors -> 403 Forbidden
+		domain.ErrInvoiceNotOwned: {
 			Status:  http.StatusForbidden,
 			Message: "Access to this invoice is not allowed",
 		},
 
-		// Not found errors → 404 Not Found
-		ErrInvoiceNotFound: {
+		// Not found errors -> 404 Not Found
+		domain.ErrInvoiceNotFound: {
 			Status:  http.StatusNotFound,
 			Message: "Invoice not found",
 		},
-		ErrInvoiceItemNotFound: {
+		domain.ErrInvoiceItemNotFound: {
 			Status:  http.StatusNotFound,
 			Message: "Invoice item not found",
 		},
 
-		// Conflict errors → 409 Conflict
-		ErrInvoiceAlreadyExistsForMonth: {
+		// Conflict errors -> 409 Conflict
+		domain.ErrInvoiceAlreadyExistsForMonth: {
 			Status:  http.StatusConflict,
 			Message: "Invoice already exists for this card and month",
 		},

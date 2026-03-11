@@ -4,7 +4,6 @@ import (
 	"encoding/json"
 	"errors"
 	"net/http"
-	"strings"
 
 	customerrors "github.com/jailtonjunior94/financial/pkg/custom_errors"
 	"github.com/jailtonjunior94/financial/pkg/validation"
@@ -78,13 +77,6 @@ func (m *errorMapper) MapError(err error) ErrorMapping {
 		}
 	}
 
-	if isValidationError(err) {
-		return ErrorMapping{
-			Status:  http.StatusBadRequest,
-			Message: err.Error(),
-		}
-	}
-
 	// 4. Default: 500 Internal Server Error
 	return ErrorMapping{
 		Status:  http.StatusInternalServerError,
@@ -144,9 +136,9 @@ func buildDomainErrorMappings() map[error]ErrorMapping {
 			Message: "Subcategory not found",
 		},
 
-		// Conflict errors → 409 Conflict
+		// Unprocessable Entity → 422
 		customerrors.ErrInvalidParentCategory: {
-			Status:  http.StatusConflict,
+			Status:  http.StatusUnprocessableEntity,
 			Message: "Invalid parent category",
 		},
 
@@ -203,10 +195,3 @@ func isJSONError(err error) bool {
 	return errors.As(err, &syntaxErr) || errors.As(err, &unmarshalErr)
 }
 
-// isValidationError checks if the error is a validation error based on error message.
-func isValidationError(err error) bool {
-	errMsg := strings.ToLower(err.Error())
-	return strings.Contains(errMsg, "invalid") ||
-		strings.Contains(errMsg, "required") ||
-		strings.Contains(errMsg, "cannot be")
-}
