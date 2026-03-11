@@ -35,7 +35,11 @@ func (s *CategoryProviderAdapterSuite) SetupTest() {
 func (s *CategoryProviderAdapterSuite) TestValidateCategories_EmptyList() {
 	db, _, err := sqlmock.New()
 	s.Require().NoError(err)
-	defer func() { _ = db.Close() }()
+	defer func() {
+		if closeErr := db.Close(); closeErr != nil {
+			s.T().Logf("TestValidateCategories_EmptyList: failed to close db: %v", closeErr)
+		}
+	}()
 
 	adapter := adapters.NewCategoryProviderAdapter(db, s.obs, s.fm)
 	err = adapter.ValidateCategories(s.ctx, "user-1", []string{})
@@ -45,7 +49,11 @@ func (s *CategoryProviderAdapterSuite) TestValidateCategories_EmptyList() {
 func (s *CategoryProviderAdapterSuite) TestValidateCategories_AllValid() {
 	db, mock, err := sqlmock.New()
 	s.Require().NoError(err)
-	defer func() { _ = db.Close() }()
+	defer func() {
+		if closeErr := db.Close(); closeErr != nil {
+			s.T().Logf("TestValidateCategories_AllValid: failed to close db: %v", closeErr)
+		}
+	}()
 
 	userID := "user-uuid-1"
 	categoryID := "cat-uuid-1"
@@ -63,7 +71,11 @@ func (s *CategoryProviderAdapterSuite) TestValidateCategories_AllValid() {
 func (s *CategoryProviderAdapterSuite) TestValidateCategories_CategoryNotFound() {
 	db, mock, err := sqlmock.New()
 	s.Require().NoError(err)
-	defer func() { _ = db.Close() }()
+	defer func() {
+		if closeErr := db.Close(); closeErr != nil {
+			s.T().Logf("TestValidateCategories_CategoryNotFound: failed to close db: %v", closeErr)
+		}
+	}()
 
 	userID := "user-uuid-1"
 	categoryID := "cat-uuid-missing"
@@ -82,7 +94,11 @@ func (s *CategoryProviderAdapterSuite) TestValidateCategories_CategoryNotFound()
 func (s *CategoryProviderAdapterSuite) TestValidateCategories_DBError() {
 	db, mock, err := sqlmock.New()
 	s.Require().NoError(err)
-	defer func() { _ = db.Close() }()
+	defer func() {
+		if closeErr := db.Close(); closeErr != nil {
+			s.T().Logf("TestValidateCategories_DBError: failed to close db: %v", closeErr)
+		}
+	}()
 
 	userID := "user-uuid-1"
 	categoryID := "cat-uuid-1"
@@ -101,7 +117,11 @@ func (s *CategoryProviderAdapterSuite) TestValidateCategories_DBError() {
 func (s *CategoryProviderAdapterSuite) TestValidateCategories_PartialFound() {
 	db, mock, err := sqlmock.New()
 	s.Require().NoError(err)
-	defer func() { _ = db.Close() }()
+	defer func() {
+		if closeErr := db.Close(); closeErr != nil {
+			s.T().Logf("TestValidateCategories_PartialFound: failed to close db: %v", closeErr)
+		}
+	}()
 
 	userID := "user-uuid-1"
 	catID1 := "cat-uuid-1"

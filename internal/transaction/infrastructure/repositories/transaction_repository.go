@@ -63,7 +63,14 @@ func (r *transactionRepository) Save(ctx context.Context, tx database.DBTX, t *e
 		r.tm.RecordRepositoryFailure(ctx, "save", "transaction", "infra", time.Since(start))
 		return err
 	}
-	defer func() { _ = stmt.Close() }()
+	defer func() {
+		if closeErr := stmt.Close(); closeErr != nil {
+			span.RecordError(closeErr)
+			r.o11y.Logger().Error(ctx, "Save: failed to close stmt",
+				observability.Error(closeErr),
+			)
+		}
+	}()
 
 	_, err = stmt.ExecContext(ctx,
 		t.ID.Value,
@@ -209,7 +216,14 @@ func (r *transactionRepository) FindByInstallmentGroup(ctx context.Context, grou
 		r.tm.RecordRepositoryFailure(ctx, "find_by_group", "transaction", "infra", time.Since(start))
 		return nil, err
 	}
-	defer func() { _ = rows.Close() }()
+	defer func() {
+		if closeErr := rows.Close(); closeErr != nil {
+			span.RecordError(closeErr)
+			r.o11y.Logger().Error(ctx, "FindByInstallmentGroup: failed to close rows",
+				observability.Error(closeErr),
+			)
+		}
+	}()
 
 	var transactions []*entities.Transaction
 	for rows.Next() {
@@ -277,7 +291,14 @@ func (r *transactionRepository) Update(ctx context.Context, tx database.DBTX, t 
 		r.tm.RecordRepositoryFailure(ctx, "update", "transaction", "infra", time.Since(start))
 		return err
 	}
-	defer func() { _ = stmt.Close() }()
+	defer func() {
+		if closeErr := stmt.Close(); closeErr != nil {
+			span.RecordError(closeErr)
+			r.o11y.Logger().Error(ctx, "Update: failed to close stmt",
+				observability.Error(closeErr),
+			)
+		}
+	}()
 
 	_, err = stmt.ExecContext(ctx,
 		t.ID.Value,
@@ -414,7 +435,14 @@ func (r *transactionRepository) ListPaginated(ctx context.Context, params interf
 		r.tm.RecordRepositoryFailure(ctx, "list_paginated", "transaction", "infra", time.Since(start))
 		return nil, "", err
 	}
-	defer func() { _ = rows.Close() }()
+	defer func() {
+		if closeErr := rows.Close(); closeErr != nil {
+			span.RecordError(closeErr)
+			r.o11y.Logger().Error(ctx, "ListPaginated: failed to close rows",
+				observability.Error(closeErr),
+			)
+		}
+	}()
 
 	transactions := make([]*entities.Transaction, 0, limit)
 	for rows.Next() {

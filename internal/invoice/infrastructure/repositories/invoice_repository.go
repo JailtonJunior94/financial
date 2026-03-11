@@ -345,7 +345,14 @@ func (r *invoiceRepository) FindByUserAndMonth(
 		r.fm.RecordRepositoryFailure(ctx, "find_by_user_month", "invoice", "infra", time.Since(start))
 		return nil, err
 	}
-	defer func() { _ = rows.Close() }()
+	defer func() {
+		if closeErr := rows.Close(); closeErr != nil {
+			span.RecordError(closeErr)
+			r.o11y.Logger().Error(ctx, "FindByUserAndMonth: failed to close rows",
+				observability.Error(closeErr),
+			)
+		}
+	}()
 
 	var invoices []*entities.Invoice
 	for rows.Next() {
@@ -402,7 +409,7 @@ func (r *invoiceRepository) ListByUserAndMonthPaginated(
 		AND reference_month >= $2
 		AND reference_month < $3
 		AND deleted_at IS NULL`
-	args := []interface{}{params.UserID.Value, params.ReferenceMonth.FirstDay(), params.ReferenceMonth.AddMonths(1).FirstDay()}
+	args := []any{params.UserID.Value, params.ReferenceMonth.FirstDay(), params.ReferenceMonth.AddMonths(1).FirstDay()}
 
 	cursorDueDate, hasDueDate := params.Cursor.GetString("due_date")
 	cursorID, hasID := params.Cursor.GetString("id")
@@ -440,7 +447,14 @@ func (r *invoiceRepository) ListByUserAndMonthPaginated(
 		r.fm.RecordRepositoryFailure(ctx, "list_by_user_month_paginated", "invoice", "infra", time.Since(start))
 		return nil, err
 	}
-	defer func() { _ = rows.Close() }()
+	defer func() {
+		if closeErr := rows.Close(); closeErr != nil {
+			span.RecordError(closeErr)
+			r.o11y.Logger().Error(ctx, "ListByUserAndMonthPaginated: failed to close rows",
+				observability.Error(closeErr),
+			)
+		}
+	}()
 
 	invoices := make([]*entities.Invoice, 0)
 	for rows.Next() {
@@ -508,7 +522,14 @@ func (r *invoiceRepository) FindByCard(ctx context.Context, cardID vos.UUID) ([]
 		r.fm.RecordRepositoryFailure(ctx, "find_by_card", "invoice", "infra", time.Since(start))
 		return nil, err
 	}
-	defer func() { _ = rows.Close() }()
+	defer func() {
+		if closeErr := rows.Close(); closeErr != nil {
+			span.RecordError(closeErr)
+			r.o11y.Logger().Error(ctx, "FindByCard: failed to close rows",
+				observability.Error(closeErr),
+			)
+		}
+	}()
 
 	var invoices []*entities.Invoice
 	for rows.Next() {
@@ -573,7 +594,7 @@ func (r *invoiceRepository) ListByCard(ctx context.Context, params interfaces.Li
 			user_id = $1
 			AND card_id = $2
 			AND deleted_at IS NULL`
-	args := []interface{}{params.UserID, params.CardID}
+	args := []any{params.UserID, params.CardID}
 	argIndex := 3
 	if params.Status != "" {
 		query += fmt.Sprintf(` AND status = $%d`, argIndex)
@@ -596,7 +617,14 @@ func (r *invoiceRepository) ListByCard(ctx context.Context, params interfaces.Li
 		r.fm.RecordRepositoryFailure(ctx, "list_by_card", "invoice", "infra", time.Since(start))
 		return nil, err
 	}
-	defer func() { _ = rows.Close() }()
+	defer func() {
+		if closeErr := rows.Close(); closeErr != nil {
+			span.RecordError(closeErr)
+			r.o11y.Logger().Error(ctx, "ListByCard: failed to close rows",
+				observability.Error(closeErr),
+			)
+		}
+	}()
 	invoices := make([]*entities.Invoice, 0)
 	for rows.Next() {
 		invoice, err := r.scanInvoice(rows)
@@ -745,7 +773,14 @@ func (r *invoiceRepository) FindItemsByPurchaseOrigin(
 		r.fm.RecordRepositoryFailure(ctx, "find_items_by_purchase_origin", "invoice", "infra", time.Since(start))
 		return nil, err
 	}
-	defer func() { _ = rows.Close() }()
+	defer func() {
+		if closeErr := rows.Close(); closeErr != nil {
+			span.RecordError(closeErr)
+			r.o11y.Logger().Error(ctx, "FindItemsByPurchaseOrigin: failed to close rows",
+				observability.Error(closeErr),
+			)
+		}
+	}()
 
 	var items []*entities.InvoiceItem
 	for rows.Next() {
@@ -801,7 +836,13 @@ func (r *invoiceRepository) findItemsByInvoiceIDs(ctx context.Context, ids []vos
 	if err != nil {
 		return nil, err
 	}
-	defer func() { _ = rows.Close() }()
+	defer func() {
+		if closeErr := rows.Close(); closeErr != nil {
+			r.o11y.Logger().Error(ctx, "findItemsByInvoiceIDs: failed to close rows",
+				observability.Error(closeErr),
+			)
+		}
+	}()
 
 	result := make(map[string][]*entities.InvoiceItem)
 	for rows.Next() {
@@ -838,7 +879,13 @@ func (r *invoiceRepository) findItemsByInvoiceID(ctx context.Context, invoiceID 
 	if err != nil {
 		return nil, err
 	}
-	defer func() { _ = rows.Close() }()
+	defer func() {
+		if closeErr := rows.Close(); closeErr != nil {
+			r.o11y.Logger().Error(ctx, "findItemsByInvoiceID: failed to close rows",
+				observability.Error(closeErr),
+			)
+		}
+	}()
 
 	var items []*entities.InvoiceItem
 	for rows.Next() {

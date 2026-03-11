@@ -64,7 +64,14 @@ func (r *userRepository) Insert(ctx context.Context, user *entities.User) (*enti
 		r.fm.RecordRepositoryFailure(ctx, "insert", "user", "infra", time.Since(start))
 		return nil, fmt.Errorf("preparing insert user statement: %w", err)
 	}
-	defer func() { _ = stmt.Close() }()
+	defer func() {
+		if closeErr := stmt.Close(); closeErr != nil {
+			span.RecordError(closeErr)
+			r.o11y.Logger().Error(ctx, "Insert: failed to close stmt",
+				observability.Error(closeErr),
+			)
+		}
+	}()
 	_, err = stmt.ExecContext(
 		ctx,
 		user.ID.String(),

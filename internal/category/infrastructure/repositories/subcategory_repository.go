@@ -75,7 +75,14 @@ func (r *subcategoryRepository) FindByCategoryID(ctx context.Context, categoryID
 		r.fm.RecordRepositoryFailure(ctx, "find_by_category_id", "subcategory", "infra", time.Since(start))
 		return nil, fmt.Errorf("subcategory_repository.find_by_category_id: %w", err)
 	}
-	defer func() { _ = rows.Close() }()
+	defer func() {
+		if closeErr := rows.Close(); closeErr != nil {
+			span.RecordError(closeErr)
+			r.o11y.Logger().Error(ctx, "FindByCategoryID: failed to close rows",
+				observability.Error(closeErr),
+			)
+		}
+	}()
 
 	subcategories := make([]*entities.Subcategory, 0)
 	for rows.Next() {
@@ -112,7 +119,7 @@ func (r *subcategoryRepository) ListPaginated(ctx context.Context, params interf
 	defer span.End()
 
 	whereClause := "category_id = $1 AND user_id = $2 AND deleted_at IS NULL"
-	args := []interface{}{params.CategoryID.String(), params.UserID.String()}
+	args := []any{params.CategoryID.String(), params.UserID.String()}
 
 	cursorSequence, hasSeq := params.Cursor.GetInt("sequence")
 	cursorID, hasID := params.Cursor.GetString("id")
@@ -137,7 +144,14 @@ LIMIT $%d`, whereClause, len(args)+1)
 		r.fm.RecordRepositoryFailure(ctx, "list_paginated", "subcategory", "infra", time.Since(start))
 		return nil, fmt.Errorf("subcategory_repository.list_paginated: %w", err)
 	}
-	defer func() { _ = rows.Close() }()
+	defer func() {
+		if closeErr := rows.Close(); closeErr != nil {
+			span.RecordError(closeErr)
+			r.o11y.Logger().Error(ctx, "ListPaginated: failed to close rows",
+				observability.Error(closeErr),
+			)
+		}
+	}()
 
 	subcategories := make([]*entities.Subcategory, 0)
 	for rows.Next() {

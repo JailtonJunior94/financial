@@ -311,7 +311,7 @@ func (r *budgetRepository) ListPaginated(ctx context.Context, params interfaces.
 
 	// Build WHERE clause with cursor
 	whereClause := "user_id = $1 AND deleted_at IS NULL"
-	args := []interface{}{params.UserID.Value}
+	args := []any{params.UserID.Value}
 
 	cursorDate, hasDate := params.Cursor.GetString("date")
 	cursorID, hasID := params.Cursor.GetString("id")
@@ -350,7 +350,14 @@ func (r *budgetRepository) ListPaginated(ctx context.Context, params interfaces.
 		r.fm.RecordRepositoryFailure(ctx, "list_paginated", "budget", "infra", time.Since(start))
 		return nil, err
 	}
-	defer func() { _ = rows.Close() }()
+	defer func() {
+		if closeErr := rows.Close(); closeErr != nil {
+			span.RecordError(closeErr)
+			r.o11y.Logger().Error(ctx, "ListPaginated: failed to close rows",
+				observability.Error(closeErr),
+			)
+		}
+	}()
 
 	budgets := make([]*entities.Budget, 0)
 	for rows.Next() {
@@ -591,7 +598,13 @@ func (r *budgetRepository) findItemsByBudgetIDs(ctx context.Context, ids []vos.U
 	if err != nil {
 		return nil, err
 	}
-	defer func() { _ = rows.Close() }()
+	defer func() {
+		if closeErr := rows.Close(); closeErr != nil {
+			r.o11y.Logger().Error(ctx, "findItemsByBudgetIDs: failed to close rows",
+				observability.Error(closeErr),
+			)
+		}
+	}()
 
 	result := make(map[string][]*entities.BudgetItem)
 	for rows.Next() {
@@ -658,7 +671,13 @@ func (r *budgetRepository) findItemsByBudgetID(ctx context.Context, budgetID vos
 	if err != nil {
 		return nil, err
 	}
-	defer func() { _ = rows.Close() }()
+	defer func() {
+		if closeErr := rows.Close(); closeErr != nil {
+			r.o11y.Logger().Error(ctx, "findItemsByBudgetID: failed to close rows",
+				observability.Error(closeErr),
+			)
+		}
+	}()
 
 	var items []*entities.BudgetItem
 	for rows.Next() {

@@ -69,7 +69,7 @@ func (r *userRepository) FindAll(ctx context.Context, limit int, cursor string) 
 	return users, nextCursor, nil
 }
 
-func (r *userRepository) buildFindAllQuery(limit int, cursor string) (string, []interface{}, error) {
+func (r *userRepository) buildFindAllQuery(limit int, cursor string) (string, []any, error) {
 	if cursor != "" {
 		decoded, err := pagination.DecodeCursor(cursor)
 		if err != nil {
@@ -83,7 +83,7 @@ func (r *userRepository) buildFindAllQuery(limit int, cursor string) (string, []
 					where deleted_at is null and (name > $1 or (name = $1 and id > $2))
 					order by name asc, id asc
 					limit $3`
-			return query, []interface{}{cursorName, cursorID, limit + 1}, nil
+			return query, []any{cursorName, cursorID, limit + 1}, nil
 		}
 	}
 	query := `select id, name, email, password, created_at, updated_at, deleted_at
@@ -91,15 +91,21 @@ func (r *userRepository) buildFindAllQuery(limit int, cursor string) (string, []
 			where deleted_at is null
 			order by name asc, id asc
 			limit $1`
-	return query, []interface{}{limit + 1}, nil
+	return query, []any{limit + 1}, nil
 }
 
-func (r *userRepository) scanUsers(ctx context.Context, query string, args []interface{}) ([]*entities.User, error) {
+func (r *userRepository) scanUsers(ctx context.Context, query string, args []any) ([]*entities.User, error) {
 	rows, err := r.db.QueryContext(ctx, query, args...)
 	if err != nil {
 		return nil, fmt.Errorf("querying users: %w", err)
 	}
-	defer func() { _ = rows.Close() }()
+	defer func() {
+		if closeErr := rows.Close(); closeErr != nil {
+			r.o11y.Logger().Error(ctx, "scanUsers: failed to close rows",
+				observability.Error(closeErr),
+			)
+		}
+	}()
 	users := make([]*entities.User, 0)
 	for rows.Next() {
 		var user entities.User
@@ -129,7 +135,7 @@ func (r *userRepository) buildNextCursor(hasNext bool, users []*entities.User) (
 	}
 	last := users[len(users)-1]
 	newCursor := pagination.Cursor{
-		Fields: map[string]interface{}{
+		Fields: map[string]any{
 			"name": last.Name.String(),
 			"id":   last.ID.String(),
 		},
@@ -173,7 +179,14 @@ func (r *userRepository) Update(ctx context.Context, user *entities.User) (*enti
 		r.fm.RecordRepositoryFailure(ctx, "update", "user", "infra", time.Since(start))
 		return nil, fmt.Errorf("preparing update user statement: %w", err)
 	}
-	defer func() { _ = stmt.Close() }()
+	defer func() {
+		if closeErr := stmt.Close(); closeErr != nil {
+			span.RecordError(closeErr)
+			r.o11y.Logger().Error(ctx, "Update: failed to close stmt",
+				observability.Error(closeErr),
+			)
+		}
+	}()
 	result, err := stmt.ExecContext(
 		ctx,
 		user.Name.String(),
@@ -251,7 +264,14 @@ func (r *userRepository) SoftDelete(ctx context.Context, id string) error {
 		r.fm.RecordRepositoryFailure(ctx, "soft_delete", "user", "infra", time.Since(start))
 		return fmt.Errorf("preparing soft delete user statement: %w", err)
 	}
-	defer func() { _ = stmt.Close() }()
+	defer func() {
+		if closeErr := stmt.Close(); closeErr != nil {
+			span.RecordError(closeErr)
+			r.o11y.Logger().Error(ctx, "SoftDelete: failed to close stmt",
+				observability.Error(closeErr),
+			)
+		}
+	}()
 	result, err := stmt.ExecContext(ctx, id)
 	if err != nil {
 		span.RecordError(err)

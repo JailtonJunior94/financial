@@ -84,7 +84,13 @@ func (a *categoryProviderAdapter) queryFoundIDs(ctx context.Context, userID stri
 	if err != nil {
 		return nil, err
 	}
-	defer func() { _ = rows.Close() }()
+	defer func() {
+		if closeErr := rows.Close(); closeErr != nil {
+			a.o11y.Logger().Error(ctx, "queryFoundIDs: failed to close rows",
+				observability.Error(closeErr),
+			)
+		}
+	}()
 
 	foundIDs := make(map[string]struct{}, len(categoryIDs))
 	for rows.Next() {

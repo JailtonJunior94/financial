@@ -3,6 +3,7 @@ package repositories
 import (
 	"context"
 	"database/sql"
+	"errors"
 	"fmt"
 	"time"
 
@@ -35,7 +36,7 @@ func (r *categoryRepository) ListPaginated(ctx context.Context, params interface
 	defer span.End()
 
 	whereClause := "user_id = $1 AND deleted_at IS NULL"
-	args := []interface{}{params.UserID.String()}
+	args := []any{params.UserID.String()}
 
 	cursorSequence, hasSeq := params.Cursor.GetInt("sequence")
 	cursorID, hasID := params.Cursor.GetString("id")
@@ -60,7 +61,14 @@ LIMIT $%d`, whereClause, len(args)+1)
 		r.fm.RecordRepositoryFailure(ctx, "list_paginated", "category", "infra", time.Since(start))
 		return nil, err
 	}
-	defer func() { _ = rows.Close() }()
+	defer func() {
+		if closeErr := rows.Close(); closeErr != nil {
+			span.RecordError(closeErr)
+			r.o11y.Logger().Error(ctx, "ListPaginated: failed to close rows",
+				observability.Error(closeErr),
+			)
+		}
+	}()
 
 	categories := make([]*entities.Category, 0)
 	for rows.Next() {
@@ -112,7 +120,7 @@ WHERE id = $1 AND user_id = $2 AND deleted_at IS NULL`
 		&category.DeletedAt,
 	)
 
-	if err == sql.ErrNoRows {
+	if errors.Is(err, sql.ErrNoRows) {
 		r.fm.RecordRepositoryQuery(ctx, "find_by_id", "category", time.Since(start))
 		return nil, nil
 	}

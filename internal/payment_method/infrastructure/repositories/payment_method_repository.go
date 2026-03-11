@@ -24,7 +24,7 @@ type paymentMethodRepository struct {
 }
 
 type paymentMethodScanner interface {
-	Scan(dest ...interface{}) error
+	Scan(dest ...any) error
 }
 
 func scanPaymentMethod(scanner paymentMethodScanner) (entities.PaymentMethod, error) {
@@ -80,6 +80,9 @@ func (r *paymentMethodRepository) List(ctx context.Context) ([]*entities.Payment
 	defer func() {
 		if closeErr := rows.Close(); closeErr != nil {
 			span.RecordError(closeErr)
+			r.o11y.Logger().Error(ctx, "List: failed to close rows",
+				observability.Error(closeErr),
+			)
 		}
 	}()
 
@@ -93,6 +96,13 @@ func (r *paymentMethodRepository) List(ctx context.Context) ([]*entities.Payment
 		}
 		paymentMethods = append(paymentMethods, &pm)
 	}
+
+	if err := rows.Err(); err != nil {
+		span.RecordError(err)
+		r.fm.RecordRepositoryFailure(ctx, "list", "payment_method", "infra", time.Since(start))
+		return nil, err
+	}
+
 	r.fm.RecordRepositoryQuery(ctx, "list", "payment_method", time.Since(start))
 	return paymentMethods, nil
 }
@@ -189,16 +199,16 @@ func (r *paymentMethodRepository) Save(ctx context.Context, paymentMethod *entit
 
 	stmt, err := r.db.PrepareContext(ctx, query)
 	if err != nil {
-		span.AddEvent(
-			"error preparing insert payment method",
-			observability.Field{Key: "error", Value: err},
-		)
+		span.RecordError(err)
 		r.fm.RecordRepositoryFailure(ctx, "save", "payment_method", "infra", time.Since(start))
 		return err
 	}
 	defer func() {
 		if closeErr := stmt.Close(); closeErr != nil {
 			span.RecordError(closeErr)
+			r.o11y.Logger().Error(ctx, "Save: failed to close stmt",
+				observability.Error(closeErr),
+			)
 		}
 	}()
 
@@ -213,10 +223,7 @@ func (r *paymentMethodRepository) Save(ctx context.Context, paymentMethod *entit
 		paymentMethod.DeletedAt.Ptr(),
 	)
 	if err != nil {
-		span.AddEvent(
-			"error inserting payment method",
-			observability.Field{Key: "error", Value: err},
-		)
+		span.RecordError(err)
 		r.fm.RecordRepositoryFailure(ctx, "save", "payment_method", "infra", time.Since(start))
 		return err
 	}
@@ -241,16 +248,16 @@ func (r *paymentMethodRepository) Update(ctx context.Context, paymentMethod *ent
 
 	stmt, err := r.db.PrepareContext(ctx, query)
 	if err != nil {
-		span.AddEvent(
-			"error preparing update payment method",
-			observability.Field{Key: "error", Value: err},
-		)
+		span.RecordError(err)
 		r.fm.RecordRepositoryFailure(ctx, "update", "payment_method", "infra", time.Since(start))
 		return err
 	}
 	defer func() {
 		if closeErr := stmt.Close(); closeErr != nil {
 			span.RecordError(closeErr)
+			r.o11y.Logger().Error(ctx, "Update: failed to close stmt",
+				observability.Error(closeErr),
+			)
 		}
 	}()
 
@@ -263,10 +270,7 @@ func (r *paymentMethodRepository) Update(ctx context.Context, paymentMethod *ent
 		paymentMethod.ID.Value,
 	)
 	if err != nil {
-		span.AddEvent(
-			"error updating payment method",
-			observability.Field{Key: "error", Value: err},
-		)
+		span.RecordError(err)
 		r.fm.RecordRepositoryFailure(ctx, "update", "payment_method", "infra", time.Since(start))
 		return err
 	}
@@ -286,7 +290,7 @@ func (r *paymentMethodRepository) ListPaginated(
 
 	// Build WHERE clause
 	whereClause := "deleted_at is null"
-	args := []interface{}{}
+	args := []any{}
 	argIndex := 1
 
 	// Filter by code if provided
@@ -326,7 +330,14 @@ func (r *paymentMethodRepository) ListPaginated(
 		r.fm.RecordRepositoryFailure(ctx, "list_paginated", "payment_method", "infra", time.Since(start))
 		return nil, err
 	}
-	defer func() { _ = rows.Close() }()
+	defer func() {
+		if closeErr := rows.Close(); closeErr != nil {
+			span.RecordError(closeErr)
+			r.o11y.Logger().Error(ctx, "ListPaginated: failed to close rows",
+				observability.Error(closeErr),
+			)
+		}
+	}()
 
 	var paymentMethods []*entities.PaymentMethod
 	for rows.Next() {
