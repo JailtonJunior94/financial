@@ -16,6 +16,7 @@ packages:
       pkgname: repositoryMock
     interfaces:
       CategoryRepository: {}
+      SubcategoryRepository: {}
   github.com/jailtonjunior94/financial/internal/budget/domain/interfaces:
     config:
       dir: ./internal/budget/infrastructure/repositories/mocks
@@ -28,6 +29,7 @@ packages:
       pkgname: repositoryMock
     interfaces:
       CardRepository: {}
+      InvoiceChecker: {}
   github.com/jailtonjunior94/financial/internal/payment_method/domain/interfaces:
     config:
       dir: ./internal/payment_method/infrastructure/repositories/mocks
@@ -39,6 +41,7 @@ packages:
       dir: ./pkg/auth/mocks
       pkgname: mocks
     interfaces:
+      TokenGenerator: {}
       TokenValidator: {}
   github.com/jailtonjunior94/financial/pkg/api/httperrors:
     config:
@@ -66,3 +69,14 @@ packages:
       pkgname: mocks
     interfaces:
       Service: {}
+      ProcessedEventsRepository:
+        config:
+          dir: ./internal/budget/infrastructure/repositories/mocks
+          pkgname: repositoryMock
+  github.com/jailtonjunior94/financial/internal/budget/application/usecase:
+    config:
+      dir: ./internal/budget/infrastructure/repositories/mocks
+      pkgname: repositoryMock
+    interfaces:
+      ReplicateBudgetUseCase: {}
+      SyncBudgetSpentAmountUseCase: {}

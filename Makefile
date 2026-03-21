@@ -225,22 +225,25 @@ run-worker: env ## Run Worker locally (requires infra-up)
 # ============================================================================
 
 .PHONY: test
-test: ## Run unit tests
+test: ## Run unit tests (default suite, without integration tag)
 	@echo "🧪 Running unit tests..."
 	@go test -short -count=1 -race -covermode=atomic -coverprofile=coverage-unit.out ./...
 	@go tool cover -func=coverage-unit.out | grep total
 
-.PHONY: test-integration
-test-integration: ## Run integration tests
+.PHONY: integration-test
+integration-test: ## Run integration tests (repositories with integration tag)
 	@echo "🧪 Running integration tests..."
 	@go test -tags=integration -count=1 -race -covermode=atomic -coverprofile=coverage-integration.out ./...
 
+.PHONY: test-integration
+test-integration: integration-test ## Backward-compatible alias for integration-test
+
 .PHONY: test-all
-test-all: test test-integration ## Run all tests
+test-all: test integration-test ## Run all tests
 	@echo "✅ All tests completed"
 
 .PHONY: test-cover
-test-cover: ## Run tests and show coverage in browser
+test-cover: ## Run unit tests and show coverage in browser
 	@echo "🧪 Running tests with coverage..."
 	@go test -short -count=1 -race -covermode=atomic -coverprofile=coverage.out ./...
 	@go tool cover -html=coverage.out

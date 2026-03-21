@@ -86,13 +86,16 @@ func (_c *InvoiceChecker_HasOpenInvoices_Call) Run(run func(ctx context.Context,
 		if args[1] != nil {
 			arg1 = args[1].(vos.UUID)
 		}
-		run(arg0, arg1)
+		run(
+			arg0,
+			arg1,
+		)
 	})
 	return _c
 }
 
-func (_c *InvoiceChecker_HasOpenInvoices_Call) Return(hasOpen bool, err error) *InvoiceChecker_HasOpenInvoices_Call {
-	_c.Call.Return(hasOpen, err)
+func (_c *InvoiceChecker_HasOpenInvoices_Call) Return(b bool, err error) *InvoiceChecker_HasOpenInvoices_Call {
+	_c.Call.Return(b, err)
 	return _c
 }
 

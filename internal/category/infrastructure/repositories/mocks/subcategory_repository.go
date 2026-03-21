@@ -13,7 +13,8 @@ import (
 	mock "github.com/stretchr/testify/mock"
 )
 
-// NewSubcategoryRepository creates a new instance of SubcategoryRepository.
+// NewSubcategoryRepository creates a new instance of SubcategoryRepository. It also registers a testing interface on the mock and a cleanup function to assert the mocks expectations.
+// The first argument is typically a *testing.T value.
 func NewSubcategoryRepository(t interface {
 	mock.TestingT
 	Cleanup(func())
@@ -37,59 +38,6 @@ type SubcategoryRepository_Expecter struct {
 
 func (_m *SubcategoryRepository) EXPECT() *SubcategoryRepository_Expecter {
 	return &SubcategoryRepository_Expecter{mock: &_m.Mock}
-}
-
-// FindByID provides a mock function for the type SubcategoryRepository
-func (_mock *SubcategoryRepository) FindByID(ctx context.Context, userID vos.UUID, categoryID vos.UUID, id vos.UUID) (*entities.Subcategory, error) {
-	ret := _mock.Called(ctx, userID, categoryID, id)
-
-	if len(ret) == 0 {
-		panic("no return value specified for FindByID")
-	}
-
-	var r0 *entities.Subcategory
-	var r1 error
-	if returnFunc, ok := ret.Get(0).(func(context.Context, vos.UUID, vos.UUID, vos.UUID) (*entities.Subcategory, error)); ok {
-		return returnFunc(ctx, userID, categoryID, id)
-	}
-	if returnFunc, ok := ret.Get(0).(func(context.Context, vos.UUID, vos.UUID, vos.UUID) *entities.Subcategory); ok {
-		r0 = returnFunc(ctx, userID, categoryID, id)
-	} else {
-		if ret.Get(0) != nil {
-			r0 = ret.Get(0).(*entities.Subcategory)
-		}
-	}
-	if returnFunc, ok := ret.Get(1).(func(context.Context, vos.UUID, vos.UUID, vos.UUID) error); ok {
-		r1 = returnFunc(ctx, userID, categoryID, id)
-	} else {
-		r1 = ret.Error(1)
-	}
-	return r0, r1
-}
-
-type SubcategoryRepository_FindByID_Call struct {
-	*mock.Call
-}
-
-func (_e *SubcategoryRepository_Expecter) FindByID(ctx interface{}, userID interface{}, categoryID interface{}, id interface{}) *SubcategoryRepository_FindByID_Call {
-	return &SubcategoryRepository_FindByID_Call{Call: _e.mock.On("FindByID", ctx, userID, categoryID, id)}
-}
-
-func (_c *SubcategoryRepository_FindByID_Call) Run(run func(ctx context.Context, userID vos.UUID, categoryID vos.UUID, id vos.UUID)) *SubcategoryRepository_FindByID_Call {
-	_c.Call.Run(func(args mock.Arguments) {
-		run(args[0].(context.Context), args[1].(vos.UUID), args[2].(vos.UUID), args[3].(vos.UUID))
-	})
-	return _c
-}
-
-func (_c *SubcategoryRepository_FindByID_Call) Return(subcategory *entities.Subcategory, err error) *SubcategoryRepository_FindByID_Call {
-	_c.Call.Return(subcategory, err)
-	return _c
-}
-
-func (_c *SubcategoryRepository_FindByID_Call) RunAndReturn(run func(ctx context.Context, userID vos.UUID, categoryID vos.UUID, id vos.UUID) (*entities.Subcategory, error)) *SubcategoryRepository_FindByID_Call {
-	_c.Call.Return(run)
-	return _c
 }
 
 // FindByCategoryID provides a mock function for the type SubcategoryRepository
@@ -120,17 +68,32 @@ func (_mock *SubcategoryRepository) FindByCategoryID(ctx context.Context, catego
 	return r0, r1
 }
 
+// SubcategoryRepository_FindByCategoryID_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'FindByCategoryID'
 type SubcategoryRepository_FindByCategoryID_Call struct {
 	*mock.Call
 }
 
+// FindByCategoryID is a helper method to define mock.On call
+//   - ctx context.Context
+//   - categoryID vos.UUID
 func (_e *SubcategoryRepository_Expecter) FindByCategoryID(ctx interface{}, categoryID interface{}) *SubcategoryRepository_FindByCategoryID_Call {
 	return &SubcategoryRepository_FindByCategoryID_Call{Call: _e.mock.On("FindByCategoryID", ctx, categoryID)}
 }
 
 func (_c *SubcategoryRepository_FindByCategoryID_Call) Run(run func(ctx context.Context, categoryID vos.UUID)) *SubcategoryRepository_FindByCategoryID_Call {
 	_c.Call.Run(func(args mock.Arguments) {
-		run(args[0].(context.Context), args[1].(vos.UUID))
+		var arg0 context.Context
+		if args[0] != nil {
+			arg0 = args[0].(context.Context)
+		}
+		var arg1 vos.UUID
+		if args[1] != nil {
+			arg1 = args[1].(vos.UUID)
+		}
+		run(
+			arg0,
+			arg1,
+		)
 	})
 	return _c
 }
@@ -141,6 +104,86 @@ func (_c *SubcategoryRepository_FindByCategoryID_Call) Return(subcategorys []*en
 }
 
 func (_c *SubcategoryRepository_FindByCategoryID_Call) RunAndReturn(run func(ctx context.Context, categoryID vos.UUID) ([]*entities.Subcategory, error)) *SubcategoryRepository_FindByCategoryID_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
+// FindByID provides a mock function for the type SubcategoryRepository
+func (_mock *SubcategoryRepository) FindByID(ctx context.Context, userID vos.UUID, categoryID vos.UUID, id vos.UUID) (*entities.Subcategory, error) {
+	ret := _mock.Called(ctx, userID, categoryID, id)
+
+	if len(ret) == 0 {
+		panic("no return value specified for FindByID")
+	}
+
+	var r0 *entities.Subcategory
+	var r1 error
+	if returnFunc, ok := ret.Get(0).(func(context.Context, vos.UUID, vos.UUID, vos.UUID) (*entities.Subcategory, error)); ok {
+		return returnFunc(ctx, userID, categoryID, id)
+	}
+	if returnFunc, ok := ret.Get(0).(func(context.Context, vos.UUID, vos.UUID, vos.UUID) *entities.Subcategory); ok {
+		r0 = returnFunc(ctx, userID, categoryID, id)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).(*entities.Subcategory)
+		}
+	}
+	if returnFunc, ok := ret.Get(1).(func(context.Context, vos.UUID, vos.UUID, vos.UUID) error); ok {
+		r1 = returnFunc(ctx, userID, categoryID, id)
+	} else {
+		r1 = ret.Error(1)
+	}
+	return r0, r1
+}
+
+// SubcategoryRepository_FindByID_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'FindByID'
+type SubcategoryRepository_FindByID_Call struct {
+	*mock.Call
+}
+
+// FindByID is a helper method to define mock.On call
+//   - ctx context.Context
+//   - userID vos.UUID
+//   - categoryID vos.UUID
+//   - id vos.UUID
+func (_e *SubcategoryRepository_Expecter) FindByID(ctx interface{}, userID interface{}, categoryID interface{}, id interface{}) *SubcategoryRepository_FindByID_Call {
+	return &SubcategoryRepository_FindByID_Call{Call: _e.mock.On("FindByID", ctx, userID, categoryID, id)}
+}
+
+func (_c *SubcategoryRepository_FindByID_Call) Run(run func(ctx context.Context, userID vos.UUID, categoryID vos.UUID, id vos.UUID)) *SubcategoryRepository_FindByID_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		var arg0 context.Context
+		if args[0] != nil {
+			arg0 = args[0].(context.Context)
+		}
+		var arg1 vos.UUID
+		if args[1] != nil {
+			arg1 = args[1].(vos.UUID)
+		}
+		var arg2 vos.UUID
+		if args[2] != nil {
+			arg2 = args[2].(vos.UUID)
+		}
+		var arg3 vos.UUID
+		if args[3] != nil {
+			arg3 = args[3].(vos.UUID)
+		}
+		run(
+			arg0,
+			arg1,
+			arg2,
+			arg3,
+		)
+	})
+	return _c
+}
+
+func (_c *SubcategoryRepository_FindByID_Call) Return(subcategory *entities.Subcategory, err error) *SubcategoryRepository_FindByID_Call {
+	_c.Call.Return(subcategory, err)
+	return _c
+}
+
+func (_c *SubcategoryRepository_FindByID_Call) RunAndReturn(run func(ctx context.Context, userID vos.UUID, categoryID vos.UUID, id vos.UUID) (*entities.Subcategory, error)) *SubcategoryRepository_FindByID_Call {
 	_c.Call.Return(run)
 	return _c
 }
@@ -173,17 +216,32 @@ func (_mock *SubcategoryRepository) ListPaginated(ctx context.Context, params in
 	return r0, r1
 }
 
+// SubcategoryRepository_ListPaginated_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'ListPaginated'
 type SubcategoryRepository_ListPaginated_Call struct {
 	*mock.Call
 }
 
+// ListPaginated is a helper method to define mock.On call
+//   - ctx context.Context
+//   - params interfaces.ListSubcategoriesParams
 func (_e *SubcategoryRepository_Expecter) ListPaginated(ctx interface{}, params interface{}) *SubcategoryRepository_ListPaginated_Call {
 	return &SubcategoryRepository_ListPaginated_Call{Call: _e.mock.On("ListPaginated", ctx, params)}
 }
 
 func (_c *SubcategoryRepository_ListPaginated_Call) Run(run func(ctx context.Context, params interfaces.ListSubcategoriesParams)) *SubcategoryRepository_ListPaginated_Call {
 	_c.Call.Run(func(args mock.Arguments) {
-		run(args[0].(context.Context), args[1].(interfaces.ListSubcategoriesParams))
+		var arg0 context.Context
+		if args[0] != nil {
+			arg0 = args[0].(context.Context)
+		}
+		var arg1 interfaces.ListSubcategoriesParams
+		if args[1] != nil {
+			arg1 = args[1].(interfaces.ListSubcategoriesParams)
+		}
+		run(
+			arg0,
+			arg1,
+		)
 	})
 	return _c
 }
@@ -215,17 +273,32 @@ func (_mock *SubcategoryRepository) Save(ctx context.Context, subcategory *entit
 	return r0
 }
 
+// SubcategoryRepository_Save_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'Save'
 type SubcategoryRepository_Save_Call struct {
 	*mock.Call
 }
 
+// Save is a helper method to define mock.On call
+//   - ctx context.Context
+//   - subcategory *entities.Subcategory
 func (_e *SubcategoryRepository_Expecter) Save(ctx interface{}, subcategory interface{}) *SubcategoryRepository_Save_Call {
 	return &SubcategoryRepository_Save_Call{Call: _e.mock.On("Save", ctx, subcategory)}
 }
 
 func (_c *SubcategoryRepository_Save_Call) Run(run func(ctx context.Context, subcategory *entities.Subcategory)) *SubcategoryRepository_Save_Call {
 	_c.Call.Run(func(args mock.Arguments) {
-		run(args[0].(context.Context), args[1].(*entities.Subcategory))
+		var arg0 context.Context
+		if args[0] != nil {
+			arg0 = args[0].(context.Context)
+		}
+		var arg1 *entities.Subcategory
+		if args[1] != nil {
+			arg1 = args[1].(*entities.Subcategory)
+		}
+		run(
+			arg0,
+			arg1,
+		)
 	})
 	return _c
 }
@@ -236,48 +309,6 @@ func (_c *SubcategoryRepository_Save_Call) Return(err error) *SubcategoryReposit
 }
 
 func (_c *SubcategoryRepository_Save_Call) RunAndReturn(run func(ctx context.Context, subcategory *entities.Subcategory) error) *SubcategoryRepository_Save_Call {
-	_c.Call.Return(run)
-	return _c
-}
-
-// Update provides a mock function for the type SubcategoryRepository
-func (_mock *SubcategoryRepository) Update(ctx context.Context, subcategory *entities.Subcategory) error {
-	ret := _mock.Called(ctx, subcategory)
-
-	if len(ret) == 0 {
-		panic("no return value specified for Update")
-	}
-
-	var r0 error
-	if returnFunc, ok := ret.Get(0).(func(context.Context, *entities.Subcategory) error); ok {
-		r0 = returnFunc(ctx, subcategory)
-	} else {
-		r0 = ret.Error(0)
-	}
-	return r0
-}
-
-type SubcategoryRepository_Update_Call struct {
-	*mock.Call
-}
-
-func (_e *SubcategoryRepository_Expecter) Update(ctx interface{}, subcategory interface{}) *SubcategoryRepository_Update_Call {
-	return &SubcategoryRepository_Update_Call{Call: _e.mock.On("Update", ctx, subcategory)}
-}
-
-func (_c *SubcategoryRepository_Update_Call) Run(run func(ctx context.Context, subcategory *entities.Subcategory)) *SubcategoryRepository_Update_Call {
-	_c.Call.Run(func(args mock.Arguments) {
-		run(args[0].(context.Context), args[1].(*entities.Subcategory))
-	})
-	return _c
-}
-
-func (_c *SubcategoryRepository_Update_Call) Return(err error) *SubcategoryRepository_Update_Call {
-	_c.Call.Return(err)
-	return _c
-}
-
-func (_c *SubcategoryRepository_Update_Call) RunAndReturn(run func(ctx context.Context, subcategory *entities.Subcategory) error) *SubcategoryRepository_Update_Call {
 	_c.Call.Return(run)
 	return _c
 }
@@ -299,17 +330,32 @@ func (_mock *SubcategoryRepository) SoftDelete(ctx context.Context, id vos.UUID)
 	return r0
 }
 
+// SubcategoryRepository_SoftDelete_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'SoftDelete'
 type SubcategoryRepository_SoftDelete_Call struct {
 	*mock.Call
 }
 
+// SoftDelete is a helper method to define mock.On call
+//   - ctx context.Context
+//   - id vos.UUID
 func (_e *SubcategoryRepository_Expecter) SoftDelete(ctx interface{}, id interface{}) *SubcategoryRepository_SoftDelete_Call {
 	return &SubcategoryRepository_SoftDelete_Call{Call: _e.mock.On("SoftDelete", ctx, id)}
 }
 
 func (_c *SubcategoryRepository_SoftDelete_Call) Run(run func(ctx context.Context, id vos.UUID)) *SubcategoryRepository_SoftDelete_Call {
 	_c.Call.Run(func(args mock.Arguments) {
-		run(args[0].(context.Context), args[1].(vos.UUID))
+		var arg0 context.Context
+		if args[0] != nil {
+			arg0 = args[0].(context.Context)
+		}
+		var arg1 vos.UUID
+		if args[1] != nil {
+			arg1 = args[1].(vos.UUID)
+		}
+		run(
+			arg0,
+			arg1,
+		)
 	})
 	return _c
 }
@@ -341,17 +387,32 @@ func (_mock *SubcategoryRepository) SoftDeleteByCategoryID(ctx context.Context, 
 	return r0
 }
 
+// SubcategoryRepository_SoftDeleteByCategoryID_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'SoftDeleteByCategoryID'
 type SubcategoryRepository_SoftDeleteByCategoryID_Call struct {
 	*mock.Call
 }
 
+// SoftDeleteByCategoryID is a helper method to define mock.On call
+//   - ctx context.Context
+//   - categoryID vos.UUID
 func (_e *SubcategoryRepository_Expecter) SoftDeleteByCategoryID(ctx interface{}, categoryID interface{}) *SubcategoryRepository_SoftDeleteByCategoryID_Call {
 	return &SubcategoryRepository_SoftDeleteByCategoryID_Call{Call: _e.mock.On("SoftDeleteByCategoryID", ctx, categoryID)}
 }
 
 func (_c *SubcategoryRepository_SoftDeleteByCategoryID_Call) Run(run func(ctx context.Context, categoryID vos.UUID)) *SubcategoryRepository_SoftDeleteByCategoryID_Call {
 	_c.Call.Run(func(args mock.Arguments) {
-		run(args[0].(context.Context), args[1].(vos.UUID))
+		var arg0 context.Context
+		if args[0] != nil {
+			arg0 = args[0].(context.Context)
+		}
+		var arg1 vos.UUID
+		if args[1] != nil {
+			arg1 = args[1].(vos.UUID)
+		}
+		run(
+			arg0,
+			arg1,
+		)
 	})
 	return _c
 }
@@ -362,6 +423,63 @@ func (_c *SubcategoryRepository_SoftDeleteByCategoryID_Call) Return(err error) *
 }
 
 func (_c *SubcategoryRepository_SoftDeleteByCategoryID_Call) RunAndReturn(run func(ctx context.Context, categoryID vos.UUID) error) *SubcategoryRepository_SoftDeleteByCategoryID_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
+// Update provides a mock function for the type SubcategoryRepository
+func (_mock *SubcategoryRepository) Update(ctx context.Context, subcategory *entities.Subcategory) error {
+	ret := _mock.Called(ctx, subcategory)
+
+	if len(ret) == 0 {
+		panic("no return value specified for Update")
+	}
+
+	var r0 error
+	if returnFunc, ok := ret.Get(0).(func(context.Context, *entities.Subcategory) error); ok {
+		r0 = returnFunc(ctx, subcategory)
+	} else {
+		r0 = ret.Error(0)
+	}
+	return r0
+}
+
+// SubcategoryRepository_Update_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'Update'
+type SubcategoryRepository_Update_Call struct {
+	*mock.Call
+}
+
+// Update is a helper method to define mock.On call
+//   - ctx context.Context
+//   - subcategory *entities.Subcategory
+func (_e *SubcategoryRepository_Expecter) Update(ctx interface{}, subcategory interface{}) *SubcategoryRepository_Update_Call {
+	return &SubcategoryRepository_Update_Call{Call: _e.mock.On("Update", ctx, subcategory)}
+}
+
+func (_c *SubcategoryRepository_Update_Call) Run(run func(ctx context.Context, subcategory *entities.Subcategory)) *SubcategoryRepository_Update_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		var arg0 context.Context
+		if args[0] != nil {
+			arg0 = args[0].(context.Context)
+		}
+		var arg1 *entities.Subcategory
+		if args[1] != nil {
+			arg1 = args[1].(*entities.Subcategory)
+		}
+		run(
+			arg0,
+			arg1,
+		)
+	})
+	return _c
+}
+
+func (_c *SubcategoryRepository_Update_Call) Return(err error) *SubcategoryRepository_Update_Call {
+	_c.Call.Return(err)
+	return _c
+}
+
+func (_c *SubcategoryRepository_Update_Call) RunAndReturn(run func(ctx context.Context, subcategory *entities.Subcategory) error) *SubcategoryRepository_Update_Call {
 	_c.Call.Return(run)
 	return _c
 }

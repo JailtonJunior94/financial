@@ -90,13 +90,17 @@ func (_c *TokenGenerator_GenerateToken_Call) Run(run func(ctx context.Context, i
 		if args[2] != nil {
 			arg2 = args[2].(string)
 		}
-		run(arg0, arg1, arg2)
+		run(
+			arg0,
+			arg1,
+			arg2,
+		)
 	})
 	return _c
 }
 
-func (_c *TokenGenerator_GenerateToken_Call) Return(token string, err error) *TokenGenerator_GenerateToken_Call {
-	_c.Call.Return(token, err)
+func (_c *TokenGenerator_GenerateToken_Call) Return(s string, err error) *TokenGenerator_GenerateToken_Call {
+	_c.Call.Return(s, err)
 	return _c
 }
 

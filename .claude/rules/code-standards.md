@@ -10,7 +10,7 @@ Garantir estilo de código e convenções de nomenclatura consistentes em todo o
 ## Requisitos
 
 ### Idioma
-- Ver Política de Idioma em `00-governance.md`.
+- Ver Política de Idioma em `governance.md`.
 
 ### Convenções de Nomenclatura
 - `camelCase`: variáveis locais, parâmetros de função, campos não exportados.
